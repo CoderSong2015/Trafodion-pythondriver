@@ -91,6 +91,9 @@ class BaseTrafSocket(object):
     def _compress(self, packet):
         pass
 
+    def set_connection_timeout(self, connection_timeout):
+        self._connection_timeout = connection_timeout
+
 class TrafTCPSocket(BaseTrafSocket):
     """
     Open a TCP/IP connection to the trafodion server
@@ -145,4 +148,6 @@ class TrafUnixSocket(BaseTrafSocket):
     """
     
     """
+    def __init__(self, unix_socket):
+        self.unix_socket = unix_socket
     pass
