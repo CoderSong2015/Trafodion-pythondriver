@@ -25,4 +25,6 @@ if __name__ == '__main__':
             dict[key] = config[key]
     print(dict)
     import time
-    print(time.time() and 0xFFF)
+    print(time.time() )
+    print(time.localtime())
+    print(time.time() + 1000)

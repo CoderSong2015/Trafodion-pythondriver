@@ -1,5 +1,6 @@
 from .abstracts import TrafConnectionAbstract
 import os
+import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
 from .struct_def import USER_DESC_def,CONNECTION_CONTEXT_def,VERSION_def,VERSION_LIST_def
 from .TRANSPOT import TRANSPORT
@@ -32,10 +33,6 @@ class TrafConnection(TrafConnectionAbstract):
     RESET_IDLE_TIMER = 1070
 
     def __init__(self, *args, **kwargs):
-        self._user = ''
-        self._password = ''
-        self._catalog = ''
-        self._database = ''
         self._master_host = '127.0.0.1'
         self._master_port = 23400
         self._force_ipv6 = False
@@ -43,6 +40,7 @@ class TrafConnection(TrafConnectionAbstract):
         self._sessionToken = None
         self._isReadOnly = False
         self._autoCommit = True
+        self._ignoreCancel = False
         super(TrafConnection, self).__init__(**kwargs)
 
     def _get_connection(self, host = '127.0.0.1', port = 0):
@@ -76,13 +74,36 @@ class TrafConnection(TrafConnectionAbstract):
         #TODO
 
     def _get_Objref(self):
-        self._get_context()
-        self._get_user_desc()
+        inContext = self._get_context()
+        userDesc = self._get_user_desc()
+        self._master_host = self.property['host']
+        self._master_port = self.property['port']
+        retryCount = 3
+        srvrType = 2 #AS
+        done = False
+        try_num = 0
 
-        master_conn = self._get_connection(self._master_host,self._master_port)
+        #seconds
+        currentTime = time.time()
+        endTime =  currentTime + inContext.loginTimeoutSec * 1000 if (inContext.loginTimeoutSec > 0) else sys.maxsize
+
+        while (done == False and try_num < retryCount and endTime > currentTime):
+            rc = self._connect_master(inContext,userDesc, srvrType, retryCount)
+
+            #in the while end
+            currentTime = time.time()
+
+    def _connect_master(self, inContext, userDesc, srvrType, retryCount):
+        wbuffer = self._marshal(inContext,
+                                userDesc,
+                                srvrType,
+                                retryCount,
+                                )
+        master_conn = self._get_connection(self._master_host, self._master_port)
         if not master_conn:
             #error handle
             pass
+        pass
 
 
     def _marshal(self,
