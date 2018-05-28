@@ -1,3 +1,5 @@
+
+from .TRANSPOT import TRANSPORT
 class CONNECTION_CONTEXT_def:
     def __init__(self):
         self.datasource = ""  # string
@@ -96,7 +98,7 @@ class VERSION_def:
 
 
 class VERSION_LIST_def:
-    versionList = [VERSION_def()]
+    list = None
 
     def sizeOf(self):
         pass
@@ -200,4 +202,29 @@ class Header:
     def extractFromByteArray(self, LogicalByteArray):
         pass
 
+class USER_DESC_def:
+    userDescType = 0
+    userSid = b''
+    domainName = ''
+    userName = ''
+    password = b''
+    domainNameBytes = b''
+    userNameBytes = b''
 
+    def sizeOf(self):
+        size = 0
+
+        domainNameBytes = len(self.domainName)
+        userNameBytes = len(self.userName)
+        Tr = TRANSPORT()
+        size += Tr.size_int # descType
+
+        size += Tr.size_bytes(self.userSid)
+        size += Tr.size_bytes(self.domainNameBytes)
+        size += Tr.size_bytes(self.userNameBytes)
+        size += Tr.size_bytes(self.password)
+
+        return size
+
+    def return_bytearray(self):
+        pass

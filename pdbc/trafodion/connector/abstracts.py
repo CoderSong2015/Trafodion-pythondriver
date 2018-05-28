@@ -9,9 +9,34 @@ class TrafConnectionAbstract(object):
 
     def __init__(self, **kwargs):
         self.user = 0
-
+        self.property = {}
+        self._init_property()
     def config(self, **kwargs):
-        pass
+        config = kwargs.copy()
+        if 'user' in config or 'password' in config:
+            try:
+                user = config['user']
+                del config['user']
+            except KeyError:
+                user = self._user
+            try:
+                password = config['password']
+                del config['password']
+            except KeyError:
+                password = self._password
+            self.set_login(user, password)
+
+        # Configure host information
+        if 'host' in config and config['host']:
+            self._host = config['host']
+
+        # Check network locations
+        try:
+            self._port = int(config['port'])
+            del config['port']
+        except KeyError:
+            pass  # Missing port argument is OK
+
 
     @abstractmethod
     def _open_connection(self):
@@ -74,3 +99,17 @@ class TrafConnectionAbstract(object):
     def rollback(self):
         """Rollback current transaction"""
         pass
+
+    def set_login(self, username=None, password=None):
+        if username is not None:
+            self._username = username.strip()
+        else:
+            self._username = ''
+        if password is not None:
+            self._password = password
+        else:
+            self._password = ''
+
+    def _init_property(self):
+        pass
+

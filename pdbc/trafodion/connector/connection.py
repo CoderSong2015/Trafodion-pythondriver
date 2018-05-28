@@ -1,10 +1,35 @@
 from .abstracts import TrafConnectionAbstract
 import os
-from .network import TrafTCPSocket, TrafUnixSocket
+from .network import TrafTCPSocket, TrafUnixSocket,socket
+from .struct_def import USER_DESC_def,CONNECTION_CONTEXT_def,VERSION_def,VERSION_LIST_def
+from .TRANSPOT import TRANSPORT
+import time
 class TrafConnection(TrafConnectionAbstract):
     """
         Connection to a mxosrvr
     """
+
+    #from odbc_common.h and sql.h
+    SQL_TXN_READ_UNCOMMITTED = 1
+    SQL_TXN_READ_COMMITTED = 2
+    SQL_TXN_REPEATABLE_READ = 4
+    SQL_TXN_SERIALIZABLE = 8
+    SQL_ATTR_CURRENT_CATALOG = 109
+    SQL_ATTR_ACCESS_MODE = 101
+    SQL_ATTR_AUTOCOMMIT = 102
+    SQL_TXN_ISOLATION = 108
+
+    # spj proxy syntax support 
+    SPJ_ENABLE_PROXY = 1040
+    PASSWORD_SECURITY = 0x4000000 # (2 ^ 26)
+    ROWWISE_ROWSET = 0x8000000 # (2 ^ 27)
+
+    CHARSET = 0x10000000 # (2 ^ 28)
+
+    STREAMING_DELAYEDERROR_MODE = 0x20000000 # 2 ^ 29
+    # Zbig
+    JDBC_ATTR_CONN_IDLE_TIMEOUT = 3000
+    RESET_IDLE_TIMER = 1070
 
     def __init__(self, *args, **kwargs):
         self._user = ''
@@ -15,7 +40,10 @@ class TrafConnection(TrafConnectionAbstract):
         self._master_port = 23400
         self._force_ipv6 = False
         self.unix_socket = None
-        super(TrafConnection, self).__init__(*args, **kwargs)
+        self._sessionToken = None
+        self._isReadOnly = False
+        self._autoCommit = True
+        super(TrafConnection, self).__init__(**kwargs)
 
     def _get_connection(self, host = '127.0.0.1', port = 0):
 
@@ -72,7 +100,71 @@ class TrafConnection(TrafConnectionAbstract):
         return wbuffer
 
     def _get_context(self):
-        pass
+        inContext = CONNECTION_CONTEXT_def()
+        inContext.catalog = self.property['catalog']
+        inContext.schema =  self.property['schema']
+        inContext.datasource = self.property['datasource']
+        inContext.userRole = self.property['userRole']
+        inContext.cpuToUse = self.property['cpuToUse']
+        inContext.cpuToUseEnd = -1 # for future use by DBTransporter
+
+        inContext.accessMode = 1 if self._isReadOnly else 0
+        inContext.autoCommit = 1 if self._autoCommit else 0
+
+        inContext.queryTimeoutSec = self.property['query_timeout']
+        inContext.idleTimeoutSec = self.property['idleTimeout']
+        inContext.loginTimeoutSec = self.property['login_timeout']
+        inContext.txnIsolationLevel = self.SQL_TXN_READ_COMMITTED
+        inContext.rowSetSize = self.property['fetchbuffersize']
+        inContext.diagnosticFlag = 0
+        inContext.processId = time.time() and 0xFFF
+
+        try:
+            inContext.computerName = socket.gethostname()
+        except:
+            inContext.computerName = "Unknown Client Host"
+
+        inContext.windowText = "FASTPDBC" if not self.property['application_name'] else self.property['application_name']
+
+        inContext.ctxDataLang = 15
+        inContext.ctxErrorLang = 15
+
+        inContext.ctxACP = 1252
+        inContext.ctxCtrlInferNXHAR = -1
+        inContext.clientVersionList.list = self.get_version(inContext.processId)
+        return inContext
     def _get_user_desc(self):
-        userDesc = new USER_DESC_def();
-        return userDesc;
+        userDesc = USER_DESC_def()
+        userDesc.userName = self._username
+        userDesc.userDescType = \
+            TRANSPORT.UNAUTHENTICATED_USER_TYPE if self._sessionToken == None else TRANSPORT.PASSWORD_ENCRYPTED_USER_TYPE
+        userDesc.domainName = ""
+
+        userDesc.userSid = None
+        userDesc.password = None # we no longer want to send the password to the MXOAS
+
+        return userDesc
+
+    def get_version(self,process_id):
+        majorVersion = 3
+        minorVersion = 0
+        buildId = 0
+
+        version = [VERSION_def(), VERSION_def()]
+
+        #Entry[0] is the Driver Version information
+        version[0].componentId = 20
+        version[0].majorVersion = majorVersion
+        version[0].minorVersion = minorVersion
+        version[0].buildId = buildId | self.ROWWISE_ROWSET | self.CHARSET | self.PASSWORD_SECURITY
+
+        if (self.property['DelayedErrorMode']):
+            version[0].buildId |= self.STREAMING_DELAYEDERROR_MODE
+
+    # Entry[1] is the Application Version information
+        version[1].componentId = 8
+        version[1].majorVersion = 3
+        version[1].minorVersion = 0
+        version[1].buildId = 0
+
+        return version
