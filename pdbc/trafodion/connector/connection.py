@@ -39,19 +39,23 @@ class TrafConnection(TrafConnectionAbstract):
         """
         :return: 
         """
-        master_conn = self._get_connection(self._master_host,self._master_port)
-        if not master_conn:
-            #error handle
-            pass
 
-        mxosrvr_info = self._get_Objref(master_conn)
+        #get conncetion from dcs master
+        mxosrvr_info = self._get_Objref()
 
         #TODO self._get_connection() get connection from mxosrvr
 
         #TODO
 
-    def _get_Objref(self, conn = None):
-        pass
+    def _get_Objref(self):
+        self._get_context()
+        self._get_user_desc()
+
+        master_conn = self._get_connection(self._master_host,self._master_port)
+        if not master_conn:
+            #error handle
+            pass
+
 
     def _marshal(self,
                  inContext,
@@ -66,3 +70,9 @@ class TrafConnection(TrafConnectionAbstract):
         wbuffer = None
 
         return wbuffer
+
+    def _get_context(self):
+        pass
+    def _get_user_desc(self):
+        userDesc = new USER_DESC_def();
+        return userDesc;

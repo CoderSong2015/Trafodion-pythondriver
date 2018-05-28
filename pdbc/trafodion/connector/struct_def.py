@@ -168,25 +168,25 @@ class Header:
                         platform,
                         transport,
                         swap):
-        operation_id_ = operation_id
-        dialogueId_ = dialogueId
-        total_length_ = total_length
-        cmp_length_ = cmp_length
-        compress_ind_ = compress_ind
-        compress_type_ = compress_type
-        hdr_type_ = hdr_type
-        signature_ = signature
-        version_ = version
-        platform_ = platform
-        transport_ = transport
-        swap_ = swap
+        self.operation_id_ = operation_id
+        self.dialogueId_ = dialogueId
+        self.total_length_ = total_length
+        self.cmp_length_ = cmp_length
+        self.compress_ind_ = compress_ind
+        self.compress_type_ = compress_type
+        self.hdr_type_ = hdr_type
+        self.signature_ = signature
+        self.version_ = version
+        self.platform_ = platform
+        self.transport_ = transport
+        self.swap_ = swap
 
 
     def reuseHeader(self,
                     operation_id,
                     dialogueId):
-        operation_id_ = operation_id
-        dialogueId_ = dialogueId
+        self.operation_id_ = operation_id
+        self.dialogueId_ = dialogueId
 
 
 

@@ -19,7 +19,7 @@ class TrafConnectionAbstract(object):
         pass
 
     @abstractmethod
-    def _get_Objref(self, conn = None):
+    def _get_Objref(self):
         """
         get connection and mxosrvr info from dcsmaster
         :return: 
