@@ -224,7 +224,7 @@ class TRANSPORT:
     # From Global.h
     ESTIMATEDCOSTRGERRWARN = 2
 
-
+    @classmethod
     def size_bytes(self, buf, fixForServer = None):
         return self.size_int + buf.length + 1 if (buf != None and buf.length > 0) else self.size_int + 1
 
@@ -237,13 +237,41 @@ class TRANSPORT:
 class convert:
 
     @classmethod
-    def convert_buf(self,buff, values, structstring):
-        import ctypes
-        s = struct.Struct(structstring)
-        buff = ctypes.create_string_buffer(s.size)
-        return s.pack_into(buff, 0, *values)
+    def convert_buf(self, values):
+        pass
 
+    @classmethod
     def int_to_byteshort(self, num):
         return struct.pack('h', num)
+
+    @classmethod
     def int_to_byteint(self, num):
         return struct.pack('i', num)
+
+    @classmethod
+    def put_data_memview(self,mem, buf):
+        for index, byte in enumerate(buf):
+            mem[index] = byte
+
+    @classmethod
+    def put_string(self, str, buf_view):
+        tmp_len = len(str)
+        data = self.int_to_byteint(tmp_len)
+        self.put_data_memview(buf_view, data)
+        buf_view = buf_view[4:]
+        if (tmp_len is not 0):
+            self.put_data_memview(buf_view, str.encode("utf-8"))  # string
+            buf_view = buf_view[tmp_len:]
+        return buf_view
+
+    @classmethod
+    def put_short(self, num, buf_view):
+        data = self.int_to_byteshort(num)
+        self.put_data_memview(buf_view, data)
+        return buf_view[2:]
+
+    @classmethod
+    def put_int(self, num, buf_view):
+        data = self.int_to_byteint(num)
+        self.put_data_memview(buf_view, data)
+        return buf_view[4:]

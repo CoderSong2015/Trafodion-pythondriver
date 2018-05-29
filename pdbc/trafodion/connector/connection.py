@@ -2,9 +2,11 @@ from .abstracts import TrafConnectionAbstract
 import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
-from .struct_def import USER_DESC_def,CONNECTION_CONTEXT_def,VERSION_def,VERSION_LIST_def,Header
+from .struct_def import USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, VERSION_LIST_def, Header
 from .TRANSPOT import TRANSPORT
 import time
+
+
 class TrafConnection(TrafConnectionAbstract):
     """
         Connection to a mxosrvr
@@ -206,7 +208,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         version = [VERSION_def(), VERSION_def()]
 
-        #Entry[0] is the Driver Version information
+        # Entry[0] is the Driver Version information
         version[0].componentId = 20
         version[0].majorVersion = majorVersion
         version[0].minorVersion = minorVersion

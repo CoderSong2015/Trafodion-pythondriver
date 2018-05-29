@@ -59,9 +59,10 @@ def get_version(process_id):
 
 def mem(mem):
     mem[3] = 22
+    mem += 2
 if __name__ == '__main__':
     xx = dd()
-    #xx.asd = 44
+    # xx.asd = 44
     xx.pr()
 
     for key in config:
@@ -92,9 +93,9 @@ if __name__ == '__main__':
 
     print(len(buf))
 
-
-    for index, byte in enumerate(bb):
-        pack[index + 2] = byte
+    pack[3:5] = bb
+   # for index, byte in enumerate(bb):
+    #    pack[index + 2] = byte
     print(len(buf))
 
     import struct
@@ -103,3 +104,27 @@ if __name__ == '__main__':
 
     mem(pack)
     print(buf)
+
+    num = "asdf"
+    ss = '' + str(len(num)) + 's'
+    print(ss)
+
+    temp = (
+        ("haolin",0),
+        (1,2),
+        (3,2),
+    )
+
+    cc = []
+    fmt = ''
+    for x in temp:
+        if 0 == x[1]:
+          cc.append(str(len(x[0])))
+          cc.append((x[0]))
+          fmt += str(len(x[0]))
+          fmt += 's'
+        else:
+            fmt += 'h'
+
+    print(cc)
+    print(fmt)

@@ -55,11 +55,11 @@ class CONNECTION_CONTEXT_def:
         self.windowTextBytes = self.windowText.encode('utf-8')
         self.connectOptionsBytes = self.connectOptions.encode('utf-8')
 
-        size = len(self.datasourceBytes)
-        size += len(self.catalogBytes)
-        size += len(self.schemaBytes)
-        size += len(self.locationBytes)
-        size += len(self.userRoleBytes)
+        size = TRANSPORT.size_bytes(self.datasourceBytes)
+        size += TRANSPORT.size_bytes(self.catalogBytes)
+        size += TRANSPORT.size_bytes(self.schemaBytes)
+        size += TRANSPORT.size_bytes(self.locationBytes)
+        size += TRANSPORT.size_bytes(self.userRoleBytes)
 
         size += TRANSPORT.size_short  # accessMode
         size += TRANSPORT.size_short  # autoCommit
@@ -82,49 +82,47 @@ class CONNECTION_CONTEXT_def:
 
         size += TRANSPORT.size_short  # cpuToUse
         size += TRANSPORT.size_short  # cpuToUseEnd
-        size += len(self.connectOptionsBytes)
+        size += TRANSPORT.size_bytes(self.connectOptionsBytes)
 
         size += self.clientVersionList.sizeOf()
 
         return size
 
     def insertIntoByteArray(self, buf_view):
-        temp = (
-        self.datasource,
-        self.catalog,
-        self.schema,
-        self.location,
-        self.userRole,
-        self.tenantName,
 
-        self.accessMode,
-        self.autoCommit,
-        self.queryTimeoutSec,
-        self.idleTimeoutSec,
-        self.loginTimeoutSec,
-        self.txnIsolationLevel,
-        self.rowSetSize,
-        self.diagnosticFlag,
-        self.processId,
-        self.computerName,
-        self.windowText,
+        buf_view = convert.put_string(self.catalog, buf_view) # string
+        buf_view = convert.put_string(self.schema, buf_view)  # string
+        buf_view = convert.put_string(self.location, buf_view)# string
+        buf_view = convert.put_string(self.userRole, buf_view) # string
+        buf_view = convert.put_string(self.tenantName, buf_view)# string
 
-        self.ctxACP,
-        self.ctxDataLang,
-        self.ctxErrorLang,
-        self.ctxCtrlInferNXHAR,
+        buf_view = convert.put_short(self.accessMode, buf_view) # short
+        buf_view = convert.put_short(self.autoCommit, buf_view) # short
+        buf_view = convert.put_short(self.queryTimeoutSec, buf_view) # short
+        buf_view = convert.put_short(self.idleTimeoutSec, buf_view) # short
+        buf_view = convert.put_short(self.loginTimeoutSec, buf_view) # short
+        buf_view = convert.put_short(self.txnIsolationLevel, buf_view) # short
+        buf_view = convert.put_short(self.rowSetSize, buf_view) # short
 
-        self.cpuToUse,
-        self.cpuToUseEnd,
+        buf_view = convert.put_int(self.diagnosticFlag, buf_view) # int
+        buf_view = convert.put_int(self.processId, buf_view) # int
 
-        self.connectOptions
-            #need clientVersionList
-        )
-        data = convert.convert_buf()
-        for index, byte in enumerate(data):
-            buf_view[index] = byte
-        return buf_view + self.sizeOf()
+        buf_view = convert.put_string(self.computerName, buf_view)# string
+        buf_view = convert.put_string(self.windowText, buf_view)  # string
 
+        buf_view = convert.put_int(self.ctxACP, buf_view) # int
+        buf_view = convert.put_int(self.ctxDataLang, buf_view) # int
+        buf_view = convert.put_int(self.ctxErrorLang, buf_view) # int
+        buf_view = convert.put_short(self.ctxCtrlInferNXHAR, buf_view) # short
+
+        buf_view = convert.put_short(self.cpuToUse, buf_view) # short
+        buf_view = convert.put_short(self.cpuToUseEnd, buf_view)  # short for future use by DBTransporter
+
+        buf_view = convert.put_string(self.connectOptions, buf_view) # string
+
+        buf_view = buf_view [self.sizeOf() - self.clientVersionList.sizeOf() :]
+        buf_view = self.clientVersionList.insertIntoByteArray(buf_view)
+        return buf_view
 
 class VERSION_def:
     componentId = 0  # short
@@ -140,6 +138,8 @@ class VERSION_def:
 class VERSION_LIST_def:
     list = []
 
+    def insertIntoByteArray(self, buf_view):
+        pass
     def sizeOf(self):
         return VERSION_def.sizeOf() * self.list.__len__() + TRANSPORT.size_int
 
@@ -254,15 +254,15 @@ class USER_DESC_def:
     def sizeOf(self):
         size = 0
 
-        domainNameBytes = len(self.domainName)
-        userNameBytes = len(self.userName)
+        self.domainNameBytes = len(self.domainName)
+        self.userNameBytes = len(self.userName)
         Tr = TRANSPORT()
         size += Tr.size_int # descType
 
-        size += Tr.size_bytes(self.userSid)
-        size += Tr.size_bytes(self.domainNameBytes)
-        size += Tr.size_bytes(self.userNameBytes)
-        size += Tr.size_bytes(self.password)
+        size += TRANSPORT.size_bytes(self.userSid)
+        size += TRANSPORT.size_bytes(self.domainNameBytes)
+        size += TRANSPORT.size_bytes(self.userNameBytes)
+        size += TRANSPORT.size_bytes(self.password)
 
         return size
 
