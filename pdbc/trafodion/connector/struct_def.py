@@ -62,27 +62,27 @@ class CONNECTION_CONTEXT_def:
         size += len(self.locationBytes)
         size += len(self.userRoleBytes)
 
-        size += 2  # accessMode
-        size += 2  # autoCommit
-        size += 4  # queryTimeoutSec
-        size += 4  # idleTimeoutSec
-        size += 4  # loginTimeoutSec
-        size += 2  # txnIsolationLevel
-        size += 2  # rowSetSize
+        size += TRANSPORT.size_short  # accessMode
+        size += TRANSPORT.size_short  # autoCommit
+        size += TRANSPORT.size_int  # queryTimeoutSec
+        size += TRANSPORT.size_int  # idleTimeoutSec
+        size += TRANSPORT.size_int  # loginTimeoutSec
+        size += TRANSPORT.size_short  # txnIsolationLevel
+        size += TRANSPORT.size_short  # rowSetSize
 
-        size += 2  # diagnosticFlag
-        size += 4  # processId
+        size += TRANSPORT.size_short  # diagnosticFlag
+        size += TRANSPORT.size_int  # processId
 
         size += len(self.computerNameBytes)
         size += len(self.windowTextBytes)
 
-        size += 4  # ctxACP
-        size += 4  # ctxDataLang
-        size += 4  # ctxErrorLang
-        size += 2  # ctxCtrlInferNCHAR
+        size += TRANSPORT.size_int  # ctxACP
+        size += TRANSPORT.size_int  # ctxDataLang
+        size += TRANSPORT.size_int  # ctxErrorLang
+        size += TRANSPORT.size_short  # ctxCtrlInferNCHAR
 
-        size += 2  # cpuToUse
-        size += 2  # cpuToUseEnd
+        size += TRANSPORT.size_short  # cpuToUse
+        size += TRANSPORT.size_short  # cpuToUseEnd
         size += len(self.connectOptionsBytes)
 
         size += self.clientVersionList.sizeOf()
@@ -96,12 +96,16 @@ class VERSION_def:
     minorVersion = 0  # short
     buildId = 0  # int
 
+    @classmethod
+    def sizeOf(self):
+        return TRANSPORT.size_int + TRANSPORT.size_short * 3
+
 
 class VERSION_LIST_def:
-    list = None
+    list = []
 
     def sizeOf(self):
-        pass
+        return VERSION_def.sizeOf() * self.list.__len__() + TRANSPORT.size_int
 
 
 class Header:
@@ -191,7 +195,7 @@ class Header:
         self.dialogueId_ = dialogueId
 
 
-
+    @classmethod
     def sizeOf(self):
         return 40
 

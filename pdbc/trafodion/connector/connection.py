@@ -2,7 +2,7 @@ from .abstracts import TrafConnectionAbstract
 import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
-from .struct_def import USER_DESC_def,CONNECTION_CONTEXT_def,VERSION_def,VERSION_LIST_def
+from .struct_def import USER_DESC_def,CONNECTION_CONTEXT_def,VERSION_def,VERSION_LIST_def,Header
 from .TRANSPOT import TRANSPORT
 import time
 class TrafConnection(TrafConnectionAbstract):
@@ -113,12 +113,44 @@ class TrafConnection(TrafConnectionAbstract):
                  retryCount,
                  optionFlags1,
                  optionFlags2,
-                 vproc,
+                 vproc = "Traf_pybc_${buildId}",
                  ):
+        wlength = Header.sizeOf()
+        buf = b''
 
-        wbuffer = None
+        vprocBytes = vproc.encode("utf-8")
+        import getpass
+        clientUserBytes = (getpass.getuser()).encode("utf-8")
 
-        return wbuffer
+        wlength += inContext.sizeOf()
+        wlength += userDesc.sizeOf()
+
+        wlength += TRANSPORT.size_int # srvrType
+        wlength += TRANSPORT.size_short # retryCount
+        wlength += TRANSPORT.size_int # optionFlags1
+        wlength += TRANSPORT.size_int # optionFlags2
+        wlength += len(vprocBytes)
+
+        buf = bytearray(b'')
+
+        buf.extend(bytearray(wlength))
+
+        # use memoryview to avoid mem copy
+        buf_view = memoryview(buf)
+        # Read the data
+        buf = inContext.insertIntoByteArray(buf)
+        userDesc.insertIntoByteArray(buf)
+
+        buf.insertInt(srvrType)
+        buf.insertShort(retryCount)
+        buf.insertInt(optionFlags1)
+        buf.insertInt(optionFlags2)
+        buf.insertString(vprocBytes)
+
+        # TODO: restructure all the flags and this new param
+        buf.insertString(clientUserBytes)
+
+        return buf
 
     def _get_context(self):
         inContext = CONNECTION_CONTEXT_def()
