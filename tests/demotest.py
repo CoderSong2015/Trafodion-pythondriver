@@ -57,6 +57,8 @@ def get_version(process_id):
 
         return version
 
+def mem(mem):
+    mem[3] = 22
 if __name__ == '__main__':
     xx = dd()
     #xx.asd = 44
@@ -87,9 +89,17 @@ if __name__ == '__main__':
     bb = b'haolin'
     buf = bytearray(20)
     pack = memoryview(buf)
-    print(buf)
+
+    print(len(buf))
 
 
     for index, byte in enumerate(bb):
         pack[index + 2] = byte
+    print(len(buf))
+
+    import struct
+    tt = 3
+    print(struct.pack('h',tt))
+
+    mem(pack)
     print(buf)

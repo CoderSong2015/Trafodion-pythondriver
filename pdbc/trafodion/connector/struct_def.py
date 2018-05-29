@@ -1,5 +1,5 @@
 
-from .TRANSPOT import TRANSPORT
+from .TRANSPOT import TRANSPORT, convert
 class CONNECTION_CONTEXT_def:
     def __init__(self):
         self.datasource = ""  # string
@@ -44,7 +44,6 @@ class CONNECTION_CONTEXT_def:
         self.windowTextBytes = bytearray(b'')
         self.connectOptionsBytes = bytearray(b'')
 
-    @property
     def sizeOf(self):
         self.size = 0
         self.datasourceBytes = self.datasource.encode('utf-8')
@@ -88,6 +87,43 @@ class CONNECTION_CONTEXT_def:
         size += self.clientVersionList.sizeOf()
 
         return size
+
+    def insertIntoByteArray(self, buf_view):
+        temp = (
+        self.datasource,
+        self.catalog,
+        self.schema,
+        self.location,
+        self.userRole,
+        self.tenantName,
+
+        self.accessMode,
+        self.autoCommit,
+        self.queryTimeoutSec,
+        self.idleTimeoutSec,
+        self.loginTimeoutSec,
+        self.txnIsolationLevel,
+        self.rowSetSize,
+        self.diagnosticFlag,
+        self.processId,
+        self.computerName,
+        self.windowText,
+
+        self.ctxACP,
+        self.ctxDataLang,
+        self.ctxErrorLang,
+        self.ctxCtrlInferNXHAR,
+
+        self.cpuToUse,
+        self.cpuToUseEnd,
+
+        self.connectOptions
+            #need clientVersionList
+        )
+        data = convert.convert_buf()
+        for index, byte in enumerate(data):
+            buf_view[index] = byte
+        return buf_view + self.sizeOf()
 
 
 class VERSION_def:

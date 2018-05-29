@@ -138,8 +138,8 @@ class TrafConnection(TrafConnectionAbstract):
         # use memoryview to avoid mem copy
         buf_view = memoryview(buf)
         # Read the data
-        buf = inContext.insertIntoByteArray(buf)
-        userDesc.insertIntoByteArray(buf)
+        buf_view = inContext.insertIntoByteArray(buf_view)
+        buf_view = userDesc.insertIntoByteArray(buf_view)
 
         buf.insertInt(srvrType)
         buf.insertShort(retryCount)
@@ -186,6 +186,7 @@ class TrafConnection(TrafConnectionAbstract):
         inContext.ctxCtrlInferNXHAR = -1
         inContext.clientVersionList.list = self.get_version(inContext.processId)
         return inContext
+
     def _get_user_desc(self):
         userDesc = USER_DESC_def()
         userDesc.userName = self._username

@@ -1,4 +1,4 @@
-
+import struct
 class TRANSPORT:
     size_long = 8
     size_int = 4
@@ -233,3 +233,17 @@ class TRANSPORT:
         return self.size_int + buf.length + 1 + self.size_int if (buf != None and buf.length > 0) else self.size_int
 
     # end class TRANSPORT
+
+class convert:
+
+    @classmethod
+    def convert_buf(self,buff, values, structstring):
+        import ctypes
+        s = struct.Struct(structstring)
+        buff = ctypes.create_string_buffer(s.size)
+        return s.pack_into(buff, 0, *values)
+
+    def int_to_byteshort(self, num):
+        return struct.pack('h', num)
+    def int_to_byteint(self, num):
+        return struct.pack('i', num)
