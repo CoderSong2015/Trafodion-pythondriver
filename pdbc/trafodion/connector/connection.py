@@ -3,8 +3,9 @@ import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
 from .struct_def import USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, VERSION_LIST_def, Header
-from .TRANSPOT import TRANSPORT
+from .TRANSPOT import TRANSPORT,convert
 import time
+import getpass
 
 
 class TrafConnection(TrafConnectionAbstract):
@@ -100,6 +101,7 @@ class TrafConnection(TrafConnectionAbstract):
                                 userDesc,
                                 srvrType,
                                 retryCount,
+                                0x10000000
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
         if not master_conn:
@@ -114,14 +116,13 @@ class TrafConnection(TrafConnectionAbstract):
                  srvrType,
                  retryCount,
                  optionFlags1,
-                 optionFlags2,
+                 optionFlags2 = 0,
                  vproc = "Traf_pybc_${buildId}",
                  ):
         wlength = Header.sizeOf()
         buf = b''
 
         vprocBytes = vproc.encode("utf-8")
-        import getpass
         clientUserBytes = (getpass.getuser()).encode("utf-8")
 
         wlength += inContext.sizeOf()
@@ -143,14 +144,14 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = inContext.insertIntoByteArray(buf_view)
         buf_view = userDesc.insertIntoByteArray(buf_view)
 
-        buf.insertInt(srvrType)
-        buf.insertShort(retryCount)
-        buf.insertInt(optionFlags1)
-        buf.insertInt(optionFlags2)
-        buf.insertString(vprocBytes)
+        buf_view = convert.put_int(srvrType, buf_view)
+        buf_view = convert.put_short(retryCount, buf_view)
+        buf_view = convert.put_int(optionFlags1, buf_view)
+        buf_view = convert.put_int(optionFlags2, buf_view)
+        buf_view = convert.put_string(vprocBytes, buf_view)
 
         # TODO: restructure all the flags and this new param
-        buf.insertString(clientUserBytes)
+        buf_view = convert.put_string(clientUserBytes, buf_view)
 
         return buf
 

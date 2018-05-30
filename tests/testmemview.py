@@ -12,10 +12,10 @@ if __name__ == '__main__':
     pack = memoryview(buf)
 
     print(pack)
-
-    print(mem(pack))
+    pack = mem(pack)
+    print()
     print(len(buf))
-    print(pack)
+    print(len(pack))
     con = convert()
     con.put_string("cccd",pack)
     print(buf)

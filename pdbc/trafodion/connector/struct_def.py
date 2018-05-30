@@ -134,12 +134,22 @@ class VERSION_def:
     def sizeOf(self):
         return TRANSPORT.size_int + TRANSPORT.size_short * 3
 
+    def insertIntoByteArray(self, buf_view):
+        buf_view = convert.put_short(self.componentId, buf_view)
+        buf_view = convert.put_short(self.majorVersion, buf_view)
+        buf_view = convert.put_short(self.minorVersion, buf_view)
+        buf_view = convert.put_int(self.buildId, buf_view)
+        return buf_view
 
 class VERSION_LIST_def:
     list = []
 
     def insertIntoByteArray(self, buf_view):
-        pass
+        buf_view = convert.put_int(buf_view, len(self.list))
+        for item in self.list:
+            buf_view = item.insertIntoByteArray(buf_view)
+        return buf_view
+
     def sizeOf(self):
         return VERSION_def.sizeOf() * self.list.__len__() + TRANSPORT.size_int
 
@@ -244,12 +254,12 @@ class Header:
 
 class USER_DESC_def:
     userDescType = 0
-    userSid = b''
+    userSid = ''
     domainName = ''
     userName = ''
-    password = b''
-    domainNameBytes = b''
-    userNameBytes = b''
+    password = ''
+    domainNameBytes = ''
+    userNameBytes = ''
 
     def sizeOf(self):
         size = 0
@@ -266,5 +276,12 @@ class USER_DESC_def:
 
         return size
 
-    def return_bytearray(self):
-        pass
+    def insertIntoByteArray(self, buf_view):
+        buf_view = convert.put_int(self.userDescType, buf_view)
+
+        buf_view = convert.put_string(self.userSid, buf_view)
+        buf_view = convert.put_string(self.domainNameBytes, buf_view)
+        buf_view = convert.put_string(self.userNameBytes, buf_view)
+        buf_view = convert.put_string(self.password,buf_view)
+
+        return buf_view

@@ -226,11 +226,11 @@ class TRANSPORT:
 
     @classmethod
     def size_bytes(self, buf, fixForServer = None):
-        return self.size_int + buf.length + 1 if (buf != None and buf.length > 0) else self.size_int + 1
+        return self.size_int + len(buf) + 1 if (buf != None and buf.length > 0) else self.size_int + 1
 
 
     def size_bytesWithCharset(self, buf):
-        return self.size_int + buf.length + 1 + self.size_int if (buf != None and buf.length > 0) else self.size_int
+        return self.size_int + len(buf) + 1 + self.size_int if (buf != None and len(buf) > 0) else self.size_int
 
     # end class TRANSPORT
 
@@ -250,11 +250,23 @@ class convert:
 
     @classmethod
     def put_data_memview(self,mem, buf):
+        """
+        :param mem: memoryview
+        :param buf: 
+        :return: 
+        """
+
+        #TODO It should to make sure that the length of buf is long enough
         for index, byte in enumerate(buf):
             mem[index] = byte
 
     @classmethod
     def put_string(self, str, buf_view):
+        """
+        :param str: 
+        :param buf_view: Python memoryview
+        :return: buf_view in current position
+        """
         tmp_len = len(str)
         data = self.int_to_byteint(tmp_len)
         self.put_data_memview(buf_view, data)
@@ -266,6 +278,11 @@ class convert:
 
     @classmethod
     def put_short(self, num, buf_view):
+        """
+        :param num: short 
+        :param buf_view: Python memoryview
+        :return: buf_view in current position
+        """
         data = self.int_to_byteshort(num)
         self.put_data_memview(buf_view, data)
         return buf_view[2:]
