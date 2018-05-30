@@ -113,3 +113,24 @@ class TrafConnectionAbstract(object):
     def _init_property(self):
         pass
 
+    @abstractmethod
+    def _tcp_io_read(self, header, buffer,conn):
+        """
+        This function used to send or recieve data from server
+        :param header: 
+        :param buffer: 
+        :param conn: use this connection to send
+        :return: databuffer
+        """
+        pass
+
+    @abstractmethod
+    def _tcp_io_write(self, header, buffer, conn):
+        """
+        This function used to send or recieve data from server
+        :param header: 
+        :param buffer: 
+        :param conn: use this connection to send
+        :return: databuffer
+        """
+        pass

@@ -62,6 +62,7 @@ class TrafConnection(TrafConnectionAbstract):
                                  force_ipv6=self._force_ipv6)
 
         conn.set_connection_timeout(self._connection_timeout)
+        conn.open_connection()
         return conn
 
     def _open_connection(self):
@@ -93,7 +94,7 @@ class TrafConnection(TrafConnectionAbstract):
         while (done == False and try_num < retryCount and endTime > currentTime):
             rc = self._connect_master(inContext,userDesc, srvrType, retryCount)
 
-            #in the while end
+            # in the while end
             currentTime = time.time()
 
     def _connect_master(self, inContext, userDesc, srvrType, retryCount):
@@ -104,11 +105,32 @@ class TrafConnection(TrafConnectionAbstract):
                                 0x10000000
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
+        ret = self._get_from_server(TRANSPORT.AS_API_GETOBJREF, wbuffer, master_conn)
         if not master_conn:
             #error handle
             pass
         pass
 
+    def _get_from_server(self, operation_id, wbuffer, conn):
+
+        # TODO need compress
+        # ...
+
+        totallength = len(wbuffer)
+        wheader = Header(operation_id,
+                         0, #m_dialogueId,
+                         totallength - Header.sizeOf(), # minus the size of the Header
+                         0,#cmpLength,
+                         0,#compress,
+                         0,#compType,
+                         Header.WRITE_REQUEST_FIRST,
+                         Header.SIGNATURE,
+                         Header.CLIENT_HEADER_VERSION_BE,
+                         Header.PC,
+                         Header.TCPIP,
+                         Header.NO)
+        data = self._tcp_io(wheader, wbuffer, conn)
+        return None
 
     def _marshal(self,
                  inContext,
@@ -139,8 +161,9 @@ class TrafConnection(TrafConnectionAbstract):
         buf.extend(bytearray(wlength))
 
         # use memoryview to avoid mem copy
-        buf_view = memoryview(buf)
-        # Read the data
+        # remain space for header
+        buf_view = memoryview(buf[Header.sizeOf():])
+        # construct bytebuffer
         buf_view = inContext.insertIntoByteArray(buf_view)
         buf_view = userDesc.insertIntoByteArray(buf_view)
 
@@ -225,3 +248,14 @@ class TrafConnection(TrafConnectionAbstract):
         version[1].buildId = 0
 
         return version
+
+    def _tcp_io_read(self, header, buffer, conn):
+
+        pass
+
+    def _tcp_io_write(self, header, buffer, conn):
+        if header.hdr_type_ == Header.WRITE_REQUEST_FIRST:
+            buf_view = memoryview(buffer)
+            header.insertIntoByteArray(buffer, buf_view)
+        elif header.hdr_type_ == Header.WRITE_REQUEST_NEXT:
+            conn.send(buffer)
