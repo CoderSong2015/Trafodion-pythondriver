@@ -250,8 +250,10 @@ class TrafConnection(TrafConnectionAbstract):
         return version
 
     def _tcp_io_read(self, header, buffer, conn):
+        num_read = 0
+        retry = False
 
-        pass
+
 
     def _tcp_io_write(self, header, buffer, conn):
         if header.hdr_type_ == Header.WRITE_REQUEST_FIRST:
@@ -259,3 +261,20 @@ class TrafConnection(TrafConnectionAbstract):
             header.insertIntoByteArray(buffer, buf_view)
         elif header.hdr_type_ == Header.WRITE_REQUEST_NEXT:
             conn.send(buffer)
+
+    def _execute_query(self, query):
+        pass
+    def commit(self):
+        pass
+    def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
+               dictionary=None, named_tuple=None):
+        pass
+    def disconnect(self):
+        pass
+    def is_connected(self):
+        pass
+    def ping(self, reconnect=False, attempts=1, delay=0):
+        pass
+
+    def rollback(self):
+        pass

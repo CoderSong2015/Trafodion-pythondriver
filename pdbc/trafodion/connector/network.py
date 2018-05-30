@@ -1,7 +1,7 @@
 import sys
 import socket
 import struct
-
+from .struct_def import Header
 
 class BaseTrafSocket(object):
     """Base class for Trafodion socket communication
@@ -47,11 +47,11 @@ class BaseTrafSocket(object):
     def recv(self, isCompressed = False):
         """Receive packets from the mxosrvr server"""
         try:
-            # Read the header of the mxosrvr packet, 4 bytes
+            # Read the header of the mxosrvr packet, 40 bytes
             packet = bytearray(b'')
             packet_len = 0
-            while packet_len < 4:
-                chunk = self.sock.recv(4 - packet_len)
+            while packet_len < Header.sizeOf():
+                chunk = self.sock.recv(Header.sizeOf() - packet_len)
                 if not chunk:
                     # needs errors
                     pass
@@ -59,6 +59,7 @@ class BaseTrafSocket(object):
                 packet_len = len(packet)
 
             # Get the data length from packet
+            print("this is recieve!" + packet)
             datalen = self._get_data_len(packet)
             rest = datalen
             packet.extend(bytearray(datalen))
