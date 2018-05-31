@@ -226,7 +226,7 @@ class TRANSPORT:
 
     @classmethod
     def size_bytes(self, buf, fixForServer = None):
-        return self.size_int + len(buf) + 1 if (buf != None and buf.length > 0) else self.size_int + 1
+        return self.size_int + len(buf) + 1 if (buf != None and (len(buf) > 0)) else self.size_int + 1
 
 
     def size_bytesWithCharset(self, buf):
@@ -261,7 +261,7 @@ class convert:
 
         #TODO It should to make sure that the length of buf is long enough
         for index, byte in enumerate(buf):
-            mem[index] = byte
+                mem[index] = byte
 
     @classmethod
     def put_string(self, str, buf_view):
@@ -271,9 +271,7 @@ class convert:
         :return: buf_view in current position
         """
         tmp_len = len(str)
-        data = self.int_to_byteint(tmp_len)
-        self.put_data_memview(buf_view, data)
-        buf_view = buf_view[4:]
+        buf_view = self.put_int(tmp_len, buf_view)
         if (tmp_len is not 0):
             self.put_data_memview(buf_view, str.encode("utf-8"))  # string
             buf_view = buf_view[tmp_len:]

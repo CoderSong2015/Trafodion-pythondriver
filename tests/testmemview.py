@@ -18,14 +18,9 @@ if __name__ == '__main__':
     buf = bytearray(20)
     pack = memoryview(buf)
 
+    print(pack.ndim)
     print(pack)
-    pack = mem(pack)
-    print()
-    print(len(buf))
-    print(len(pack))
-    con = convert()
-    con.put_string("cccd",pack)
+    pack = pack[3:4]
+    print(pack)
+    pack[0] = 3
     print(buf)
-
-    print(kk('b', 3))
-

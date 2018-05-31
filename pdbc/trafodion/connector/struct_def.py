@@ -120,7 +120,6 @@ class CONNECTION_CONTEXT_def:
 
         buf_view = convert.put_string(self.connectOptions, buf_view) # string
 
-        buf_view = buf_view [self.sizeOf() - self.clientVersionList.sizeOf() :]
         buf_view = self.clientVersionList.insertIntoByteArray(buf_view)
         return buf_view
 
@@ -145,7 +144,7 @@ class VERSION_LIST_def:
     list = []
 
     def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_int(buf_view, len(self.list))
+        buf_view = convert.put_int(len(self.list), buf_view)
         for item in self.list:
             buf_view = item.insertIntoByteArray(buf_view)
         return buf_view
@@ -278,17 +277,24 @@ class USER_DESC_def:
     domainNameBytes = ''
     userNameBytes = ''
 
+    def __init__(self):
+        self.userDescType = 0
+        self.userSid = ''
+        self.domainName = ''
+        self.userName = ''
+        self.password = ''
+        self.domainNameBytes = ''
+        self.userNameBytes = ''
+
     def sizeOf(self):
         size = 0
 
-        self.domainNameBytes = len(self.domainName)
-        self.userNameBytes = len(self.userName)
         Tr = TRANSPORT()
         size += Tr.size_int # descType
 
         size += TRANSPORT.size_bytes(self.userSid)
-        size += TRANSPORT.size_bytes(self.domainNameBytes)
-        size += TRANSPORT.size_bytes(self.userNameBytes)
+        size += TRANSPORT.size_bytes(self.domainName)
+        size += TRANSPORT.size_bytes(self.userName)
         size += TRANSPORT.size_bytes(self.password)
 
         return size
@@ -297,8 +303,124 @@ class USER_DESC_def:
         buf_view = convert.put_int(self.userDescType, buf_view)
 
         buf_view = convert.put_string(self.userSid, buf_view)
-        buf_view = convert.put_string(self.domainNameBytes, buf_view)
-        buf_view = convert.put_string(self.userNameBytes, buf_view)
+        buf_view = convert.put_string(self.domainName, buf_view)
+        buf_view = convert.put_string(self.userName, buf_view)
         buf_view = convert.put_string(self.password,buf_view)
 
         return buf_view
+
+class TrafProperty:
+    def __init__(self):
+        self._master_host = '127.0.0.1'
+        self._master_port = 23400
+        self._catalog = "TRAFODION"
+        self._schema = "SEABASE"
+        self._datasource = ""
+        self._userRole = ""
+        self._cpuToUse = 0
+        self._query_timeout = 3600
+        self._idleTimeout = 3600
+        self._login_timeout = 60
+        self._fetchbuffersize = 100
+        self._application_name = ""
+        self._DelayedErrorMode = False
+
+    @property
+    def master_host(self):
+        return self._master_host
+
+    @master_host.setter
+    def master_host(self, str):
+        self._master_host = str
+
+    @property
+    def master_port(self):
+        return self._master_port
+    @master_port.setter
+    def master_port(self, num):
+        self._master_port = num
+
+    @property
+    def catalog(self):
+        return self._catalog
+
+    @catalog.setter
+    def catalog(self, str):
+        self._catalog = str
+
+    @property
+    def schema(self):
+        return self._schema
+
+    @schema.setter
+    def schema(self, str):
+        self._schema = str
+
+    @property
+    def datasource(self):
+        return self._datasource
+    @datasource.setter
+    def datasource(self, str):
+        self._datasource = str
+
+    @property
+    def userRole(self):
+        return self._userRole
+    @userRole.setter
+    def userRole(self, str):
+        self._userRole = str
+
+    @property
+    def cpuToUse(self):
+        return self._cpuToUse
+    @cpuToUse.setter
+    def cpuToUse(self, num):
+        self._cpuToUse = num
+
+    @property
+    def query_timeout(self):
+        return self._query_timeout
+    @query_timeout.setter
+    def query_timeout(self, num):
+        self._query_timeout = num
+
+    @property
+    def idleTimeout(self):
+        return self._idleTimeout
+
+    @idleTimeout.setter
+    def idleTimeout(self, num):
+        self._idleTimeout = num
+
+    @property
+    def fetchbuffersize(self):
+        return self._fetchbuffersize
+
+    @fetchbuffersize.setter
+    def fetchbuffersize(self, num):
+        self._fetchbuffersize = num
+
+    @property
+    def login_timeout(self):
+        return self._login_timeout
+
+    @login_timeout.setter
+    def login_timeout(self, num):
+        self._login_timeout = num
+
+    @property
+    def application_name(self):
+        return self._application_name
+
+    @application_name.setter
+    def application_name(self, str):
+        self._application_name = str
+
+    @property
+    def DelayedErrorMode(self):
+        return self._DelayedErrorMode
+
+    @DelayedErrorMode.setter
+    def DelayedErrorMode(self, bool):
+        self._DelayedErrorMode = bool
+

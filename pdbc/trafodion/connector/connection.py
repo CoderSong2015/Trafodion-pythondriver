@@ -46,6 +46,13 @@ class TrafConnection(TrafConnectionAbstract):
         self._ignoreCancel = False
         super(TrafConnection, self).__init__(**kwargs)
 
+
+        print("kwargs!?")
+        if kwargs:
+            print("kwargs!")
+            self.connect(**kwargs)
+        self._open_connection()
+
     def _get_connection(self, host = '127.0.0.1', port = 0):
 
         """
@@ -80,8 +87,8 @@ class TrafConnection(TrafConnectionAbstract):
     def _get_Objref(self):
         inContext = self._get_context()
         userDesc = self._get_user_desc()
-        self._master_host = self.property['host']
-        self._master_port = self.property['port']
+        self._master_host = self.property.master_host
+        self._master_port = self.property.master_port
         retryCount = 3
         srvrType = 2 #AS
         done = False
@@ -129,7 +136,7 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.PC,
                          Header.TCPIP,
                          Header.NO)
-        data = self._tcp_io(wheader, wbuffer, conn)
+        data = self._tcp_io_write(wheader, wbuffer, conn)
         return None
 
     def _marshal(self,
@@ -160,6 +167,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         buf.extend(bytearray(wlength))
 
+        print(len(buf))
         # use memoryview to avoid mem copy
         # remain space for header
         buf_view = memoryview(buf[Header.sizeOf():])
@@ -180,21 +188,21 @@ class TrafConnection(TrafConnectionAbstract):
 
     def _get_context(self):
         inContext = CONNECTION_CONTEXT_def()
-        inContext.catalog = self.property['catalog']
-        inContext.schema =  self.property['schema']
-        inContext.datasource = self.property['datasource']
-        inContext.userRole = self.property['userRole']
-        inContext.cpuToUse = self.property['cpuToUse']
+        inContext.catalog = self.property.catalog
+        inContext.schema =  self.property.schema
+        inContext.datasource = self.property.datasource
+        inContext.userRole = self.property.userRole
+        inContext.cpuToUse = self.property.cpuToUse
         inContext.cpuToUseEnd = -1 # for future use by DBTransporter
 
         inContext.accessMode = 1 if self._isReadOnly else 0
         inContext.autoCommit = 1 if self._autoCommit else 0
 
-        inContext.queryTimeoutSec = self.property['query_timeout']
-        inContext.idleTimeoutSec = self.property['idleTimeout']
-        inContext.loginTimeoutSec = self.property['login_timeout']
+        inContext.queryTimeoutSec = self.property.query_timeout
+        inContext.idleTimeoutSec = self.property.idleTimeout
+        inContext.loginTimeoutSec = self.property.login_timeout
         inContext.txnIsolationLevel = self.SQL_TXN_READ_COMMITTED
-        inContext.rowSetSize = self.property['fetchbuffersize']
+        inContext.rowSetSize = self.property.fetchbuffersize
         inContext.diagnosticFlag = 0
         inContext.processId = time.time() and 0xFFF
 
@@ -203,7 +211,7 @@ class TrafConnection(TrafConnectionAbstract):
         except:
             inContext.computerName = "Unknown Client Host"
 
-        inContext.windowText = "FASTPDBC" if not self.property['application_name'] else self.property['application_name']
+        inContext.windowText = "FASTPDBC" if not self.property.application_name else self.property.application_name
 
         inContext.ctxDataLang = 15
         inContext.ctxErrorLang = 15
@@ -238,7 +246,7 @@ class TrafConnection(TrafConnectionAbstract):
         version[0].minorVersion = minorVersion
         version[0].buildId = buildId | self.ROWWISE_ROWSET | self.CHARSET | self.PASSWORD_SECURITY
 
-        if (self.property['DelayedErrorMode']):
+        if (self.property.DelayedErrorMode):
             version[0].buildId |= self.STREAMING_DELAYEDERROR_MODE
 
     # Entry[1] is the Application Version information

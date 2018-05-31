@@ -16,4 +16,4 @@ if __name__ == '__main__':
         'get_warnings': True,
     }
 
-    out = pdbc.trafodion.connector.connect(config)
+    out = pdbc.trafodion.connector.connect(**config)

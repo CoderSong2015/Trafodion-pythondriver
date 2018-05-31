@@ -1,6 +1,7 @@
 """Module gathering all abstract base classes"""
 from abc import ABCMeta, abstractmethod, abstractproperty
 from .catch23 import make_abc
+from .struct_def import TrafProperty
 
 
 @make_abc(ABCMeta)
@@ -18,7 +19,7 @@ class TrafConnectionAbstract(object):
                 user = config['user']
                 del config['user']
             except KeyError:
-                user = self._user
+                user = self._username
             try:
                 password = config['password']
                 del config['password']
@@ -29,10 +30,12 @@ class TrafConnectionAbstract(object):
         # Configure host information
         if 'host' in config and config['host']:
             self._host = config['host']
+            self.property.master_host = self._host
 
         # Check network locations
         try:
             self._port = int(config['port'])
+            self.property.master_port = self._port
             del config['port']
         except KeyError:
             pass  # Missing port argument is OK
@@ -111,7 +114,7 @@ class TrafConnectionAbstract(object):
             self._password = ''
 
     def _init_property(self):
-        pass
+        self.property = TrafProperty()
 
     @abstractmethod
     def _tcp_io_read(self, header, buffer,conn):
