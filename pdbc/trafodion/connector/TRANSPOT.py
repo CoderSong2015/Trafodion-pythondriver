@@ -242,11 +242,11 @@ class convert:
 
     @classmethod
     def int_to_byteshort(self, num):
-        return struct.pack('h', num)
+        return struct.pack('!h', num)
 
     @classmethod
     def int_to_byteint(self, num):
-        return struct.pack('i', num)
+        return struct.pack('!i', num)
 
     @classmethod
     def char_to_bytechar(self, char):

@@ -139,6 +139,7 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.TCPIP,
                          Header.NO)
         data = self._tcp_io_write(wheader, wbuffer, conn)
+        self._tcp_io_read(wheader, wbuffer, conn)
         return None
 
     def _marshal(self,
@@ -156,8 +157,9 @@ class TrafConnection(TrafConnectionAbstract):
         clientUser = getpass.getuser()
 
         wlength += inContext.sizeOf()
+        print(wlength)
         wlength += userDesc.sizeOf()
-
+        print(wlength)
         wlength += TRANSPORT.size_int # srvrType
         wlength += TRANSPORT.size_short # retryCount
         wlength += TRANSPORT.size_int # optionFlags1
@@ -171,7 +173,8 @@ class TrafConnection(TrafConnectionAbstract):
         print(len(buf))
         # use memoryview to avoid mem copy
         # remain space for header
-        buf_view = memoryview(buf[Header.sizeOf():])
+        buf_view = memoryview(buf)
+        buf_view = buf_view[Header.sizeOf():]
         # construct bytebuffer
         buf_view = inContext.insertIntoByteArray(buf_view)
         buf_view = userDesc.insertIntoByteArray(buf_view)
@@ -261,8 +264,8 @@ class TrafConnection(TrafConnectionAbstract):
     def _tcp_io_read(self, header, buffer, conn):
         num_read = 0
         retry = False
-
-
+        data = conn.recv()
+        print(data)
 
     def _tcp_io_write(self, header, buffer, conn):
         if header.hdr_type_ == Header.WRITE_REQUEST_FIRST:

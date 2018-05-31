@@ -18,10 +18,17 @@ if __name__ == '__main__':
     buf = bytearray(20)
     pack = memoryview(buf)
 
-    print(pack.ndim)
-    print(pack)
-    pack = pack[3:4]
-    print(pack)
-    pack[0] = 3
+    wlength = 40
+    buf = bytearray(b'')
+
+    buf.extend(bytearray(wlength))
+
+    print(len(buf))
+    # use memoryview to avoid mem copy
+    # remain space for header
+    buf_view = memoryview(buf)
+    buf_view[5] = 23
     print(buf)
-    print(len(''))
+    buf_view = buf_view[5:]
+    buf_view[5] = 23
+    print(buf)
