@@ -21,3 +21,7 @@ if __name__ == '__main__':
         print("null")
     else:
         print("not null")
+
+    tt = "dwqdwefcqew3我"
+    print(len(tt))
+    print(len(tt.encode("utf-8")))

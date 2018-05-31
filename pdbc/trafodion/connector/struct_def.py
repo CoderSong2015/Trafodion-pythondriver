@@ -250,15 +250,15 @@ class Header:
         buf_view = convert.put_int(self.dialogueId_, buf_view)  # int
         buf_view = convert.put_int(self.total_length_, buf_view)  # int
         buf_view = convert.put_int(self.cmp_length_, buf_view)  # int
-        buf_view = convert.put_char(self.compress_ind_, buf_view)  # char
-        buf_view = convert.put_char(self.compress_type_, buf_view)  # char
+        buf_view = convert.put_char(self.compress_ind_.encode("utf-8"), buf_view)  # char
+        buf_view = convert.put_char(self.compress_type_.encode("utf-8"), buf_view)  # char
         # + 2 filler  = 0
         buf_view = convert.put_int(self.hdr_type_, buf_view)  # int
         buf_view = convert.put_int(self.signature_, buf_view)  # int
         buf_view = convert.put_int(self.version_, buf_view)  # int
-        buf_view = convert.put_char(self.platform_, buf_view)  # char
-        buf_view = convert.put_char(self.transport_, buf_view)  # char
-        buf_view = convert.put_char(self.swap_, buf_view)  # char
+        buf_view = convert.put_char(self.platform_.encode("utf-8"), buf_view)  # char
+        buf_view = convert.put_char(self.transport_.encode("utf-8"), buf_view)  # char
+        buf_view = convert.put_char(self.swap_.encode("utf-8"), buf_view)  # char
         # + 1 filler
         buf_view = convert.put_short(self.error_, buf_view) # short
         buf_view = convert.put_short(self.error_detail_, buf_view)  # short

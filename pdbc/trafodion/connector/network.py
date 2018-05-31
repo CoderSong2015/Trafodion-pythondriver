@@ -113,7 +113,8 @@ class TrafTCPSocket(BaseTrafSocket):
         try:
             addrinfos = socket.getaddrinfo(self.master_host,
                                            self.master_port,
-                                           0,socket.SOCK_STREAM,
+                                           0,
+                                           socket.SOCK_STREAM,
                                            socket.SOL_TCP)
             # If multiple results we favor IPv4, unless IPv6 was forced.
             for info in addrinfos:

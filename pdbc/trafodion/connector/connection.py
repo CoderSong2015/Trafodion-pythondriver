@@ -44,6 +44,7 @@ class TrafConnection(TrafConnectionAbstract):
         self._isReadOnly = False
         self._autoCommit = True
         self._ignoreCancel = False
+        self._connection_timeout = 60
         super(TrafConnection, self).__init__(**kwargs)
 
 
@@ -89,7 +90,7 @@ class TrafConnection(TrafConnectionAbstract):
         userDesc = self._get_user_desc()
         self._master_host = self.property.master_host
         self._master_port = self.property.master_port
-        retryCount = 3
+        retryCount = 5
         srvrType = 2 #AS
         done = False
         try_num = 0
@@ -100,7 +101,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         while (done == False and try_num < retryCount and endTime > currentTime):
             rc = self._connect_master(inContext,userDesc, srvrType, retryCount)
-
+            try_num = try_num + 1
             # in the while end
             currentTime = time.time()
 
@@ -112,6 +113,7 @@ class TrafConnection(TrafConnectionAbstract):
                                 0x10000000
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
+        print(master_conn)
         ret = self._get_from_server(TRANSPORT.AS_API_GETOBJREF, wbuffer, master_conn)
         if not master_conn:
             #error handle
@@ -128,8 +130,8 @@ class TrafConnection(TrafConnectionAbstract):
                          0, #m_dialogueId,
                          totallength - Header.sizeOf(), # minus the size of the Header
                          0,#cmpLength,
-                         0,#compress,
-                         0,#compType,
+                         'N',#compress,
+                         '0',#compType this should be modify,
                          Header.WRITE_REQUEST_FIRST,
                          Header.SIGNATURE,
                          Header.CLIENT_HEADER_VERSION_BE,
@@ -151,8 +153,7 @@ class TrafConnection(TrafConnectionAbstract):
         wlength = Header.sizeOf()
         buf = b''
 
-        vprocBytes = vproc.encode("utf-8")
-        clientUserBytes = (getpass.getuser()).encode("utf-8")
+        clientUser = getpass.getuser()
 
         wlength += inContext.sizeOf()
         wlength += userDesc.sizeOf()
@@ -161,8 +162,8 @@ class TrafConnection(TrafConnectionAbstract):
         wlength += TRANSPORT.size_short # retryCount
         wlength += TRANSPORT.size_int # optionFlags1
         wlength += TRANSPORT.size_int # optionFlags2
-        wlength += len(vprocBytes)
-
+        wlength += TRANSPORT.size_bytes(vproc.encode("utf-8"))
+        wlength += TRANSPORT.size_bytes(clientUser.encode("utf-8"))
         buf = bytearray(b'')
 
         buf.extend(bytearray(wlength))
@@ -179,10 +180,10 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = convert.put_short(retryCount, buf_view)
         buf_view = convert.put_int(optionFlags1, buf_view)
         buf_view = convert.put_int(optionFlags2, buf_view)
-        buf_view = convert.put_string(vprocBytes, buf_view)
+        buf_view = convert.put_string(vproc, buf_view)
 
         # TODO: restructure all the flags and this new param
-        buf_view = convert.put_string(clientUserBytes, buf_view)
+        buf_view = convert.put_string(clientUser, buf_view)
 
         return buf
 
@@ -228,8 +229,8 @@ class TrafConnection(TrafConnectionAbstract):
             TRANSPORT.UNAUTHENTICATED_USER_TYPE if self._sessionToken == None else TRANSPORT.PASSWORD_ENCRYPTED_USER_TYPE
         userDesc.domainName = ""
 
-        userDesc.userSid = None
-        userDesc.password = None # we no longer want to send the password to the MXOAS
+        userDesc.userSid = ''
+        userDesc.password = '' # we no longer want to send the password to the MXOAS
 
         return userDesc
 
@@ -266,7 +267,8 @@ class TrafConnection(TrafConnectionAbstract):
     def _tcp_io_write(self, header, buffer, conn):
         if header.hdr_type_ == Header.WRITE_REQUEST_FIRST:
             buf_view = memoryview(buffer)
-            header.insertIntoByteArray(buffer, buf_view)
+            header.insertIntoByteArray(buf_view)
+            conn.send(buffer)
         elif header.hdr_type_ == Header.WRITE_REQUEST_NEXT:
             conn.send(buffer)
 

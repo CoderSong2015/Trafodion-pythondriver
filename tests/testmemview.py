@@ -24,3 +24,4 @@ if __name__ == '__main__':
     print(pack)
     pack[0] = 3
     print(buf)
+    print(len(''))

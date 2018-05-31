@@ -298,8 +298,6 @@ class convert:
     def put_char(self, char, buf_view):
 
         #TODO need exception
-        if len(char) is not 1:
-            return None
         data = self.char_to_bytechar(char)
         self.put_data_memview(buf_view, data)
         return buf_view[4:]
