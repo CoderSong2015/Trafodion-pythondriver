@@ -245,21 +245,21 @@ class Header:
         return 40
 
     def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_short(self.operation_id_, buf_view)  # short
-        # + 2 filler
-        buf_view = convert.put_int(self.dialogueId_, buf_view)  # int
-        buf_view = convert.put_int(self.total_length_, buf_view)  # int
-        buf_view = convert.put_int(self.cmp_length_, buf_view)  # int
-        buf_view = convert.put_char(self.compress_ind_.encode("utf-8"), buf_view)  # char
-        buf_view = convert.put_char(self.compress_type_.encode("utf-8"), buf_view)  # char
-        # + 2 filler  = 0
-        buf_view = convert.put_int(self.hdr_type_, buf_view)  # int
-        buf_view = convert.put_int(self.signature_, buf_view)  # int
+        buf_view = convert.put_short(self.operation_id_, buf_view)  # short                  0,1
+        buf_view = convert.put_short(0, buf_view)# + 2 filler                                2,3
+        buf_view = convert.put_int(self.dialogueId_, buf_view)  # int                        4-7
+        buf_view = convert.put_int(self.total_length_, buf_view)  # int                      8-11
+        buf_view = convert.put_int(self.cmp_length_, buf_view)  # int                        12-15
+        buf_view = convert.put_char(self.compress_ind_.encode("utf-8"), buf_view)  # char    16
+        buf_view = convert.put_char(self.compress_type_.encode("utf-8"), buf_view)  # char   17
+        buf_view = convert.put_short(0, buf_view)  # + 2 filler                              18,19
+        buf_view = convert.put_int(self.hdr_type_, buf_view)  # int                          20-23
+        buf_view = convert.put_int(self.signature_, buf_view)  # int                         24-27
         buf_view = convert.put_int(self.version_, buf_view)  # int
         buf_view = convert.put_char(self.platform_.encode("utf-8"), buf_view)  # char
         buf_view = convert.put_char(self.transport_.encode("utf-8"), buf_view)  # char
         buf_view = convert.put_char(self.swap_.encode("utf-8"), buf_view)  # char
-        # + 1 filler
+        buf_view = convert.put_char('0'.encode("utf-8"), buf_view)  # + 1 filler
         buf_view = convert.put_short(self.error_, buf_view) # short
         buf_view = convert.put_short(self.error_detail_, buf_view)  # short
         return buf_view
