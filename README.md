@@ -12,10 +12,12 @@
 
 
 ## About driver
-
+    
+    Implements the Python Database API Specification v2.0 (PEP-249)
 ## Requirement
-
+    // TODO
 ## Build
+    // TODO
 
 ## Contract me
    email: haolin.song@esgyn.cn
