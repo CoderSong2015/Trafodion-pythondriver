@@ -59,7 +59,7 @@ class BaseTrafSocket(object):
                 packet_len = len(packet)
 
             # Get the data length from packet
-            print("this is recieve!" + packet)
+
             datalen = self._get_data_len(packet)
             rest = datalen
             packet.extend(bytearray(datalen))
@@ -84,7 +84,7 @@ class BaseTrafSocket(object):
             pass
 
     def _get_data_len(self, packet):
-        return 0
+        return len(packet)
 
     def _uncompress(self, packet):
         pass

@@ -270,9 +270,10 @@ class convert:
         :param buf_view: Python memoryview
         :return: buf_view in current position
         """
-        tmp_len = len(str)
-        buf_view = self.put_int(tmp_len, buf_view)
+        tmp_len = len(str) + 1 #server need to handle the '\0'
+        buf_view = self.put_int(tmp_len, buf_view)  #
         if (tmp_len is not 0):
+
             self.put_data_memview(buf_view, str.encode("utf-8"))  # string
             buf_view = buf_view[tmp_len:]
         return buf_view

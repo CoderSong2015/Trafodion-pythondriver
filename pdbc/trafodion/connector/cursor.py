@@ -1,5 +1,5 @@
 from .abstracts import TrafCursorAbstract
-
+import weakref
 
 class CursorBase(TrafCursorAbstract):
     """
@@ -105,4 +105,34 @@ class CursorBase(TrafCursorAbstract):
         """Returns the value generated for an AUTO_INCREMENT column
         """
         return self._last_insert_id
+
+class TrafCursor(CursorBase):
+    def __init__(self, connection=None):
+        CursorBase.__init__(self)
+        self._connection = None
+        self._stored_results = []
+        self._nextrow = (None, None)
+        self._warnings = None
+        self._warning_count = 0
+        self._executed = None
+        self._executed_list = []
+        self._binary = False
+
+        if connection is not None:
+            self._set_connection(connection)
+
+    def __iter__(self):
+        """
+        Iteration over the result set which calls self.fetchone()
+        and returns the next row.
+        """
+        return iter(self.fetchone, None)
+
+    def _set_connection(self, connection):
+        """Set the connection"""
+        try:
+            self._connection = weakref.proxy(connection)
+            self._connection.is_connected()
+        except (AttributeError, TypeError):
+            pass
 

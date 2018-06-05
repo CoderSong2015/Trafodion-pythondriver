@@ -69,11 +69,11 @@ class CONNECTION_CONTEXT_def:
         size += TRANSPORT.size_short  # txnIsolationLevel
         size += TRANSPORT.size_short  # rowSetSize
 
-        size += TRANSPORT.size_short  # diagnosticFlag
+        size += TRANSPORT.size_int  # diagnosticFlag
         size += TRANSPORT.size_int  # processId
 
-        size += len(self.computerNameBytes)
-        size += len(self.windowTextBytes)
+        size += TRANSPORT.size_bytes(self.computerNameBytes)
+        size += TRANSPORT.size_bytes(self.windowTextBytes)
 
         size += TRANSPORT.size_int  # ctxACP
         size += TRANSPORT.size_int  # ctxDataLang
@@ -89,18 +89,18 @@ class CONNECTION_CONTEXT_def:
         return size
 
     def insertIntoByteArray(self, buf_view):
-
+        buf_view = convert.put_string(self.datasource, buf_view)
         buf_view = convert.put_string(self.catalog, buf_view) # string
         buf_view = convert.put_string(self.schema, buf_view)  # string
         buf_view = convert.put_string(self.location, buf_view)# string
         buf_view = convert.put_string(self.userRole, buf_view) # string
-        buf_view = convert.put_string(self.tenantName, buf_view)# string
+        #buf_view = convert.put_string(self.tenantName, buf_view)# string
 
         buf_view = convert.put_short(self.accessMode, buf_view) # short
         buf_view = convert.put_short(self.autoCommit, buf_view) # short
-        buf_view = convert.put_short(self.queryTimeoutSec, buf_view) # short
-        buf_view = convert.put_short(self.idleTimeoutSec, buf_view) # short
-        buf_view = convert.put_short(self.loginTimeoutSec, buf_view) # short
+        buf_view = convert.put_int(self.queryTimeoutSec, buf_view) # int
+        buf_view = convert.put_int(self.idleTimeoutSec, buf_view) # int
+        buf_view = convert.put_int(self.loginTimeoutSec, buf_view) # int
         buf_view = convert.put_short(self.txnIsolationLevel, buf_view) # short
         buf_view = convert.put_short(self.rowSetSize, buf_view) # short
 

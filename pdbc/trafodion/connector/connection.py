@@ -99,11 +99,11 @@ class TrafConnection(TrafConnectionAbstract):
         currentTime = time.time()
         endTime =  currentTime + inContext.loginTimeoutSec * 1000 if (inContext.loginTimeoutSec > 0) else sys.maxsize
 
-        while (done == False and try_num < retryCount and endTime > currentTime):
-            rc = self._connect_master(inContext,userDesc, srvrType, retryCount)
-            try_num = try_num + 1
+        #while (done == False and try_num < retryCount and endTime > currentTime):
+        rc = self._connect_master(inContext,userDesc, srvrType, retryCount)
+        try_num = try_num + 1
             # in the while end
-            currentTime = time.time()
+        currentTime = time.time()
 
     def _connect_master(self, inContext, userDesc, srvrType, retryCount):
         wbuffer = self._marshal(inContext,
