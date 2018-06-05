@@ -302,3 +302,24 @@ class convert:
         data = self.char_to_bytechar(char)
         self.put_data_memview(buf_view, data)
         return buf_view[1:]
+
+    @classmethod
+    def get_short(self, buf_view):
+        return (struct.unpack('!h', buf_view[0:2])[0], buf_view[2:])
+
+    @classmethod
+    def get_int(self, buf_view):
+        return (struct.unpack('!i', buf_view[0:4])[0], buf_view[4:])
+
+    @classmethod
+    def get_string(self, buf_view):
+        len, buf_view = self.get_int(buf_view)
+
+        toBytes = buf_view[0:len].tobytes()
+        return (toBytes.decode("utf-8"), buf_view[len:])
+
+    @classmethod
+    def get_char(self, buf_view):
+        return (struct.unpack('!c', buf_view[0:1])[0], buf_view[1:])
+
+

@@ -32,3 +32,5 @@ if __name__ == '__main__':
     buf_view = buf_view[5:]
     buf_view[5] = 23
     print(buf)
+
+    bv = memoryview(bb)

@@ -207,18 +207,18 @@ class Header:
     error_detail_ = 0 #short
 
 
-    def __init__(self,  operation_id,
-                        dialogueId,
-                        total_length,
-                        cmp_length,
-                        compress_ind,
-                        compress_type,
-                        hdr_type,
-                        signature,
-                        version,
-                        platform,
-                        transport,
-                        swap):
+    def __init__(self,  operation_id = None,
+                        dialogueId = None,
+                        total_length = None,
+                        cmp_length = None,
+                        compress_ind = None,
+                        compress_type = None,
+                        hdr_type = None,
+                        signature = None,
+                        version = None,
+                        platform = None,
+                        transport = None,
+                        swap = None):
         self.operation_id_ = operation_id
         self.dialogueId_ = dialogueId
         self.total_length_ = total_length
@@ -231,7 +231,9 @@ class Header:
         self.platform_ = platform
         self.transport_ = transport
         self.swap_ = swap
-
+    @property
+    def total_length(self):
+        return self.total_length_
 
     def reuseHeader(self,
                     operation_id,
@@ -265,8 +267,28 @@ class Header:
         return buf_view
 
 
-    def extractFromByteArray(self, LogicalByteArray):
-        pass
+    def extractFromByteArray(self, buf):
+        buf_view = memoryview(buf)
+        self.operation_id_, buf_view= convert.get_short(buf_view)
+        null, buf_view = convert.get_short(buf_view) # +2 fillter
+
+        self.dialogueId_, buf_view= convert.get_int(buf_view)
+        self.total_length_, buf_view = convert.get_int(buf_view)
+        self.cmp_length_, buf_view = convert.get_int(buf_view)
+        self.compress_ind_, buf_view = convert.get_char(buf_view)
+        self.compress_type_, buf_view = convert.get_char(buf_view)
+
+        null, buf_view = convert.get_short(buf_view)  # +2 fillter
+
+        self.hdr_type_, buf_view = convert.get_int(buf_view)
+        self.signature_, buf_view = convert.get_int(buf_view)
+        self.version_, buf_view = convert.get_int(buf_view)
+        self.platform_, buf_view = convert.get_char(buf_view)
+        self.transport_, buf_view = convert.get_char(buf_view)
+        self.swap_, buf_view = convert.get_char(buf_view)
+        null, buf_view = convert.get_char(buf_view)  # +1 fillter
+        self.error_, buf_view = convert.get_short(buf_view)
+        self.error_detail_, buf_view = convert.get_short(buf_view)
 
 class USER_DESC_def:
     userDescType = 0

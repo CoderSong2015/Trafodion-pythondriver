@@ -60,7 +60,9 @@ class BaseTrafSocket(object):
 
             # Get the data length from packet
 
-            datalen = self._get_data_len(packet)
+            hdr = Header()
+            hdr.extractFromByteArray(packet)
+            datalen = hdr.total_length
             rest = datalen
             packet.extend(bytearray(datalen))
 
