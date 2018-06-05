@@ -152,6 +152,9 @@ class VERSION_LIST_def:
     def sizeOf(self):
         return VERSION_def.sizeOf() * self.list.__len__() + TRANSPORT.size_int
 
+    def extractFromByteArray(self, buf_view):
+        pass
+
 
 class Header:
     #

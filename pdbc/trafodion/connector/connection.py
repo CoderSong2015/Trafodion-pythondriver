@@ -138,9 +138,29 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.PC,
                          Header.TCPIP,
                          Header.NO)
-        data = self._tcp_io_write(wheader, wbuffer, conn)
-        self._tcp_io_read(wheader, wbuffer, conn)
+        self._tcp_io_write(wheader, wbuffer, conn)
+        data = self._tcp_io_read(wheader, wbuffer, conn)
+        self._handle_master_data(data)
         return None
+
+    def _handle_master_data(self,data):
+        buf_view = memoryview(data)
+        buf_1_exception = None
+        dialogue_id, buf_view = convert.get_int(buf_view)
+        data_source, buf_view = convert.get_string(buf_view)
+        user_sid, buf_view = convert.get_string(buf_view)
+        version_list = VERSION_LIST_def()
+        version_list.extractFromByteArray(buf_view)
+        null, buf_view = convert.get_int(buf_view) #old iso mapping
+        isoMapping = 15
+        server_host_name, buf_view = convert.get_string(buf_view)
+        server_node_id, buf_view = convert.get_int(buf_view)
+        server_process_id, buf_view = convert.get_int(buf_view)
+        server_process_name, buf_view = convert.get_string(buf_view)
+        
+
+
+        pass
 
     def _marshal(self,
                  inContext,
@@ -262,10 +282,8 @@ class TrafConnection(TrafConnectionAbstract):
         return version
 
     def _tcp_io_read(self, header, buffer, conn):
-        num_read = 0
-        retry = False
         data = conn.recv()
-        print(data)
+        return data
 
     def _tcp_io_write(self, header, buffer, conn):
         if header.hdr_type_ == Header.WRITE_REQUEST_FIRST:
