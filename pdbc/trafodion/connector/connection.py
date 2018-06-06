@@ -149,17 +149,17 @@ class TrafConnection(TrafConnectionAbstract):
             buf_exception = GetPbjRefHdlExc()
             buf_view = buf_exception.extractFromByteArray(buf_view)
             dialogue_id, buf_view = convert.get_int(buf_view, little=True)
-            data_source, buf_view = convert.get_string(buf_view)
-            user_sid, buf_view = convert.get_string(buf_view)
+            data_source, buf_view = convert.get_string(buf_view, little=True)
+            user_sid, buf_view = convert.get_string(buf_view, little=True, byteoffset=True)
             version_list = VERSION_LIST_def()
             buf_view = version_list.extractFromByteArray(buf_view)
             null, buf_view = convert.get_int(buf_view, little=True) #old iso mapping
             isoMapping = 15
-            server_host_name, buf_view = convert.get_string(buf_view)
+            server_host_name, buf_view = convert.get_string(buf_view, little=True)
             server_node_id, buf_view = convert.get_int(buf_view, little=True)
             server_process_id, buf_view = convert.get_int(buf_view, little=True)
-            server_process_name, buf_view = convert.get_string(buf_view)
-            server_ip_address, buf_view = convert.get_string(buf_view)
+            server_process_name, buf_view = convert.get_string(buf_view, little=True)
+            server_ip_address, buf_view = convert.get_string(buf_view, little=True)
             server_port, buf_view = convert.get_int(buf_view, little=True)
         except:
             print("what?")

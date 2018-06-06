@@ -318,11 +318,17 @@ class convert:
             return (struct.unpack('<i', buf_view[0:4])[0], buf_view[4:])
 
     @classmethod
-    def get_string(self, buf_view: memoryview):
-        len, buf_view = self.get_int(buf_view)
+    def get_string(self, buf_view: memoryview, little=False, byteoffset=False):
+        len, buf_view = self.get_int(buf_view, little)
 
-        toBytes = buf_view[0:len].tobytes()
-        return (toBytes.decode("utf-8"), buf_view[len:])
+        #In server there are two function:put_string and put_bytestring,
+        # they are different in calculating length of string
+        offset = 1 if not byteoffset else 0
+        if len is not 0:
+            toBytes = buf_view[0:len - offset].tobytes()
+            return (toBytes.decode("utf-8"), buf_view[len + (1 - offset):])
+        else:
+            return ('', buf_view)
 
     @classmethod
     def get_char(self, buf_view: memoryview):
