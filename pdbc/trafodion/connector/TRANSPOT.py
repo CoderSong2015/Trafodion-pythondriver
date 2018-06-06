@@ -264,7 +264,7 @@ class convert:
                 mem[index] = byte
 
     @classmethod
-    def put_string(self, str, buf_view):
+    def put_string(self, str, buf_view: memoryview):
         """
         :param str: 
         :param buf_view: Python memoryview
@@ -279,7 +279,7 @@ class convert:
         return buf_view
 
     @classmethod
-    def put_short(self, num, buf_view):
+    def put_short(self, num, buf_view: memoryview):
         """
         :param num: short 
         :param buf_view: Python memoryview
@@ -290,13 +290,13 @@ class convert:
         return buf_view[2:]
 
     @classmethod
-    def put_int(self, num, buf_view):
+    def put_int(self, num, buf_view: memoryview):
         data = self.int_to_byteint(num)
         self.put_data_memview(buf_view, data)
         return buf_view[4:]
 
     @classmethod
-    def put_char(self, char, buf_view):
+    def put_char(self, char, buf_view: memoryview):
 
         #TODO need exception
         data = self.char_to_bytechar(char)
@@ -304,22 +304,34 @@ class convert:
         return buf_view[1:]
 
     @classmethod
-    def get_short(self, buf_view):
-        return (struct.unpack('!h', buf_view[0:2])[0], buf_view[2:])
+    def get_short(self, buf_view: memoryview, little=False):
+        if not little:
+            return (struct.unpack('!h', buf_view[0:2])[0], buf_view[2:])
+        else:
+            return (struct.unpack('<h', buf_view[0:2])[0], buf_view[2:])
 
     @classmethod
-    def get_int(self, buf_view):
-        return (struct.unpack('!i', buf_view[0:4])[0], buf_view[4:])
+    def get_int(self, buf_view: memoryview, little=False):
+        if not little:
+            return (struct.unpack('!i', buf_view[0:4])[0], buf_view[4:])
+        else:
+            return (struct.unpack('<i', buf_view[0:4])[0], buf_view[4:])
 
     @classmethod
-    def get_string(self, buf_view):
+    def get_string(self, buf_view: memoryview):
         len, buf_view = self.get_int(buf_view)
 
         toBytes = buf_view[0:len].tobytes()
         return (toBytes.decode("utf-8"), buf_view[len:])
 
     @classmethod
-    def get_char(self, buf_view):
+    def get_char(self, buf_view: memoryview):
         return (struct.unpack('!c', buf_view[0:1])[0], buf_view[1:])
+
+    @classmethod
+    def get_timestamp(self, buf_view: memoryview):
+        time = buf_view[0:8].tobytes()
+        return (time.decode("utf-8"), buf_view[8:])
+
 
 

@@ -140,6 +140,13 @@ class VERSION_def:
         buf_view = convert.put_int(self.buildId, buf_view)
         return buf_view
 
+    def extractFromByteArray(self, buf_view):
+        self.componentId, buf_view = convert.get_short(buf_view, little=True)
+        self.majorVersion, buf_view = convert.get_short(buf_view, little=True)
+        self.minorVersion, buf_view = convert.get_short(buf_view, little=True)
+        self.buildId, buf_view = convert.get_int(buf_view, little=True)
+        return buf_view
+
 class VERSION_LIST_def:
     list = []
 
@@ -153,8 +160,15 @@ class VERSION_LIST_def:
         return VERSION_def.sizeOf() * self.list.__len__() + TRANSPORT.size_int
 
     def extractFromByteArray(self, buf_view):
-        pass
 
+        len, buf_view = convert.get_int(buf_view, little=True)
+
+        for i in range(len):
+            version_def = VERSION_def()
+            buf_view = version_def.extractFromByteArray(buf_view)
+            self.list.append(version_def)
+
+        return buf_view
 
 class Header:
     #
@@ -208,7 +222,6 @@ class Header:
     # + 1 filler
     error_     = 0 #short
     error_detail_ = 0 #short
-
 
     def __init__(self,  operation_id = None,
                         dialogueId = None,
@@ -448,4 +461,19 @@ class TrafProperty:
     @DelayedErrorMode.setter
     def DelayedErrorMode(self, bool):
         self._DelayedErrorMode = bool
+
+class GetPbjRefHdlExc:
+
+    exception_nr = 0
+    exception_detail = 0
+    error_text = ''
+    def extractFromByteArray(self,buf_view):
+        self.exception_nr, buf_view = convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = convert.get_int(buf_view, little=True)
+        self.error_text, buf_view = convert.get_string(buf_view)
+
+        #TODO need to handle exception_nr
+
+        return buf_view
+
 

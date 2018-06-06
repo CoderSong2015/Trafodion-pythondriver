@@ -20,8 +20,11 @@ if __name__ == '__main__':
     print(str[0:4])
     print(str[4:8])
 
-    ss = b'nihaocc'
+    ss = b'\x03\x00\x00\x00'
 
     bv = memoryview(ss)
     vv = bv[0:5].tobytes()
     print(vv.decode("utf-8"))
+
+
+    print(struct.unpack('<i', bv[0:4])[0])

@@ -2,7 +2,7 @@ from .abstracts import TrafConnectionAbstract
 import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
-from .struct_def import USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, VERSION_LIST_def, Header
+from .struct_def import USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, VERSION_LIST_def, Header, GetPbjRefHdlExc
 from .TRANSPOT import TRANSPORT,convert
 import time
 import getpass
@@ -139,26 +139,34 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.TCPIP,
                          Header.NO)
         self._tcp_io_write(wheader, wbuffer, conn)
-        data = self._tcp_io_read(wheader, wbuffer, conn)
+        data = self._tcp_io_read(conn)
         self._handle_master_data(data)
         return None
 
     def _handle_master_data(self,data):
-        buf_view = memoryview(data)
-        buf_1_exception = None
-        dialogue_id, buf_view = convert.get_int(buf_view)
-        data_source, buf_view = convert.get_string(buf_view)
-        user_sid, buf_view = convert.get_string(buf_view)
-        version_list = VERSION_LIST_def()
-        version_list.extractFromByteArray(buf_view)
-        null, buf_view = convert.get_int(buf_view) #old iso mapping
-        isoMapping = 15
-        server_host_name, buf_view = convert.get_string(buf_view)
-        server_node_id, buf_view = convert.get_int(buf_view)
-        server_process_id, buf_view = convert.get_int(buf_view)
-        server_process_name, buf_view = convert.get_string(buf_view)
-        
+        try:
+            buf_view = memoryview(data)
+            buf_exception = GetPbjRefHdlExc()
+            buf_view = buf_exception.extractFromByteArray(buf_view)
+            dialogue_id, buf_view = convert.get_int(buf_view, little=True)
+            data_source, buf_view = convert.get_string(buf_view)
+            user_sid, buf_view = convert.get_string(buf_view)
+            version_list = VERSION_LIST_def()
+            buf_view = version_list.extractFromByteArray(buf_view)
+            null, buf_view = convert.get_int(buf_view, little=True) #old iso mapping
+            isoMapping = 15
+            server_host_name, buf_view = convert.get_string(buf_view)
+            server_node_id, buf_view = convert.get_int(buf_view, little=True)
+            server_process_id, buf_view = convert.get_int(buf_view, little=True)
+            server_process_name, buf_view = convert.get_string(buf_view)
+            server_ip_address, buf_view = convert.get_string(buf_view)
+            server_port, buf_view = convert.get_int(buf_view, little=True)
+        except:
+            print("what?")
 
+        #if version_list.list[0].buildId:
+        #timestamp, buf_view = convert.get_timestamp(buf_view)
+        #cluster_name, buf_view = convert.get_string(buf_view)
 
         pass
 
@@ -281,7 +289,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         return version
 
-    def _tcp_io_read(self, header, buffer, conn):
+    def _tcp_io_read(self, conn):
         data = conn.recv()
         return data
 
