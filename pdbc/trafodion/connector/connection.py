@@ -13,28 +13,6 @@ class TrafConnection(TrafConnectionAbstract):
         Connection to a mxosrvr
     """
 
-    #from odbc_common.h and sql.h
-    SQL_TXN_READ_UNCOMMITTED = 1
-    SQL_TXN_READ_COMMITTED = 2
-    SQL_TXN_REPEATABLE_READ = 4
-    SQL_TXN_SERIALIZABLE = 8
-    SQL_ATTR_CURRENT_CATALOG = 109
-    SQL_ATTR_ACCESS_MODE = 101
-    SQL_ATTR_AUTOCOMMIT = 102
-    SQL_TXN_ISOLATION = 108
-
-    # spj proxy syntax support 
-    SPJ_ENABLE_PROXY = 1040
-    PASSWORD_SECURITY = 0x4000000 # (2 ^ 26)
-    ROWWISE_ROWSET = 0x8000000 # (2 ^ 27)
-
-    CHARSET = 0x10000000 # (2 ^ 28)
-
-    STREAMING_DELAYEDERROR_MODE = 0x20000000 # 2 ^ 29
-    # Zbig
-    JDBC_ATTR_CONN_IDLE_TIMEOUT = 3000
-    RESET_IDLE_TIMER = 1070
-
     def __init__(self, *args, **kwargs):
         self._master_host = '127.0.0.1'
         self._master_port = 23400
@@ -45,40 +23,21 @@ class TrafConnection(TrafConnectionAbstract):
         self._autoCommit = True
         self._ignoreCancel = False
         self._connection_timeout = 60
-        super(TrafConnection, self).__init__(**kwargs)
+        self._dialogue_id = 0
 
+        super(TrafConnection, self).__init__(**kwargs)
 
         print("kwargs!?")
         if kwargs:
             print("kwargs!")
             self.connect(**kwargs)
-        self._open_connection()
 
-    def _get_connection(self, host = '127.0.0.1', port = 0):
-
-        """
-        :param host: 
-        :param port: 
-        :return: 
-        """
-        conn = None
-        if self.unix_socket and os.name != 'nt':
-            conn = TrafTCPSocket(self.unix_socket)
-        else:
-            conn = TrafTCPSocket(host=host,
-                                 port=port,
-                                 force_ipv6=self._force_ipv6)
-
-        conn.set_connection_timeout(self._connection_timeout)
-        conn.open_connection()
-        return conn
-
-    def _open_connection(self):
+    def _connect_to_mxosrvr(self):
         """
         :return: 
         """
 
-        #get conncetion from dcs master
+        # get information from dcs master
         mxosrvr_info = self._get_Objref()
 
         #TODO self._get_connection() get connection from mxosrvr
@@ -86,30 +45,17 @@ class TrafConnection(TrafConnectionAbstract):
         #TODO
 
     def _get_Objref(self):
-        inContext = self._get_context()
-        userDesc = self._get_user_desc()
+        self._in_context = self._get_context()
+        self._user_desc = self._get_user_desc()
         self._master_host = self.property.master_host
         self._master_port = self.property.master_port
-        retryCount = 5
-        srvrType = 2 #AS
-        done = False
-        try_num = 0
+        retry_count = self.property.retry_count
+        srvr_type = self.property.srvr_type
 
-        #seconds
-        currentTime = time.time()
-        endTime =  currentTime + inContext.loginTimeoutSec * 1000 if (inContext.loginTimeoutSec > 0) else sys.maxsize
-
-        #while (done == False and try_num < retryCount and endTime > currentTime):
-        rc = self._connect_master(inContext,userDesc, srvrType, retryCount)
-        try_num = try_num + 1
-            # in the while end
-        currentTime = time.time()
-
-    def _connect_master(self, inContext, userDesc, srvrType, retryCount):
-        wbuffer = self._marshal(inContext,
-                                userDesc,
-                                srvrType,
-                                retryCount,
+        wbuffer = self._marshal(self._in_context,
+                                self._user_desc,
+                                srvr_type,
+                                retry_count,
                                 0x10000000
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
@@ -127,11 +73,11 @@ class TrafConnection(TrafConnectionAbstract):
 
         totallength = len(wbuffer)
         wheader = Header(operation_id,
-                         0, #m_dialogueId,
-                         totallength - Header.sizeOf(), # minus the size of the Header
-                         0,#cmpLength,
-                         'N',#compress,
-                         '0',#compType this should be modify,
+                         self._dialogue_id,                              # dialogueId,
+                         totallength - Header.sizeOf(),  # minus the size of the Header
+                         0,                              # cmpLength,
+                         'N',                            # compress,
+                         '0',                            # compType this should be modify,
                          Header.WRITE_REQUEST_FIRST,
                          Header.SIGNATURE,
                          Header.CLIENT_HEADER_VERSION_BE,
@@ -140,14 +86,17 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.NO)
         self._tcp_io_write(wheader, wbuffer, conn)
         data = self._tcp_io_read(conn)
-        self._handle_master_data(data)
+        connect_reply = self._handle_master_data(data)
+        # TODO handle connect_reply
         return None
 
-    def _handle_master_data(self,data):
+    def _handle_master_data(self, data):
         try:
             buf_view = memoryview(data)
             buf_exception = GetPbjRefHdlExc()
             buf_view = buf_exception.extractFromByteArray(buf_view)
+
+            #TODO handle error
             dialogue_id, buf_view = convert.get_int(buf_view, little=True)
             data_source, buf_view = convert.get_string(buf_view, little=True)
             user_sid, buf_view = convert.get_string(buf_view, little=True, byteoffset=True)
@@ -161,39 +110,38 @@ class TrafConnection(TrafConnectionAbstract):
             server_process_name, buf_view = convert.get_string(buf_view, little=True)
             server_ip_address, buf_view = convert.get_string(buf_view, little=True)
             server_port, buf_view = convert.get_int(buf_view, little=True)
+
+            if (version_list.list[0].buildId and self.PASSWORD_SECURITY > 0):
+                security_enabled = True
+                timestamp, buf_view = convert.get_timestamp(buf_view)
+                cluster_name, buf_view = convert.get_string(buf_view)
+            else:
+                security_enabled = False
         except:
             print("what?")
 
-        #if version_list.list[0].buildId:
-        #timestamp, buf_view = convert.get_timestamp(buf_view)
-        #cluster_name, buf_view = convert.get_string(buf_view)
-
-        pass
-
     def _marshal(self,
-                 inContext,
-                 userDesc,
-                 srvrType,
-                 retryCount,
-                 optionFlags1,
-                 optionFlags2 = 0,
-                 vproc = "Traf_pybc_${buildId}",
+                 in_context,
+                 user_desc,
+                 srvr_type,
+                 retry_count,
+                 option_flags_1,
+                 option_flags_2=0,
+                 vproc="Traf_pybc_${buildId}",
                  ):
         wlength = Header.sizeOf()
         buf = b''
 
         clientUser = getpass.getuser()
 
-        wlength += inContext.sizeOf()
-        print(wlength)
-        wlength += userDesc.sizeOf()
-        print(wlength)
-        wlength += TRANSPORT.size_int # srvrType
-        wlength += TRANSPORT.size_short # retryCount
-        wlength += TRANSPORT.size_int # optionFlags1
-        wlength += TRANSPORT.size_int # optionFlags2
-        wlength += TRANSPORT.size_bytes(vproc.encode("utf-8"))
-        wlength += TRANSPORT.size_bytes(clientUser.encode("utf-8"))
+        wlength += (in_context.sizeOf()
+                    + user_desc.sizeOf()
+                    + TRANSPORT.size_int    # srvr_type
+                    + TRANSPORT.size_short  # retry_count
+                    + TRANSPORT.size_int    # option_flags_1
+                    + TRANSPORT.size_int    # option_flags_2
+                    + TRANSPORT.size_bytes(vproc.encode("utf-8"))
+                    + TRANSPORT.size_bytes(clientUser.encode("utf-8")))
         buf = bytearray(b'')
 
         buf.extend(bytearray(wlength))
@@ -204,13 +152,13 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = memoryview(buf)
         buf_view = buf_view[Header.sizeOf():]
         # construct bytebuffer
-        buf_view = inContext.insertIntoByteArray(buf_view)
-        buf_view = userDesc.insertIntoByteArray(buf_view)
+        buf_view = in_context.insertIntoByteArray(buf_view)
+        buf_view = user_desc.insertIntoByteArray(buf_view)
 
-        buf_view = convert.put_int(srvrType, buf_view)
-        buf_view = convert.put_short(retryCount, buf_view)
-        buf_view = convert.put_int(optionFlags1, buf_view)
-        buf_view = convert.put_int(optionFlags2, buf_view)
+        buf_view = convert.put_int(srvr_type, buf_view)
+        buf_view = convert.put_short(retry_count, buf_view)
+        buf_view = convert.put_int(option_flags_1, buf_view)
+        buf_view = convert.put_int(option_flags_2, buf_view)
         buf_view = convert.put_string(vproc, buf_view)
 
         # TODO: restructure all the flags and this new param
@@ -254,16 +202,16 @@ class TrafConnection(TrafConnectionAbstract):
         return inContext
 
     def _get_user_desc(self):
-        userDesc = USER_DESC_def()
-        userDesc.userName = self._username
-        userDesc.userDescType = \
-            TRANSPORT.UNAUTHENTICATED_USER_TYPE if self._sessionToken == None else TRANSPORT.PASSWORD_ENCRYPTED_USER_TYPE
-        userDesc.domainName = ""
+        user_desc = USER_DESC_def()
+        user_desc.userName = self._username
+        user_desc.userDescType = \
+            TRANSPORT.UNAUTHENTICATED_USER_TYPE if self._sessionToken == '' else TRANSPORT.PASSWORD_ENCRYPTED_USER_TYPE
+        user_desc.domainName = ""
 
-        userDesc.userSid = ''
-        userDesc.password = '' # we no longer want to send the password to the MXOAS
+        user_desc.userSid = ''
+        user_desc.password = '' # we no longer want to send the password to the MXOAS
 
-        return userDesc
+        return user_desc
 
     def get_version(self,process_id):
         majorVersion = 3

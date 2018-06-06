@@ -35,31 +35,31 @@ class CONNECTION_CONTEXT_def:
 
         self.clientVersionList = VERSION_LIST_def()
 
-        self.datasourceBytes = bytearray(b'')
-        self.catalogBytes = bytearray(b'')
-        self.schemaBytes = bytearray(b'')
-        self.locationBytes = bytearray(b'')
-        self.userRoleBytes = bytearray(b'')
-        self.computerNameBytes = bytearray(b'')
-        self.windowTextBytes = bytearray(b'')
-        self.connectOptionsBytes = bytearray(b'')
+        self.datasource_bytes = bytearray(b'')
+        self.catalog_bytes = bytearray(b'')
+        self.schema_bytes = bytearray(b'')
+        self.location_bytes = bytearray(b'')
+        self.userRole_bytes = bytearray(b'')
+        self.computerName_bytes = bytearray(b'')
+        self.windowText_bytes = bytearray(b'')
+        self.connectOptions_bytes = bytearray(b'')
 
     def sizeOf(self):
         self.size = 0
-        self.datasourceBytes = self.datasource.encode('utf-8')
-        self.catalogBytes = self.catalog.encode('utf-8')
-        self.schemaBytes = self.schema.encode('utf-8')
-        self.locationBytes = self.location.encode('utf-8')
-        self.userRoleBytes = self.userRole.encode('utf-8')
-        self.computerNameBytes = self.computerName.encode('utf-8')
-        self.windowTextBytes = self.windowText.encode('utf-8')
-        self.connectOptionsBytes = self.connectOptions.encode('utf-8')
+        self.datasource_bytes = self.datasource.encode('utf-8')
+        self.catalog_bytes = self.catalog.encode('utf-8')
+        self.schema_bytes = self.schema.encode('utf-8')
+        self.location_bytes = self.location.encode('utf-8')
+        self.userRole_bytes = self.userRole.encode('utf-8')
+        self.computerName_bytes = self.computerName.encode('utf-8')
+        self.windowText_bytes = self.windowText.encode('utf-8')
+        self.connectOptions_bytes = self.connectOptions.encode('utf-8')
 
-        size = TRANSPORT.size_bytes(self.datasourceBytes)
-        size += TRANSPORT.size_bytes(self.catalogBytes)
-        size += TRANSPORT.size_bytes(self.schemaBytes)
-        size += TRANSPORT.size_bytes(self.locationBytes)
-        size += TRANSPORT.size_bytes(self.userRoleBytes)
+        size = TRANSPORT.size_bytes(self.datasource_bytes)
+        size += TRANSPORT.size_bytes(self.catalog_bytes)
+        size += TRANSPORT.size_bytes(self.schema_bytes)
+        size += TRANSPORT.size_bytes(self.location_bytes)
+        size += TRANSPORT.size_bytes(self.userRole_bytes)
 
         size += TRANSPORT.size_short  # accessMode
         size += TRANSPORT.size_short  # autoCommit
@@ -72,8 +72,8 @@ class CONNECTION_CONTEXT_def:
         size += TRANSPORT.size_int  # diagnosticFlag
         size += TRANSPORT.size_int  # processId
 
-        size += TRANSPORT.size_bytes(self.computerNameBytes)
-        size += TRANSPORT.size_bytes(self.windowTextBytes)
+        size += TRANSPORT.size_bytes(self.computerName_bytes)
+        size += TRANSPORT.size_bytes(self.windowText_bytes)
 
         size += TRANSPORT.size_int  # ctxACP
         size += TRANSPORT.size_int  # ctxDataLang
@@ -82,7 +82,7 @@ class CONNECTION_CONTEXT_def:
 
         size += TRANSPORT.size_short  # cpuToUse
         size += TRANSPORT.size_short  # cpuToUseEnd
-        size += TRANSPORT.size_bytes(self.connectOptionsBytes)
+        size += TRANSPORT.size_bytes(self.connectOptions_bytes)
 
         size += self.clientVersionList.sizeOf()
 
@@ -123,11 +123,14 @@ class CONNECTION_CONTEXT_def:
         buf_view = self.clientVersionList.insertIntoByteArray(buf_view)
         return buf_view
 
+
 class VERSION_def:
-    componentId = 0  # short
-    majorVersion = 0  # short
-    minorVersion = 0  # short
-    buildId = 0  # int
+
+    def __init__(self):
+        self.componentId = 0  # short
+        self.majorVersion = 0  # short
+        self.minorVersion = 0  # short
+        self.buildId = 0  # int
 
     @classmethod
     def sizeOf(self):
@@ -147,6 +150,7 @@ class VERSION_def:
         self.buildId, buf_view = convert.get_int(buf_view, little=True)
         return buf_view
 
+
 class VERSION_LIST_def:
     list = []
 
@@ -161,14 +165,15 @@ class VERSION_LIST_def:
 
     def extractFromByteArray(self, buf_view):
 
-        len, buf_view = convert.get_int(buf_view, little=True)
+        length, buf_view = convert.get_int(buf_view, little=True)
 
-        for i in range(len):
+        for i in range(length):
             version_def = VERSION_def()
             buf_view = version_def.extractFromByteArray(buf_view)
             self.list.append(version_def)
 
         return buf_view
+
 
 class Header:
     #
@@ -202,41 +207,40 @@ class Header:
     COMP_12 = 0x12
     COMP_14 = 0x14
 
-    #
-    # The Java version of the HEADER structure taken from TransportBase.h
-    #
-    operation_id_ = 0  # short
-    # + 2 filler
-    dialogueId_ = 0  # int
-    total_length_ = 0 # int
-    cmp_length_ = 0   #int
-    compress_ind_ = '' #char
-    compress_type_ = '' #char
-    # + 2 filler  = 0
-    hdr_type_ = 0  #int
-    signature_ = 0 #int
-    version_ = 0   #int
-    platform_ = '' #char
-    transport_ ='' #char
-    swap_      = '' #char
-    # + 1 filler
-    error_     = 0 #short
-    error_detail_ = 0 #short
+    """
+      operation_id_  # short
+      # + 2 filler
+      dialogueId_    # int
+      total_length_  # int
+      cmp_length_    # int
+      compress_ind_  # char
+      compress_type_ # char
+      # + 2 filler  
+      hdr_type_      # int
+      signature_     # int
+      version_       # int
+      platform_      # char
+      transport_     # char
+      swap_          # char
+      # + 1 filler
+      error_         # short
+      error_detail_  # short
+    """
 
-    def __init__(self,  operation_id = None,
-                        dialogueId = None,
-                        total_length = None,
-                        cmp_length = None,
-                        compress_ind = None,
-                        compress_type = None,
-                        hdr_type = None,
-                        signature = None,
-                        version = None,
-                        platform = None,
-                        transport = None,
-                        swap = None):
+    def __init__(self, operation_id=None,
+                 dialogue_id=None,
+                 total_length=None,
+                 cmp_length=None,
+                 compress_ind=None,
+                 compress_type=None,
+                 hdr_type=None,
+                 signature=None,
+                 version=None,
+                 platform=None,
+                 transport=None,
+                 swap=None):
         self.operation_id_ = operation_id
-        self.dialogueId_ = dialogueId
+        self.dialogueId_ = dialogue_id
         self.total_length_ = total_length
         self.cmp_length_ = cmp_length
         self.compress_ind_ = compress_ind
@@ -247,16 +251,16 @@ class Header:
         self.platform_ = platform
         self.transport_ = transport
         self.swap_ = swap
+        self.error_ = 0
+        self.error_detail_ = 0
+
     @property
     def total_length(self):
         return self.total_length_
 
-    def reuseHeader(self,
-                    operation_id,
-                    dialogueId):
+    def reuse_header(self, operation_id, dialogue_id):
         self.operation_id_ = operation_id
-        self.dialogueId_ = dialogueId
-
+        self.dialogueId_ = dialogue_id
 
     @classmethod
     def sizeOf(self):
@@ -264,7 +268,7 @@ class Header:
 
     def insertIntoByteArray(self, buf_view):
         buf_view = convert.put_short(self.operation_id_, buf_view)  # short                  0,1
-        buf_view = convert.put_short(0, buf_view)# + 2 filler                                2,3
+        buf_view = convert.put_short(0, buf_view)  # + 2 filler                              2,3
         buf_view = convert.put_int(self.dialogueId_, buf_view)  # int                        4-7
         buf_view = convert.put_int(self.total_length_, buf_view)  # int                      8-11
         buf_view = convert.put_int(self.cmp_length_, buf_view)  # int                        12-15
@@ -278,17 +282,17 @@ class Header:
         buf_view = convert.put_char(self.transport_.encode("utf-8"), buf_view)  # char
         buf_view = convert.put_char(self.swap_.encode("utf-8"), buf_view)  # char
         buf_view = convert.put_char('0'.encode("utf-8"), buf_view)  # + 1 filler
-        buf_view = convert.put_short(self.error_, buf_view) # short
+        buf_view = convert.put_short(self.error_, buf_view)  # short
         buf_view = convert.put_short(self.error_detail_, buf_view)  # short
         return buf_view
 
 
     def extractFromByteArray(self, buf):
         buf_view = memoryview(buf)
-        self.operation_id_, buf_view= convert.get_short(buf_view)
-        null, buf_view = convert.get_short(buf_view) # +2 fillter
+        self.operation_id_, buf_view = convert.get_short(buf_view)
+        null, buf_view = convert.get_short(buf_view)  # +2 fillter
 
-        self.dialogueId_, buf_view= convert.get_int(buf_view)
+        self.dialogueId_, buf_view = convert.get_int(buf_view)
         self.total_length_, buf_view = convert.get_int(buf_view)
         self.cmp_length_, buf_view = convert.get_int(buf_view)
         self.compress_ind_, buf_view = convert.get_char(buf_view)
@@ -307,13 +311,6 @@ class Header:
         self.error_detail_, buf_view = convert.get_short(buf_view)
 
 class USER_DESC_def:
-    userDescType = 0
-    userSid = ''
-    domainName = ''
-    userName = ''
-    password = ''
-    domainNameBytes = ''
-    userNameBytes = ''
 
     def __init__(self):
         self.userDescType = 0
@@ -321,17 +318,15 @@ class USER_DESC_def:
         self.domainName = ''
         self.userName = ''
         self.password = ''
-        self.domainNameBytes = ''
-        self.userNameBytes = ''
+        self.domainName_bytes = self.domainName.encode("utf-8")
+        self.userName_bytes = self.userName.encode("utf-8")
 
     def sizeOf(self):
         size = 0
 
-        Tr = TRANSPORT()
-        size += Tr.size_int # descType
-
-        size += TRANSPORT.size_bytes(self.userSid)
-        size += TRANSPORT.size_bytes(self.domainName)
+        size += TRANSPORT.size_int  # descType
+        size += TRANSPORT.size_bytes(self.domainName_bytes)
+        size += TRANSPORT.size_bytes(self.userName_bytes)
         size += TRANSPORT.size_bytes(self.userName)
         size += TRANSPORT.size_bytes(self.password)
 
@@ -362,6 +357,24 @@ class TrafProperty:
         self._fetchbuffersize = 100
         self._application_name = ""
         self._DelayedErrorMode = False
+        self._retry_count = 5
+        self._srvr_type = 2  # AS
+
+    @property
+    def retry_count(self):
+        return self._retry_count
+
+    @retry_count.setter
+    def retry_count(self, num):
+        self._retry_count = num
+
+    @property
+    def srvr_type(self):
+        return self._srvr_type
+
+    @srvr_type.setter
+    def srvr_type(self, num):
+        self._srvr_type = num
 
     @property
     def master_host(self):

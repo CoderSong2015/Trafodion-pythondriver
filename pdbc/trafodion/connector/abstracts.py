@@ -2,16 +2,41 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from .catch23 import make_abc
 from .struct_def import TrafProperty
-
+import os
+from .network import TrafTCPSocket
 
 @make_abc(ABCMeta)
 class TrafConnectionAbstract(object):
     """Abstract class for classes connecting to a Trafodion server"""
 
     def __init__(self, **kwargs):
+
+        # from odbc_common.h and sql.h
+        self.SQL_TXN_READ_UNCOMMITTED = 1
+        self.SQL_TXN_READ_COMMITTED = 2
+        self.SQL_TXN_REPEATABLE_READ = 4
+        self.SQL_TXN_SERIALIZABLE = 8
+        self.SQL_ATTR_CURRENT_CATALOG = 109
+        self.SQL_ATTR_ACCESS_MODE = 101
+        self.SQL_ATTR_AUTOCOMMIT = 102
+        self.SQL_TXN_ISOLATION = 108
+
+        # spj proxy syntax support
+        self.SPJ_ENABLE_PROXY = 1040
+        self.PASSWORD_SECURITY = 0x4000000  # (2 ^ 26)
+        self.ROWWISE_ROWSET = 0x8000000  # (2 ^ 27)
+
+        self.CHARSET = 0x10000000  # (2 ^ 28)
+
+        self.STREAMING_DELAYEDERROR_MODE = 0x20000000  # 2 ^ 29
+        # Zbig
+        self.JDBC_ATTR_CONN_IDLE_TIMEOUT = 3000
+        self.RESET_IDLE_TIMER = 1070
+
         self.user = 0
         self.property = {}
         self._init_property()
+
     def config(self, **kwargs):
         config = kwargs.copy()
         if 'user' in config or 'password' in config:
@@ -40,9 +65,27 @@ class TrafConnectionAbstract(object):
         except KeyError:
             pass  # Missing port argument is OK
 
+    def _get_connection(self, host = '127.0.0.1', port = 0):
+
+        """
+        :param host: 
+        :param port: 
+        :return: 
+        """
+        conn = None
+        if self.unix_socket and os.name != 'nt':
+            conn = TrafTCPSocket(self.unix_socket)
+        else:
+            conn = TrafTCPSocket(host=host,
+                                 port=port,
+                                 force_ipv6=self._force_ipv6)
+
+        conn.set_connection_timeout(self._connection_timeout)
+        conn.open_connection()
+        return conn
 
     @abstractmethod
-    def _open_connection(self):
+    def _connect_to_mxosrvr(self):
         """Open the connection to the mxosrvr server"""
         pass
 
@@ -70,8 +113,7 @@ class TrafConnectionAbstract(object):
         if kwargs:
             self.config(**kwargs)
 
-        info = self._get_Objref()
-        self._open_connection()
+        self._connect_to_mxosrvr()
 
     @abstractmethod
     def is_connected(self):
@@ -117,7 +159,7 @@ class TrafConnectionAbstract(object):
         self.property = TrafProperty()
 
     @abstractmethod
-    def _tcp_io_read(self, header, buffer,conn):
+    def _tcp_io_read(self, conn):
         """
         This function used to send or recieve data from server
         :param header: 
