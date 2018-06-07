@@ -2,10 +2,11 @@ from .abstracts import TrafConnectionAbstract
 import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
-from .struct_def import USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, VERSION_LIST_def, Header, GetPbjRefHdlExc
+from .struct_def import ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, Header
 from .TRANSPOT import TRANSPORT,convert
 import time
 import getpass
+from . import errors
 
 
 class TrafConnection(TrafConnectionAbstract):
@@ -39,10 +40,19 @@ class TrafConnection(TrafConnectionAbstract):
 
         # get information from dcs master
         mxosrvr_info = self._get_Objref()
-
+        if mxosrvr_info.security_enabled :
+            self.securelogin(mxosrvr_info)
+        else:
+            self.old_encrypt_password()
+            self.init_diag(False, False)
         #TODO self._get_connection() get connection from mxosrvr
 
         #TODO
+    def old_encrypt_password(self):
+        pass
+
+    def init_diag(self, setTimestamp, downloadCert):
+        pass
 
     def _get_Objref(self):
         self._in_context = self._get_context()
@@ -60,11 +70,11 @@ class TrafConnection(TrafConnectionAbstract):
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
         print(master_conn)
-        ret = self._get_from_server(TRANSPORT.AS_API_GETOBJREF, wbuffer, master_conn)
+        connect_reply = self._get_from_server(TRANSPORT.AS_API_GETOBJREF, wbuffer, master_conn)
         if not master_conn:
             #error handle
             pass
-        pass
+        return connect_reply
 
     def _get_from_server(self, operation_id, wbuffer, conn):
 
@@ -88,37 +98,16 @@ class TrafConnection(TrafConnectionAbstract):
         data = self._tcp_io_read(conn)
         connect_reply = self._handle_master_data(data)
         # TODO handle connect_reply
-        return None
+        return connect_reply
 
     def _handle_master_data(self, data):
         try:
             buf_view = memoryview(data)
-            buf_exception = GetPbjRefHdlExc()
-            buf_view = buf_exception.extractFromByteArray(buf_view)
-
-            #TODO handle error
-            dialogue_id, buf_view = convert.get_int(buf_view, little=True)
-            data_source, buf_view = convert.get_string(buf_view, little=True)
-            user_sid, buf_view = convert.get_string(buf_view, little=True, byteoffset=True)
-            version_list = VERSION_LIST_def()
-            buf_view = version_list.extractFromByteArray(buf_view)
-            null, buf_view = convert.get_int(buf_view, little=True) #old iso mapping
-            isoMapping = 15
-            server_host_name, buf_view = convert.get_string(buf_view, little=True)
-            server_node_id, buf_view = convert.get_int(buf_view, little=True)
-            server_process_id, buf_view = convert.get_int(buf_view, little=True)
-            server_process_name, buf_view = convert.get_string(buf_view, little=True)
-            server_ip_address, buf_view = convert.get_string(buf_view, little=True)
-            server_port, buf_view = convert.get_int(buf_view, little=True)
-
-            if (version_list.list[0].buildId and self.PASSWORD_SECURITY > 0):
-                security_enabled = True
-                timestamp, buf_view = convert.get_timestamp(buf_view)
-                cluster_name, buf_view = convert.get_string(buf_view)
-            else:
-                security_enabled = False
+            c = ConnectReply()
+            c.init_reply(buf_view, self)
         except:
-            print("what?")
+            raise errors.DataError(2345)
+        return c
 
     def _marshal(self,
                  in_context,
@@ -167,39 +156,8 @@ class TrafConnection(TrafConnectionAbstract):
         return buf
 
     def _get_context(self):
-        inContext = CONNECTION_CONTEXT_def()
-        inContext.catalog = self.property.catalog
-        inContext.schema =  self.property.schema
-        inContext.datasource = self.property.datasource
-        inContext.userRole = self.property.userRole
-        inContext.cpuToUse = self.property.cpuToUse
-        inContext.cpuToUseEnd = -1 # for future use by DBTransporter
-
-        inContext.accessMode = 1 if self._isReadOnly else 0
-        inContext.autoCommit = 1 if self._autoCommit else 0
-
-        inContext.queryTimeoutSec = self.property.query_timeout
-        inContext.idleTimeoutSec = self.property.idleTimeout
-        inContext.loginTimeoutSec = self.property.login_timeout
-        inContext.txnIsolationLevel = self.SQL_TXN_READ_COMMITTED
-        inContext.rowSetSize = self.property.fetchbuffersize
-        inContext.diagnosticFlag = 0
-        inContext.processId = time.time() and 0xFFF
-
-        try:
-            inContext.computerName = socket.gethostname()
-        except:
-            inContext.computerName = "Unknown Client Host"
-
-        inContext.windowText = "FASTPDBC" if not self.property.application_name else self.property.application_name
-
-        inContext.ctxDataLang = 15
-        inContext.ctxErrorLang = 15
-
-        inContext.ctxACP = 1252
-        inContext.ctxCtrlInferNXHAR = -1
-        inContext.clientVersionList.list = self.get_version(inContext.processId)
-        return inContext
+        in_context = CONNECTION_CONTEXT_def(self)
+        return in_context
 
     def _get_user_desc(self):
         user_desc = USER_DESC_def()
@@ -251,15 +209,20 @@ class TrafConnection(TrafConnectionAbstract):
 
     def _execute_query(self, query):
         pass
+
     def commit(self):
         pass
+
     def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
                dictionary=None, named_tuple=None):
         pass
+
     def disconnect(self):
         pass
+
     def is_connected(self):
         pass
+
     def ping(self, reconnect=False, attempts=1, delay=0):
         pass
 

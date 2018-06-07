@@ -61,70 +61,14 @@ def mem(mem):
     mem[3] = 22
     mem += 2
 if __name__ == '__main__':
-    xx = dd()
-    # xx.asd = 44
-    xx.pr()
-
-    for key in config:
-        if key in dict:
-            dict[key] = config[key]
-    print(dict)
-    import time
-    print(time.time() )
-    print(time.localtime())
-    print(time.time() + 1000)
-
-    list = [1,3]
-    print(list.__len__())
-    print(list[0])
-    tt = VERSION_LIST_def()
-    tt.list.append(VERSION_def())
-    print(tt.sizeOf())
-
-    tt = get_version(1)
-    print(tt[1].componentId)
-    import getpass
-    print(getpass.getuser().encode("utf-8"))
+    c = b'\xc1\xeb\xcb>\x94\xf2\x02'
+    print(c.decode("utf-8"))
+    """
+     from tests import dicttest
+    for k, v in dicttest.__dict__.items():
+        if 9 == v:
+            print(k)
+    """
 
 
-    bb = b'haolin'
-    buf = bytearray(20)
-    pack = memoryview(buf)
 
-    print(len(buf))
-
-    pack[3:5] = bb
-   # for index, byte in enumerate(bb):
-    #    pack[index + 2] = byte
-    print(len(buf))
-
-    import struct
-    tt = 3
-    print(struct.pack('h',tt))
-
-    mem(pack)
-    print(buf)
-
-    num = "asdf"
-    ss = '' + str(len(num)) + 's'
-    print(ss)
-
-    temp = (
-        ("haolin",0),
-        (1,2),
-        (3,2),
-    )
-
-    cc = []
-    fmt = ''
-    for x in temp:
-        if 0 == x[1]:
-          cc.append(str(len(x[0])))
-          cc.append((x[0]))
-          fmt += str(len(x[0]))
-          fmt += 's'
-        else:
-            fmt += 'h'
-
-    print(cc)
-    print(fmt)

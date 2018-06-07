@@ -1,7 +1,11 @@
 
 from .TRANSPOT import TRANSPORT, convert
+import socket
+import time
+
+
 class CONNECTION_CONTEXT_def:
-    def __init__(self):
+    def __init__(self, conn):
         self.datasource = ""  # string
         self.catalog = ""  # string
         self.schema = ""  # string
@@ -43,6 +47,8 @@ class CONNECTION_CONTEXT_def:
         self.computerName_bytes = bytearray(b'')
         self.windowText_bytes = bytearray(b'')
         self.connectOptions_bytes = bytearray(b'')
+
+        self._init_context(conn)
 
     def sizeOf(self):
         self.size = 0
@@ -123,6 +129,38 @@ class CONNECTION_CONTEXT_def:
         buf_view = self.clientVersionList.insertIntoByteArray(buf_view)
         return buf_view
 
+    def _init_context(self, conn):
+        self.catalog = conn.property.catalog
+        self.schema =  conn.property.schema
+        self.datasource = conn.property.datasource
+        self.userRole = conn.property.userRole
+        self.cpuToUse = conn.property.cpuToUse
+        self.cpuToUseEnd = -1 # for future use by DBTransporter
+
+        self.accessMode = 1 if conn._isReadOnly else 0
+        self.autoCommit = 1 if conn._autoCommit else 0
+
+        self.queryTimeoutSec = conn.property.query_timeout
+        self.idleTimeoutSec = conn.property.idleTimeout
+        self.loginTimeoutSec = conn.property.login_timeout
+        self.txnIsolationLevel = conn.SQL_TXN_READ_COMMITTED
+        self.rowSetSize = conn.property.fetchbuffersize
+        self.diagnosticFlag = 0
+        self.processId = time.time() and 0xFFF
+
+        try:
+            self.computerName = socket.gethostname()
+        except:
+            self.computerName = "Unknown Client Host"
+
+        self.windowText = "FASTPDBC" if not conn.property.application_name else conn.property.application_name
+
+        self.ctxDataLang = 15
+        self.ctxErrorLang = 15
+
+        self.ctxACP = 1252
+        self.ctxCtrlInferNXHAR = -1
+        self.clientVersionList.list = conn.get_version(self.processId)
 
 class VERSION_def:
 
@@ -489,4 +527,33 @@ class GetPbjRefHdlExc:
 
         return buf_view
 
+
+class ConnectReply:
+    def __init__(self):
+        pass
+    def init_reply(self, buf_view, conn):
+        self.buf_exception = GetPbjRefHdlExc()
+        buf_view = self.buf_exception.extractFromByteArray(buf_view)
+
+        # TODO handle error
+        self.dialogue_id, buf_view = convert.get_int(buf_view, little=True)
+        self.data_source, buf_view = convert.get_string(buf_view, little=True)
+        self.user_sid, buf_view = convert.get_string(buf_view, little=True, byteoffset=True)
+        self.version_list = VERSION_LIST_def()
+        buf_view = self.version_list.extractFromByteArray(buf_view)
+        null, buf_view = convert.get_int(buf_view, little=True)  # old iso mapping
+        self.isoMapping = 15 #utf-8
+        self.server_host_name, buf_view = convert.get_string(buf_view, little=True)
+        self.server_node_id, buf_view = convert.get_int(buf_view, little=True)
+        self.server_process_id, buf_view = convert.get_int(buf_view, little=True)
+        self.server_process_name, buf_view = convert.get_string(buf_view, little=True)
+        self.server_ip_address, buf_view = convert.get_string(buf_view, little=True)
+        self.server_port, buf_view = convert.get_int(buf_view, little=True)
+
+        if (self.version_list.list[0].buildId and conn.PASSWORD_SECURITY > 0):
+            self.security_enabled = True
+            self.timestamp, buf_view = convert.get_timestamp(buf_view)
+            self.cluster_name, buf_view = convert.get_string(buf_view, little=True)
+        else:
+            self.security_enabled = False
 

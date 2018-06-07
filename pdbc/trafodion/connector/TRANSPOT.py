@@ -337,7 +337,7 @@ class convert:
     @classmethod
     def get_timestamp(self, buf_view: memoryview):
         time = buf_view[0:8].tobytes()
-        return (time.decode("utf-8"), buf_view[8:])
+        return (time, buf_view[8:])
 
 
 
