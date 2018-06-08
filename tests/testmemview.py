@@ -1,6 +1,6 @@
 import sys
 sys.path.append("..")
-from pdbc.trafodion.connector.TRANSPOT import convert
+from pdbc.trafodion.connector.transport import convert
 def mem(mem):
     mem[3] = 22
     mem = mem[5:]

@@ -3,7 +3,7 @@ import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
 from .struct_def import ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, Header
-from .TRANSPOT import TRANSPORT,convert
+from .transport import Transport,convert
 import time
 import getpass
 from . import errors
@@ -70,7 +70,7 @@ class TrafConnection(TrafConnectionAbstract):
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
         print(master_conn)
-        connect_reply = self._get_from_server(TRANSPORT.AS_API_GETOBJREF, wbuffer, master_conn)
+        connect_reply = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
         if not master_conn:
             #error handle
             pass
@@ -125,12 +125,12 @@ class TrafConnection(TrafConnectionAbstract):
 
         wlength += (in_context.sizeOf()
                     + user_desc.sizeOf()
-                    + TRANSPORT.size_int    # srvr_type
-                    + TRANSPORT.size_short  # retry_count
-                    + TRANSPORT.size_int    # option_flags_1
-                    + TRANSPORT.size_int    # option_flags_2
-                    + TRANSPORT.size_bytes(vproc.encode("utf-8"))
-                    + TRANSPORT.size_bytes(clientUser.encode("utf-8")))
+                    + Transport.size_int    # srvr_type
+                    + Transport.size_short  # retry_count
+                    + Transport.size_int    # option_flags_1
+                    + Transport.size_int    # option_flags_2
+                    + Transport.size_bytes(vproc.encode("utf-8"))
+                    + Transport.size_bytes(clientUser.encode("utf-8")))
         buf = bytearray(b'')
 
         buf.extend(bytearray(wlength))
@@ -163,7 +163,7 @@ class TrafConnection(TrafConnectionAbstract):
         user_desc = USER_DESC_def()
         user_desc.userName = self._username
         user_desc.userDescType = \
-            TRANSPORT.UNAUTHENTICATED_USER_TYPE if self._sessionToken == '' else TRANSPORT.PASSWORD_ENCRYPTED_USER_TYPE
+            Transport.UNAUTHENTICATED_USER_TYPE if self._sessionToken == '' else Transport.PASSWORD_ENCRYPTED_USER_TYPE
         user_desc.domainName = ""
 
         user_desc.userSid = ''

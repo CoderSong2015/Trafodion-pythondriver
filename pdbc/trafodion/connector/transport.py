@@ -1,5 +1,7 @@
 import struct
-class TRANSPORT:
+
+
+class Transport:
     size_long = 8
     size_int = 4
     size_short = 2

@@ -1,5 +1,5 @@
 
-from .TRANSPOT import TRANSPORT, convert
+from .transport import Transport, convert
 import socket
 import time
 
@@ -61,34 +61,34 @@ class CONNECTION_CONTEXT_def:
         self.windowText_bytes = self.windowText.encode('utf-8')
         self.connectOptions_bytes = self.connectOptions.encode('utf-8')
 
-        size = TRANSPORT.size_bytes(self.datasource_bytes)
-        size += TRANSPORT.size_bytes(self.catalog_bytes)
-        size += TRANSPORT.size_bytes(self.schema_bytes)
-        size += TRANSPORT.size_bytes(self.location_bytes)
-        size += TRANSPORT.size_bytes(self.userRole_bytes)
+        size = Transport.size_bytes(self.datasource_bytes)
+        size += Transport.size_bytes(self.catalog_bytes)
+        size += Transport.size_bytes(self.schema_bytes)
+        size += Transport.size_bytes(self.location_bytes)
+        size += Transport.size_bytes(self.userRole_bytes)
 
-        size += TRANSPORT.size_short  # accessMode
-        size += TRANSPORT.size_short  # autoCommit
-        size += TRANSPORT.size_int  # queryTimeoutSec
-        size += TRANSPORT.size_int  # idleTimeoutSec
-        size += TRANSPORT.size_int  # loginTimeoutSec
-        size += TRANSPORT.size_short  # txnIsolationLevel
-        size += TRANSPORT.size_short  # rowSetSize
+        size += Transport.size_short  # accessMode
+        size += Transport.size_short  # autoCommit
+        size += Transport.size_int  # queryTimeoutSec
+        size += Transport.size_int  # idleTimeoutSec
+        size += Transport.size_int  # loginTimeoutSec
+        size += Transport.size_short  # txnIsolationLevel
+        size += Transport.size_short  # rowSetSize
 
-        size += TRANSPORT.size_int  # diagnosticFlag
-        size += TRANSPORT.size_int  # processId
+        size += Transport.size_int  # diagnosticFlag
+        size += Transport.size_int  # processId
 
-        size += TRANSPORT.size_bytes(self.computerName_bytes)
-        size += TRANSPORT.size_bytes(self.windowText_bytes)
+        size += Transport.size_bytes(self.computerName_bytes)
+        size += Transport.size_bytes(self.windowText_bytes)
 
-        size += TRANSPORT.size_int  # ctxACP
-        size += TRANSPORT.size_int  # ctxDataLang
-        size += TRANSPORT.size_int  # ctxErrorLang
-        size += TRANSPORT.size_short  # ctxCtrlInferNCHAR
+        size += Transport.size_int  # ctxACP
+        size += Transport.size_int  # ctxDataLang
+        size += Transport.size_int  # ctxErrorLang
+        size += Transport.size_short  # ctxCtrlInferNCHAR
 
-        size += TRANSPORT.size_short  # cpuToUse
-        size += TRANSPORT.size_short  # cpuToUseEnd
-        size += TRANSPORT.size_bytes(self.connectOptions_bytes)
+        size += Transport.size_short  # cpuToUse
+        size += Transport.size_short  # cpuToUseEnd
+        size += Transport.size_bytes(self.connectOptions_bytes)
 
         size += self.clientVersionList.sizeOf()
 
@@ -172,7 +172,7 @@ class VERSION_def:
 
     @classmethod
     def sizeOf(self):
-        return TRANSPORT.size_int + TRANSPORT.size_short * 3
+        return Transport.size_int + Transport.size_short * 3
 
     def insertIntoByteArray(self, buf_view):
         buf_view = convert.put_short(self.componentId, buf_view)
@@ -199,7 +199,7 @@ class VERSION_LIST_def:
         return buf_view
 
     def sizeOf(self):
-        return VERSION_def.sizeOf() * self.list.__len__() + TRANSPORT.size_int
+        return VERSION_def.sizeOf() * self.list.__len__() + Transport.size_int
 
     def extractFromByteArray(self, buf_view):
 
@@ -222,8 +222,8 @@ class Header:
     READ_RESPONSE_FIRST = (WRITE_REQUEST_NEXT + 1)
     READ_RESPONSE_NEXT = (READ_RESPONSE_FIRST + 1)
     CLEANUP = (READ_RESPONSE_NEXT + 1)
-    SRVR_TRANSPORT_ERROR = (CLEANUP + 1)
-    CLOSE_TCPIP_SESSION = (SRVR_TRANSPORT_ERROR + 1)
+    SRVR_Transport_ERROR = (CLEANUP + 1)
+    CLOSE_TCPIP_SESSION = (SRVR_Transport_ERROR + 1)
 
     SIGNATURE = 12345  # 0x3039
 
@@ -328,7 +328,7 @@ class Header:
     def extractFromByteArray(self, buf):
         buf_view = memoryview(buf)
         self.operation_id_, buf_view = convert.get_short(buf_view)
-        null, buf_view = convert.get_short(buf_view)  # +2 fillter
+        __, buf_view = convert.get_short(buf_view)  # +2 fillter
 
         self.dialogueId_, buf_view = convert.get_int(buf_view)
         self.total_length_, buf_view = convert.get_int(buf_view)
@@ -336,7 +336,7 @@ class Header:
         self.compress_ind_, buf_view = convert.get_char(buf_view)
         self.compress_type_, buf_view = convert.get_char(buf_view)
 
-        null, buf_view = convert.get_short(buf_view)  # +2 fillter
+        __, buf_view = convert.get_short(buf_view)  # +2 fillter
 
         self.hdr_type_, buf_view = convert.get_int(buf_view)
         self.signature_, buf_view = convert.get_int(buf_view)
@@ -344,7 +344,7 @@ class Header:
         self.platform_, buf_view = convert.get_char(buf_view)
         self.transport_, buf_view = convert.get_char(buf_view)
         self.swap_, buf_view = convert.get_char(buf_view)
-        null, buf_view = convert.get_char(buf_view)  # +1 fillter
+        __, buf_view = convert.get_char(buf_view)  # +1 fillter
         self.error_, buf_view = convert.get_short(buf_view)
         self.error_detail_, buf_view = convert.get_short(buf_view)
 
@@ -362,11 +362,11 @@ class USER_DESC_def:
     def sizeOf(self):
         size = 0
 
-        size += TRANSPORT.size_int  # descType
-        size += TRANSPORT.size_bytes(self.domainName_bytes)
-        size += TRANSPORT.size_bytes(self.userName_bytes)
-        size += TRANSPORT.size_bytes(self.userName)
-        size += TRANSPORT.size_bytes(self.password)
+        size += Transport.size_int  # descType
+        size += Transport.size_bytes(self.domainName_bytes)
+        size += Transport.size_bytes(self.userName_bytes)
+        size += Transport.size_bytes(self.userName)
+        size += Transport.size_bytes(self.password)
 
         return size
 
@@ -541,7 +541,7 @@ class ConnectReply:
         self.user_sid, buf_view = convert.get_string(buf_view, little=True, byteoffset=True)
         self.version_list = VERSION_LIST_def()
         buf_view = self.version_list.extractFromByteArray(buf_view)
-        null, buf_view = convert.get_int(buf_view, little=True)  # old iso mapping
+        __, buf_view = convert.get_int(buf_view, little=True)  # old iso mapping
         self.isoMapping = 15 #utf-8
         self.server_host_name, buf_view = convert.get_string(buf_view, little=True)
         self.server_node_id, buf_view = convert.get_int(buf_view, little=True)
