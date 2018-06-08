@@ -61,14 +61,35 @@ def mem(mem):
     mem[3] = 22
     mem += 2
 if __name__ == '__main__':
-    c = b'\xc1\xeb\xcb>\x94\xf2\x02'
-    print(c.decode("utf-8"))
     """
      from tests import dicttest
     for k, v in dicttest.__dict__.items():
         if 9 == v:
             print(k)
     """
+    import os
+    print(os.environ['HOMEDRIVE'])
+    env = os.environ
+    if "HOMEDRVE" in env:
+        print(env['HOMEDRIVE'])
+    elif "xx" in env:
+        print("ok")
+    else:
+        print("nihao")
+    tt = ''
+    if not tt:
+        print("yes")
+"""
+    print(env['HOMEPATH'])
+    print(os.sep)
+    dic = env['HOMEDRIVE'] + os.sep + env['HOMEPATH'] + os.sep +"xxxxxxxxxx"
+    print(dic)
+    with open(dic, 'w'):
+        pass
+
+
+    print("ddd")
+"""
 
 
 

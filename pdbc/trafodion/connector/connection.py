@@ -40,7 +40,8 @@ class TrafConnection(TrafConnectionAbstract):
 
         # get information from dcs master
         mxosrvr_info = self._get_Objref()
-        if mxosrvr_info.security_enabled :
+        
+        if mxosrvr_info.security_enabled:
             self.securelogin(mxosrvr_info)
         else:
             self.old_encrypt_password()
@@ -48,6 +49,7 @@ class TrafConnection(TrafConnectionAbstract):
         #TODO self._get_connection() get connection from mxosrvr
 
         #TODO
+
     def old_encrypt_password(self):
         pass
 
