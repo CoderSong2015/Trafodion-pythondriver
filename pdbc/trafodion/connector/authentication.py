@@ -1,22 +1,8 @@
 import os
 from . import errors
 
-class SecPwd:
 
-    NONCE_RANDOM = 24
-    NONCE_SEQNUM = 8
-    NONCE_SIZE = (NONCE_RANDOM + NONCE_SEQNUM)
-    SESSION_KEYLEN = 32
-    DIGEST_LENGTH = 32
-    # AES block size used in data encryption
-    AES_BLOCKSIZE = 16
-    KEY_REFRESH = 30
-    TIMESTAMP_SIZE = 8
-    ROLENAME_SIZE = 128
-    PROCINFO_SIZE = 8
-    PWDID_SIZE = 4
-    EXPDATESIZE = 12
-    PWDKEY_SIZE_LESS_LOGINDATA = (PWDID_SIZE + ROLENAME_SIZE + DIGEST_LENGTH + TIMESTAMP_SIZE)
+class SecPwd:
 
     def __init__(self, directory, filename, spj_mode, server_name, proc_info):
         """
@@ -113,20 +99,105 @@ class SecPwd:
             raise errors.NotSupportedError
         if not pwdkey:
             raise errors.NotSupportedError
-        if self.spj_mode: # token
+        if self.spj_mode:   # token
             pass
         else:
             self.security.encrypt_pwd(pwd, rolename, self.proc_info, pwdkey)
 
 
 class Security:
-    def __init__(self, cer):
-        pass
+    def __init__(self, cer_file):
+        # m_encrypted = 0
+        self.pwdkey = SecdefsCommon.PwdKey()
+        self.pwdkey.data = SecdefsCommon.LoginData()
+        self.pwdkey.id[0] = '\1'
+        self.pwdkey.id[1] = '\2'
+        self.pwdkey.id[2] = '\3'
+        self.pwdkey.id[3] = '\4'
+
+        try:
+            m_keyObj = Key()
+            m_cert = Certificate(cer_file)
+            m_keyObj.get_pubkey_from_file(m_cert.get_cert())
+            self.generate_session_key()
+        except:
+            raise errors.NotSupportedError
 
     def encrypt_pwd(self, pwd, rolename, proc_info, pwdkey):
         pass
 
+    def generate_session_key(self):
+        pass
 
+
+class Key:
+
+    def get_pubkey_from_file(self, file):
+        pass
+    pass
+
+class Certificate:
+    def __init__(self, cer_file):
+        pass
+
+    def get_cert(self):
+        pass
+
+
+class SecdefsCommon:
+
+     NONCE_RANDOM = 24
+     NONCE_SEQNUM = 8
+     NONCE_SIZE = (NONCE_RANDOM+NONCE_SEQNUM)
+     SESSION_KEYLEN = 32
+     DIGEST_LENGTH = 32
+     ###AES block size used in data encryption
+     AES_BLOCKSIZE = 16
+     KEY_REFRESH = 30
+     TIMESTAMP_SIZE = 8
+     ROLENAME_SIZE  = 128
+     PROCINFO_SIZE =  8
+     PWDID_SIZE = 4
+     EXPDATESIZE = 12
+     PWDKEY_SIZE_LESS_LOGINDATA = (PWDID_SIZE + ROLENAME_SIZE + DIGEST_LENGTH +  TIMESTAMP_SIZE)
+
+     #  For public key encryption, the  number of bytes
+     #  to be encrypted is 11 bytes less than the public key length
+
+     UNUSEDBYTES = 11
+     TOKENSIZE = 68
+     # User tokens begin with byte values 3,4.
+     USERTOKEN_ID_1 = b'\3' 	# User token identifier, must be a sequence
+     USERTOKEN_ID_2 = b'\4'	# not allowed in password
+     DATA_BLOCK_BIT_SIZE = 128    # data encryption block size in bits.  Java
+                                  # supports block size of 128 bits for AES
+                                  # algorithm using cryptographic key of 256 bits only.
+
+
+     #Structure used to describe layout of Encrypted data in login message
+     class LoginData:
+        #000 Session key
+
+        def __init__(self):
+            self.session_key = bytearray(SecdefsCommon.SESSION_KEYLEN)
+            #032 Nonce
+            self.nonce = bytearray(SecdefsCommon.NONCE_SIZE)
+            self.password = b''            # 064 User's password # 128 for 1024 or 256 for 2048
+
+     # Structure used to describe layout of password key
+
+     class PwdKey:
+         def __init__(self):
+             # 000 Key identifier, binary values 1,2,3,4
+             # or 1,2,2,4 keys, optional mode only
+             self.id= bytearray(SecdefsCommon.PWDID_SIZE)
+             #  004 RolenameA
+             self.rolename = bytearray(SecdefsCommon.ROLENAME_SIZE)
+             #  132 Digest of server id and encrypted data
+             self.digest = bytearray(SecdefsCommon.DIGEST_LENGTH)
+             # 164 time stamp
+             self.ts = bytearray(SecdefsCommon.TIMESTAMP_SIZE)
+             self.data = SecdefsCommon.LoginData()             #172 Encrypted data
 
 
 
