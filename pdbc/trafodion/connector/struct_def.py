@@ -397,6 +397,7 @@ class TrafProperty:
         self._DelayedErrorMode = False
         self._retry_count = 5
         self._srvr_type = 2  # AS
+        self._fetch_ahead = ''
 
     @property
     def retry_count(self):
@@ -406,6 +407,9 @@ class TrafProperty:
     def retry_count(self, num):
         self._retry_count = num
 
+    @property
+    def fetch_ahead(self):
+        return self._fetch_ahead
     @property
     def srvr_type(self):
         return self._srvr_type

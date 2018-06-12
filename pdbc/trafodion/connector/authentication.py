@@ -161,8 +161,8 @@ class SecdefsCommon:
      EXPDATESIZE = 12
      PWDKEY_SIZE_LESS_LOGINDATA = (PWDID_SIZE + ROLENAME_SIZE + DIGEST_LENGTH +  TIMESTAMP_SIZE)
 
-     #  For public key encryption, the  number of bytes
-     #  to be encrypted is 11 bytes less than the public key length
+     # For public key encryption, the number of bytes
+     #    to be encrypted is 11 bytes less than the public key length
 
      UNUSEDBYTES = 11
      TOKENSIZE = 68

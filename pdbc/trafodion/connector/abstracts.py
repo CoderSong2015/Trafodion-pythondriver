@@ -33,6 +33,14 @@ class TrafConnectionAbstract(object):
         self.JDBC_ATTR_CONN_IDLE_TIMEOUT = 3000
         self.RESET_IDLE_TIMER = 1070
 
+        self.INCONTEXT_OPT1_SESSIONNAME = 0x80000000  # (2 ^ 31)
+
+        self.INCONTEXT_OPT1_FETCHAHEAD = 0x40000000  # (2 ^ 30)
+
+        self.INCONTEXT_OPT1_CERTIFICATE_TIMESTAMP = 0x20000000  # (2 ^ 29)
+
+        self.INCONTEXT_OPT1_CLIENT_USERNAME = 0x10000000  # (2 ^ 28)
+
         self.user = 0
         self.property = {}
         self._init_property()

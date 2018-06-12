@@ -25,6 +25,7 @@ class TrafConnection(TrafConnectionAbstract):
         self._ignoreCancel = False
         self._connection_timeout = 60
         self._dialogue_id = 0
+        self._session_name = ''
 
         super(TrafConnection, self).__init__(**kwargs)
 
@@ -39,24 +40,105 @@ class TrafConnection(TrafConnectionAbstract):
         """
 
         # get information from dcs master
-        mxosrvr_info = self._get_Objref()
+        self.mxosrvr_info = self._get_objref()
         
-        if mxosrvr_info.security_enabled:
-            self.securelogin(mxosrvr_info)
+        if self.mxosrvr_info.security_enabled:
+            self.secure_login()
         else:
             self.old_encrypt_password()
-            self.init_diag(False, False)
+            self.init_diag(True , False)
         #TODO self._get_connection() get connection from mxosrvr
 
         #TODO
+
+    def secure_login(self):
+        #  if there is no certificate in local system, downloading
+        #  if from mxosrvr first.
+        #
+
+        self.download_cer()
+        pass
+
+    def download_cer(self):
+        # attempt download
+        self._in_context.connectOptions = ''
+        self.init_diag(True, True)
+        pass
 
     def old_encrypt_password(self):
         pass
 
     def init_diag(self, setTimestamp, downloadCert):
-        pass
 
-    def _get_Objref(self):
+        #  get connection
+
+        option_flags1 = self.INCONTEXT_OPT1_CLIENT_USERNAME
+        option_flags2 = 0
+        if setTimestamp:
+            option_flags1 |= self.INCONTEXT_OPT1_CERTIFICATE_TIMESTAMP
+
+
+        if self._session_name is not None and len(self._session_name) > 0:
+            option_flags1 |= self.INCONTEXT_OPT1_SESSIONNAME
+
+        if self.property.fetch_ahead:
+            option_flags1 |= self.INCONTEXT_OPT1_FETCHAHEAD
+
+        wbuffer = self._marshal_initdialog(self._user_desc,
+                                 self._in_context,
+                                 self.mxosrvr_info.dialogue_id,
+                                 option_flags1,
+                                 option_flags2,
+                                 "")
+
+        mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
+        data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, mxosrvr_conn)
+
+
+
+    def _marshal_initdialog(self, _user_desc,
+                            _in_context,
+                            dialogue_id,
+                            option_flags1,
+                            option_flags2,
+                            session_name,
+                            ):
+        wlength = Header.sizeOf()
+
+        client_user = getpass.getuser()
+
+        wlength += (_in_context.sizeOf()
+                    + _user_desc.sizeOf()
+                    + Transport.size_int  # dialogueId
+                    + Transport.size_int  # option_flags_1
+                    + Transport.size_int  # option_flags_2
+                    + Transport.size_bytes(session_name.encode("utf-8")) #sessionBytes
+                    + Transport.size_bytes(client_user.encode("utf-8")))
+
+        buf = bytearray(b'')
+
+        buf.extend(bytearray(wlength))
+
+        print(len(buf))
+        # use memoryview to avoid mem copy
+        # remain space for header
+        buf_view = memoryview(buf)
+        buf_view = buf_view[Header.sizeOf():]
+        # construct bytebuffer
+        buf_view = _in_context.insertIntoByteArray(buf_view)
+        buf_view = _user_desc.insertIntoByteArray(buf_view)
+
+        buf_view = convert.put_int(dialogue_id, buf_view)
+        buf_view = convert.put_int(option_flags1, buf_view)
+        buf_view = convert.put_int(option_flags2, buf_view)
+
+        if (option_flags1 & self.INCONTEXT_OPT1_SESSIONNAME) is not 0:
+            buf_view = convert.put_string(session_name, buf_view)
+        if (option_flags1 & self.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
+            buf_view = convert.put_string(client_user, buf_view)
+        return buf
+
+    def _get_objref(self):
         self._in_context = self._get_context()
         self._user_desc = self._get_user_desc()
         self._master_host = self.property.master_host
@@ -64,7 +146,7 @@ class TrafConnection(TrafConnectionAbstract):
         retry_count = self.property.retry_count
         srvr_type = self.property.srvr_type
 
-        wbuffer = self._marshal(self._in_context,
+        wbuffer = self._marshal_getobjref(self._in_context,
                                 self._user_desc,
                                 srvr_type,
                                 retry_count,
@@ -72,7 +154,8 @@ class TrafConnection(TrafConnectionAbstract):
                                 )
         master_conn = self._get_connection(self._master_host, self._master_port)
         print(master_conn)
-        connect_reply = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
+        data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
+        connect_reply = self._handle_master_data(data)
         if not master_conn:
             #error handle
             pass
@@ -98,9 +181,9 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.NO)
         self._tcp_io_write(wheader, wbuffer, conn)
         data = self._tcp_io_read(conn)
-        connect_reply = self._handle_master_data(data)
+
         # TODO handle connect_reply
-        return connect_reply
+        return data
 
     def _handle_master_data(self, data):
         try:
@@ -111,7 +194,7 @@ class TrafConnection(TrafConnectionAbstract):
             raise errors.DataError(2345)
         return c
 
-    def _marshal(self,
+    def _marshal_getobjref(self,
                  in_context,
                  user_desc,
                  srvr_type,
