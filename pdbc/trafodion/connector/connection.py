@@ -2,7 +2,7 @@ from .abstracts import TrafConnectionAbstract
 import os
 import sys
 from .network import TrafTCPSocket, TrafUnixSocket,socket
-from .struct_def import ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, Header
+from .struct_def import ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, Header, InitializeDialogueReply
 from .transport import Transport,convert
 import time
 import getpass
@@ -94,8 +94,21 @@ class TrafConnection(TrafConnectionAbstract):
 
         mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
         data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, mxosrvr_conn)
-        return data
+        try:
+            init_reply = self._handle_mxosrvr_data(data)
+            return init_reply
+        except:
+            print("what?")
+            return ''
 
+    def _handle_mxosrvr_data(self, data):
+        try:
+            buf_view = memoryview(data)
+            c = InitializeDialogueReply()
+            c.init_reply(buf_view, self)
+        except:
+            raise errors.DataError(2345)
+        return c
     def _marshal_initdialog(self, _user_desc,
                             _in_context,
                             dialogue_id,

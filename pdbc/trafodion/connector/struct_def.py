@@ -589,21 +589,21 @@ class OUT_CONNECTION_CONTEXT_def:
         self.version_list = VERSION_LIST_def()
         buf_view = self.version_list.extractFromByteArray(buf_view)
 
-        buf_view, self.node_id = convert.get_short(buf_view, little=True)
-        buf_view, self.process_id = convert.get_int(buf_view, little=True)
-        buf_view, self.computer_name = convert.get_string(buf_view, little=True)
-        buf_view, self.catalog = convert.get_string(buf_view, little=True)
-        buf_view, self.schema = convert.get_string(buf_view, little=True)
-        buf_view, self.option_flags1 = convert.get_int(buf_view, little=True)
-        buf_view, self.option_flags2 = convert.get_int(buf_view, little=True)
+        self.node_id, buf_view = convert.get_short(buf_view, little=True)
+        self.process_id, buf_view = convert.get_int(buf_view, little=True)
+        self.computer_name, buf_view = convert.get_string(buf_view, little=True)
+        self.catalog, buf_view = convert.get_string(buf_view, little=True)
+        self.schema, buf_view = convert.get_string(buf_view, little=True)
+        self.option_flags1, buf_view = convert.get_int(buf_view, little=True)
+        self.option_flags2, buf_view = convert.get_int(buf_view, little=True)
         self.enforce_iso = (self.option_flags1 and self.OUTCONTEXT_OPT1_ENFORCE_ISO88591) > 0
         self.ignore_cancel = (self.option_flags1 and self.OUTCONTEXT_OPT1_IGNORE_SQLCANCEL) > 0
 
         if self.option_flags1 & self.OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE > 0:
-            buf_view, self.certificate = convert.get_string(buf_view, little=True)
+            self.certificate, buf_view = convert.get_string(buf_view, little=True)
         elif self.option_flags1 & self.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
             try:
-                buf_view, buf = convert.get_string(buf_view, little=True)
+                buf, buf_view = convert.get_string(buf_view, little=True)
                 self.decodeExtraOptions(buf)
             except:
                 pass
@@ -611,7 +611,7 @@ class OUT_CONNECTION_CONTEXT_def:
         return buf_view
 
     def decodeExtraOptions(self, options):
-        opts = options.split(";")
+        opts = options.split("")
         for x in opts:
             token, value = x.split("=")
             if token == "RN":
@@ -640,8 +640,8 @@ class InitializeDialogueReply:
         self.out_context = OUT_CONNECTION_CONTEXT_def()
 
     def init_reply(self, buf_view, conn):
-        buf_view, self.exception_nr = convert.get_int(buf_view, little=True)
-        buf_view, self.exception_detail = convert.get_int(buf_view, little=True)
+        self.exception_nr, buf_view = convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = convert.get_int(buf_view, little=True)
 
         if self.exception_nr == Transport.CEE_SUCCESS:
             buf_view = self.out_context.extractFromByteArray(buf_view)
@@ -656,7 +656,7 @@ class InitializeDialogueReply:
             buf_view = self.out_context.extractFromByteArray(buf_view)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
-            buf_view, self.param_error = convert.get_string(buf_view, little=True)
+            self.param_error, buf_view = convert.get_string(buf_view, little=True)
             raise errors.NotSupportedError
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
@@ -664,3 +664,60 @@ class InitializeDialogueReply:
 
         else:
             self.client_error_text = "unknow error"
+
+
+class ERROR_DESC_LIST_def:
+
+    def __init__(self):
+        self.length = 0
+        self.list = []
+
+    def extractFromByteArray(self, buf_view):
+
+        length, buf_view = convert.get_int(buf_view, little=True)
+
+        for i in range(length):
+            error_desc = ERROR_DESC_Def()
+            buf_view = error_desc.extractFromByteArray(buf_view)
+            self.list.append(error_desc)
+
+        return buf_view
+
+
+class ERROR_DESC_Def:
+
+    def __int__(self):
+        self.rowId = 0
+        self.errorDiagnosticId = 0
+        self.sqlcode  = 0
+        self.sqlstate = ''
+        self.errorText = ''
+        self.operationAbortId = 0
+        self.errorCodeType = 0
+        self.Param1 = ''
+        self.Param2 = ''
+        self.Param3 = ''
+        self.Param4 = ''
+        self.Param5 = ''
+        self.Param6 = ''
+        self.Param7 = ''
+
+    def extractFromByteArray(self, buf_view):
+        self.rowId, buf_view= convert.get_int(buf_view, little=True)
+        self.errorDiagnosticId, buf_view = convert.get_int(buf_view, little=True)
+        self.sqlcode, buf_view = convert.get_int(buf_view, little=True)
+
+        # Note, SQLSTATE is logically 5 bytes, but ODBC uses 6 bytes for some reason.
+        self.sqlstate, buf_view = convert.get_string(buf_view, little=True)
+        self.errorText, buf_view = convert.get_string(buf_view, little=True)
+        self.operationAbortId, buf_view = convert.get_int(buf_view, little=True)
+        self.errorCodeType, buf_view = convert.get_int(buf_view, little=True)
+        self.Param1, buf_view = convert.get_string(buf_view, little=True)
+        self.Param2, buf_view = convert.get_string(buf_view, little=True)
+        self.Param3, buf_view = convert.get_string(buf_view, little=True)
+        self.Param4, buf_view = convert.get_string(buf_view, little=True)
+        self.Param5, buf_view = convert.get_string(buf_view, little=True)
+        self.Param6, buf_view = convert.get_string(buf_view, little=True)
+        self.Param7, buf_view = convert.get_string(buf_view, little=True)
+        return  buf_view
+
