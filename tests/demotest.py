@@ -79,6 +79,14 @@ if __name__ == '__main__':
     tt = ''
     if not tt:
         print("yes")
+
+    options = 'RN=123;RN=3'
+    opts = options.split(";")
+    for x in opts:
+            token, value = x.split("=")
+            if token == "RN":
+                print(value)
+
 """
     print(env['HOMEPATH'])
     print(os.sep)
@@ -90,6 +98,7 @@ if __name__ == '__main__':
 
     print("ddd")
 """
+
 
 
 

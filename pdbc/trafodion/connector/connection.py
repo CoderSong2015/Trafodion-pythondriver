@@ -41,6 +41,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         # get information from dcs master
         self.mxosrvr_info = self._get_objref()
+        self._dialogue_id = self.mxosrvr_info.dialogue_id
         
         if self.mxosrvr_info.security_enabled:
             self.secure_login()
@@ -86,15 +87,14 @@ class TrafConnection(TrafConnectionAbstract):
 
         wbuffer = self._marshal_initdialog(self._user_desc,
                                  self._in_context,
-                                 self.mxosrvr_info.dialogue_id,
+                                 self._dialogue_id,
                                  option_flags1,
                                  option_flags2,
                                  "")
 
         mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
         data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, mxosrvr_conn)
-
-
+        return data
 
     def _marshal_initdialog(self, _user_desc,
                             _in_context,
@@ -125,17 +125,17 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = memoryview(buf)
         buf_view = buf_view[Header.sizeOf():]
         # construct bytebuffer
-        buf_view = _in_context.insertIntoByteArray(buf_view)
-        buf_view = _user_desc.insertIntoByteArray(buf_view)
+        buf_view = _user_desc.insertIntoByteArray(buf_view, little=True)
+        buf_view = _in_context.insertIntoByteArray(buf_view, little=True)
 
-        buf_view = convert.put_int(dialogue_id, buf_view)
-        buf_view = convert.put_int(option_flags1, buf_view)
-        buf_view = convert.put_int(option_flags2, buf_view)
+        buf_view = convert.put_int(dialogue_id, buf_view, little=True)
+        buf_view = convert.put_int(option_flags1, buf_view, little=True)
+        buf_view = convert.put_int(option_flags2, buf_view, little=True)
 
         if (option_flags1 & self.INCONTEXT_OPT1_SESSIONNAME) is not 0:
-            buf_view = convert.put_string(session_name, buf_view)
+            buf_view = convert.put_string(session_name, buf_view, little=True)
         if (option_flags1 & self.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
-            buf_view = convert.put_string(client_user, buf_view)
+            buf_view = convert.put_string(client_user, buf_view, little=True)
         return buf
 
     def _get_objref(self):
@@ -168,7 +168,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         totallength = len(wbuffer)
         wheader = Header(operation_id,
-                         self._dialogue_id,                              # dialogueId,
+                         self._dialogue_id,              # dialogueId,
                          totallength - Header.sizeOf(),  # minus the size of the Header
                          0,                              # cmpLength,
                          'N',                            # compress,
@@ -180,7 +180,10 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.TCPIP,
                          Header.NO)
         self._tcp_io_write(wheader, wbuffer, conn)
-        data = self._tcp_io_read(conn)
+
+        #  master return header with Big-Endian while other is Little-Endian
+        little = False if operation_id == Transport.AS_API_GETOBJREF else True
+        data = self._tcp_io_read(conn, little)
 
         # TODO handle connect_reply
         return data
@@ -280,8 +283,8 @@ class TrafConnection(TrafConnectionAbstract):
 
         return version
 
-    def _tcp_io_read(self, conn):
-        data = conn.recv()
+    def _tcp_io_read(self, conn, little=False):
+        data = conn.recv(little=little)
         return data
 
     def _tcp_io_write(self, header, buffer, conn):

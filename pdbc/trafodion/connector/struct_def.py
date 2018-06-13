@@ -2,6 +2,7 @@
 from .transport import Transport, convert
 import socket
 import time
+from . import errors
 
 
 class CONNECTION_CONTEXT_def:
@@ -94,39 +95,39 @@ class CONNECTION_CONTEXT_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_string(self.datasource, buf_view)
-        buf_view = convert.put_string(self.catalog, buf_view) # string
-        buf_view = convert.put_string(self.schema, buf_view)  # string
-        buf_view = convert.put_string(self.location, buf_view)# string
-        buf_view = convert.put_string(self.userRole, buf_view) # string
+    def insertIntoByteArray(self, buf_view, little=False):
+        buf_view = convert.put_string(self.datasource, buf_view, little)
+        buf_view = convert.put_string(self.catalog, buf_view, little) # string
+        buf_view = convert.put_string(self.schema, buf_view, little)  # string
+        buf_view = convert.put_string(self.location, buf_view, little)# string
+        buf_view = convert.put_string(self.userRole, buf_view, little) # string
         #buf_view = convert.put_string(self.tenantName, buf_view)# string
 
-        buf_view = convert.put_short(self.accessMode, buf_view) # short
-        buf_view = convert.put_short(self.autoCommit, buf_view) # short
-        buf_view = convert.put_int(self.queryTimeoutSec, buf_view) # int
-        buf_view = convert.put_int(self.idleTimeoutSec, buf_view) # int
-        buf_view = convert.put_int(self.loginTimeoutSec, buf_view) # int
-        buf_view = convert.put_short(self.txnIsolationLevel, buf_view) # short
-        buf_view = convert.put_short(self.rowSetSize, buf_view) # short
+        buf_view = convert.put_short(self.accessMode, buf_view, little) # short
+        buf_view = convert.put_short(self.autoCommit, buf_view, little) # short
+        buf_view = convert.put_int(self.queryTimeoutSec, buf_view, little) # int
+        buf_view = convert.put_int(self.idleTimeoutSec, buf_view, little) # int
+        buf_view = convert.put_int(self.loginTimeoutSec, buf_view, little) # int
+        buf_view = convert.put_short(self.txnIsolationLevel, buf_view, little) # short
+        buf_view = convert.put_short(self.rowSetSize, buf_view, little) # short
 
-        buf_view = convert.put_int(self.diagnosticFlag, buf_view) # int
-        buf_view = convert.put_int(self.processId, buf_view) # int
+        buf_view = convert.put_int(self.diagnosticFlag, buf_view, little) # int
+        buf_view = convert.put_int(self.processId, buf_view, little) # int
 
-        buf_view = convert.put_string(self.computerName, buf_view)# string
-        buf_view = convert.put_string(self.windowText, buf_view)  # string
+        buf_view = convert.put_string(self.computerName, buf_view, little)# string
+        buf_view = convert.put_string(self.windowText, buf_view, little)  # string
 
-        buf_view = convert.put_int(self.ctxACP, buf_view) # int
-        buf_view = convert.put_int(self.ctxDataLang, buf_view) # int
-        buf_view = convert.put_int(self.ctxErrorLang, buf_view) # int
-        buf_view = convert.put_short(self.ctxCtrlInferNXHAR, buf_view) # short
+        buf_view = convert.put_int(self.ctxACP, buf_view, little) # int
+        buf_view = convert.put_int(self.ctxDataLang, buf_view, little) # int
+        buf_view = convert.put_int(self.ctxErrorLang, buf_view, little) # int
+        buf_view = convert.put_short(self.ctxCtrlInferNXHAR, buf_view, little) # short
 
-        buf_view = convert.put_short(self.cpuToUse, buf_view) # short
-        buf_view = convert.put_short(self.cpuToUseEnd, buf_view)  # short for future use by DBTransporter
+        buf_view = convert.put_short(self.cpuToUse, buf_view, little) # short
+        buf_view = convert.put_short(self.cpuToUseEnd, buf_view, little)  # short for future use by DBTransporter
 
-        buf_view = convert.put_string(self.connectOptions, buf_view) # string
+        buf_view = convert.put_string(self.connectOptions, buf_view, little) # string
 
-        buf_view = self.clientVersionList.insertIntoByteArray(buf_view)
+        buf_view = self.clientVersionList.insertIntoByteArray(buf_view, little)
         return buf_view
 
     def _init_context(self, conn):
@@ -174,11 +175,11 @@ class VERSION_def:
     def sizeOf(self):
         return Transport.size_int + Transport.size_short * 3
 
-    def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_short(self.componentId, buf_view)
-        buf_view = convert.put_short(self.majorVersion, buf_view)
-        buf_view = convert.put_short(self.minorVersion, buf_view)
-        buf_view = convert.put_int(self.buildId, buf_view)
+    def insertIntoByteArray(self, buf_view, little=False):
+        buf_view = convert.put_short(self.componentId, buf_view, little)
+        buf_view = convert.put_short(self.majorVersion, buf_view, little)
+        buf_view = convert.put_short(self.minorVersion, buf_view, little)
+        buf_view = convert.put_int(self.buildId, buf_view, little)
         return buf_view
 
     def extractFromByteArray(self, buf_view):
@@ -192,10 +193,10 @@ class VERSION_def:
 class VERSION_LIST_def:
     list = []
 
-    def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_int(len(self.list), buf_view)
+    def insertIntoByteArray(self, buf_view, little=False):
+        buf_view = convert.put_int(len(self.list), buf_view, little)
         for item in self.list:
-            buf_view = item.insertIntoByteArray(buf_view)
+            buf_view = item.insertIntoByteArray(buf_view, little)
         return buf_view
 
     def sizeOf(self):
@@ -325,28 +326,28 @@ class Header:
         return buf_view
 
 
-    def extractFromByteArray(self, buf):
+    def extractFromByteArray(self, buf, little=False):
         buf_view = memoryview(buf)
-        self.operation_id_, buf_view = convert.get_short(buf_view)
-        __, buf_view = convert.get_short(buf_view)  # +2 fillter
+        self.operation_id_, buf_view = convert.get_short(buf_view, little)
+        __, buf_view = convert.get_short(buf_view, little)  # +2 fillter
 
-        self.dialogueId_, buf_view = convert.get_int(buf_view)
-        self.total_length_, buf_view = convert.get_int(buf_view)
-        self.cmp_length_, buf_view = convert.get_int(buf_view)
+        self.dialogueId_, buf_view = convert.get_int(buf_view, little)
+        self.total_length_, buf_view = convert.get_int(buf_view, little)
+        self.cmp_length_, buf_view = convert.get_int(buf_view, little)
         self.compress_ind_, buf_view = convert.get_char(buf_view)
         self.compress_type_, buf_view = convert.get_char(buf_view)
 
-        __, buf_view = convert.get_short(buf_view)  # +2 fillter
+        __, buf_view = convert.get_short(buf_view, little)  # +2 fillter
 
-        self.hdr_type_, buf_view = convert.get_int(buf_view)
-        self.signature_, buf_view = convert.get_int(buf_view)
-        self.version_, buf_view = convert.get_int(buf_view)
+        self.hdr_type_, buf_view = convert.get_int(buf_view, little)
+        self.signature_, buf_view = convert.get_int(buf_view, little)
+        self.version_, buf_view = convert.get_int(buf_view, little)
         self.platform_, buf_view = convert.get_char(buf_view)
         self.transport_, buf_view = convert.get_char(buf_view)
         self.swap_, buf_view = convert.get_char(buf_view)
         __, buf_view = convert.get_char(buf_view)  # +1 fillter
-        self.error_, buf_view = convert.get_short(buf_view)
-        self.error_detail_, buf_view = convert.get_short(buf_view)
+        self.error_, buf_view = convert.get_short(buf_view, little)
+        self.error_detail_, buf_view = convert.get_short(buf_view, little)
 
 class USER_DESC_def:
 
@@ -370,13 +371,13 @@ class USER_DESC_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_int(self.userDescType, buf_view)
+    def insertIntoByteArray(self, buf_view, little=False):
+        buf_view = convert.put_int(self.userDescType, buf_view, little)
 
-        buf_view = convert.put_string(self.userSid, buf_view)
-        buf_view = convert.put_string(self.domainName, buf_view)
-        buf_view = convert.put_string(self.userName, buf_view)
-        buf_view = convert.put_string(self.password,buf_view)
+        buf_view = convert.put_string(self.userSid, buf_view, little)
+        buf_view = convert.put_string(self.domainName, buf_view, little)
+        buf_view = convert.put_string(self.userName, buf_view, little)
+        buf_view = convert.put_string(self.password,buf_view, little)
 
         return buf_view
 
@@ -561,3 +562,105 @@ class ConnectReply:
         else:
             self.security_enabled = False
 
+class OUT_CONNECTION_CONTEXT_def:
+    OUTCONTEXT_OPT1_ENFORCE_ISO88591 = 1  #   (2^0)
+    OUTCONTEXT_OPT1_IGNORE_SQLCANCEL = 1073741824  #   (2^30)
+    OUTCONTEXT_OPT1_EXTRA_OPTIONS = 2147483648  #   (2^31)
+    OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE = 536870912  #  (2^29)
+
+    def __init__(self):
+        self.version_list = VERSION_LIST_def()
+        self.node_id = 0 # short
+        self.process_id = 0 # int
+
+        self.computer_name = ''
+        self.catalog = ''
+        self.schema = ''
+        self.option_flags1 = 0
+        self.option_flags2 = 0
+        self.role_name = ''
+        self.enforce_iso = False
+        self.ignore_cancel = True
+
+        self.certificate = b''
+
+    def extractFromByteArray(self, buf_view):
+
+        self.version_list = VERSION_LIST_def()
+        buf_view = self.version_list.extractFromByteArray(buf_view)
+
+        buf_view, self.node_id = convert.get_short(buf_view, little=True)
+        buf_view, self.process_id = convert.get_int(buf_view, little=True)
+        buf_view, self.computer_name = convert.get_string(buf_view, little=True)
+        buf_view, self.catalog = convert.get_string(buf_view, little=True)
+        buf_view, self.schema = convert.get_string(buf_view, little=True)
+        buf_view, self.option_flags1 = convert.get_int(buf_view, little=True)
+        buf_view, self.option_flags2 = convert.get_int(buf_view, little=True)
+        self.enforce_iso = (self.option_flags1 and self.OUTCONTEXT_OPT1_ENFORCE_ISO88591) > 0
+        self.ignore_cancel = (self.option_flags1 and self.OUTCONTEXT_OPT1_IGNORE_SQLCANCEL) > 0
+
+        if self.option_flags1 & self.OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE > 0:
+            buf_view, self.certificate = convert.get_string(buf_view, little=True)
+        elif self.option_flags1 & self.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
+            try:
+                buf_view, buf = convert.get_string(buf_view, little=True)
+                self.decodeExtraOptions(buf)
+            except:
+                pass
+
+        return buf_view
+
+    def decodeExtraOptions(self, options):
+        opts = options.split(";")
+        for x in opts:
+            token, value = x.split("=")
+            if token == "RN":
+                self.role_name = value
+
+
+class InitializeDialogueReply:
+    odbc_SQLSvc_InitializeDialogue_ParamError_exn_ = 1
+    odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_ = 2
+    odbc_SQLSvc_InitializeDialogue_SQLError_exn_ = 3
+    odbc_SQLSvc_InitializeDialogue_SQLInvalidHandle_exn_ = 4
+    odbc_SQLSvc_InitializeDialogue_SQLNeedData_exn_ = 5
+    odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_ = 6
+
+    SQL_PASSWORD_EXPIRING = 8857
+    SQL_PASSWORD_GRACEPERIOD = 8837
+
+    def __init__(self):
+        self.exception_nr = 0
+        self.exception_detail = 0
+        self.param_error = ''
+        self.SQLError = ERROR_DESC_LIST_def()
+        self.InvalidUser = ERROR_DESC_LIST_def()
+        self.client_error_text = ''
+
+        self.out_context = OUT_CONNECTION_CONTEXT_def()
+
+    def init_reply(self, buf_view, conn):
+        buf_view, self.exception_nr = convert.get_int(buf_view, little=True)
+        buf_view, self.exception_detail = convert.get_int(buf_view, little=True)
+
+        if self.exception_nr == Transport.CEE_SUCCESS:
+            buf_view = self.out_context.extractFromByteArray(buf_view)
+
+        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
+            buf_view = self.SQLError.extractFromByteArray(buf_view)
+            if (self.exception_detail == self.SQL_PASSWORD_EXPIRING  or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
+                self.out_context.extractFromByteArray(buf_view)
+
+        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
+            buf_view = self.SQLError.extractFromByteArray(buf_view)
+            buf_view = self.out_context.extractFromByteArray(buf_view)
+
+        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
+            buf_view, self.param_error = convert.get_string(buf_view, little=True)
+            raise errors.NotSupportedError
+
+        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
+            raise errors.NotSupportedError
+
+        else:
+            self.client_error_text = "unknow error"

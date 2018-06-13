@@ -243,16 +243,23 @@ class convert:
         pass
 
     @classmethod
-    def int_to_byteshort(self, num):
-        return struct.pack('!h', num)
+    def int_to_byteshort(self, num, little=False):
+        if not little:
+            return struct.pack('!h', num)
+        else:
+            return struct.pack('<h', num)
 
     @classmethod
-    def int_to_byteint(self, num):
-        return struct.pack('!i', num)
+    def int_to_byteint(self, num, little=False):
+        if not little:
+            return struct.pack('!i', num)
+        else:
+            return struct.pack('<i', num)
 
     @classmethod
     def char_to_bytechar(self, char):
         return struct.pack('!c', char)
+
     @classmethod
     def put_data_memview(self,mem, buf):
         """
@@ -266,14 +273,14 @@ class convert:
                 mem[index] = byte
 
     @classmethod
-    def put_string(self, str, buf_view: memoryview):
+    def put_string(self, str, buf_view: memoryview, little=False):
         """
         :param str: 
         :param buf_view: Python memoryview
         :return: buf_view in current position
         """
         tmp_len = len(str) + 1 #server need to handle the '\0'
-        buf_view = self.put_int(tmp_len, buf_view)  #
+        buf_view = self.put_int(tmp_len, buf_view, little)  #
         if (tmp_len is not 0):
 
             self.put_data_memview(buf_view, str.encode("utf-8"))  # string
@@ -281,19 +288,19 @@ class convert:
         return buf_view
 
     @classmethod
-    def put_short(self, num, buf_view: memoryview):
+    def put_short(self, num, buf_view: memoryview, little=False):
         """
         :param num: short 
         :param buf_view: Python memoryview
         :return: buf_view in current position
         """
-        data = self.int_to_byteshort(num)
+        data = self.int_to_byteshort(num, little)
         self.put_data_memview(buf_view, data)
         return buf_view[2:]
 
     @classmethod
-    def put_int(self, num, buf_view: memoryview):
-        data = self.int_to_byteint(num)
+    def put_int(self, num, buf_view: memoryview, little=False):
+        data = self.int_to_byteint(num, little)
         self.put_data_memview(buf_view, data)
         return buf_view[4:]
 

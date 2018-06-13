@@ -44,7 +44,7 @@ class BaseTrafSocket(object):
         """
         pass
 
-    def recv(self, isCompressed = False):
+    def recv(self, isCompressed = False, little=False):
         """Receive packets from the mxosrvr server"""
         try:
             # Read the header of the mxosrvr packet, 40 bytes
@@ -61,7 +61,7 @@ class BaseTrafSocket(object):
             # Get the data length from packet
 
             hdr = Header()
-            hdr.extractFromByteArray(packet)
+            hdr.extractFromByteArray(packet, little)
             datalen = hdr.total_length
             rest = datalen
             packet.extend(bytearray(datalen))
