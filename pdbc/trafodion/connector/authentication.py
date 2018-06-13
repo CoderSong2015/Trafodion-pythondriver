@@ -1,45 +1,47 @@
 import os
 from . import errors
-
-
+from OpenSSL import crypto
+import random
+import time
+from sys import maxsize
 class SecPwd:
 
     def __init__(self, directory, filename, spj_mode, server_name, proc_info):
         """
-                   # Ctor for the SecPwd. There are two possible certificates: active
-                   # certificate and certificate that is going to be active.
-                   #
-                   # If autodownload is true, certificate will always come from the
-                   # server. In this case, only active certificate is used.
-                   #
-                   # If autodownload is false, active certificate is used to encrypt the
-                   # password. When there is a new certificate, it will be stored in
-                   # "certificate". As soon as this new certificate is activated on the
-                   # server, the current active certificate will become stale, and the new
-                   # certificate will be copied over and becomes the active certificate.
-                   #
-                   # If spjMode is true, the OS name is NONSTOP_KERNEL and the host name
-                   # is the same as the server name then just setSpj mode to true
-                   # and does nothing.
-                   #
-                   # @param directory
-                   #            specifies the directory to locate the certificate. The default
-                   #            value is %HOME% if set else %HOMEDRIVE%%HOMEPATH%.
-                   # @param file_name
-                   #            specifies the certificate that is in waiting. The default
-                   #            value is the first 5 characters of server name.
-                   # 
-                   # @param spj_mode
-                   #            true - and if os.name == NSK and the host name
-                   #            matches the local host - token case.  Certificate is not
-                   #            handled in this case.
-                   #            false - handles certificate
-                   # @param server_name
-                   #            server name for this certificate.
-                   # @param proc_info
-                   #            stores only 4 bytes pid + 4 bytes nid
-                   # @throws SecurityException
-                   #   
+        # Ctor for the SecPwd. There are two possible certificates: active
+        # certificate and certificate that is going to be active.
+        #
+        # If autodownload is true, certificate will always come from the
+        # server. In this case, only active certificate is used.
+        #
+        # If autodownload is false, active certificate is used to encrypt the
+        # password. When there is a new certificate, it will be stored in
+        # "certificate". As soon as this new certificate is activated on the
+        # server, the current active certificate will become stale, and the new
+        # certificate will be copied over and becomes the active certificate.
+        #
+        # If spjMode is true, the OS name is NONSTOP_KERNEL and the host name
+        # is the same as the server name then just setSpj mode to true
+        # and does nothing.
+        #
+        # @param directory
+        #            specifies the directory to locate the certificate. The default
+        #            value is %HOME% if set else %HOMEDRIVE%%HOMEPATH%.
+        # @param file_name
+        #            specifies the certificate that is in waiting. The default
+        #            value is the first 5 characters of server name.
+        # 
+        # @param spj_mode
+        #            true - and if os.name == NSK and the host name
+        #            matches the local host - token case.  Certificate is not
+        #            handled in this case.
+        #            false - handles certificate
+        # @param server_name
+        #            server name for this certificate.
+        # @param proc_info
+        #            stores only 4 bytes pid + 4 bytes nid
+        # @throws SecurityException
+        #   
 
         """
         self.m_sec =''
@@ -106,7 +108,7 @@ class SecPwd:
 
 
 class Security:
-    def __init__(self, cer_file):
+    def __init__(self, cer_file=None, cer=None):
         # m_encrypted = 0
         self.pwdkey = SecdefsCommon.PwdKey()
         self.pwdkey.data = SecdefsCommon.LoginData()
@@ -114,11 +116,13 @@ class Security:
         self.pwdkey.id[1] = '\2'
         self.pwdkey.id[2] = '\3'
         self.pwdkey.id[3] = '\4'
+        self.key_time = None
 
         try:
-            m_keyObj = Key()
-            m_cert = Certificate(cer_file)
-            m_keyObj.get_pubkey_from_file(m_cert.get_cert())
+            self.keyobj = Key()
+            self.cert = Certificate()
+            self.cert.import_cert(cer) if cer is not None else self.cert.import_cert_file(cer_file)
+            self.keyobj.import_pub_key(self.cert.get_pubkey())
             self.generate_session_key()
         except:
             raise errors.NotSupportedError
@@ -127,22 +131,44 @@ class Security:
         pass
 
     def generate_session_key(self):
+        for i in range(len(self.pwdkey.data.session_key)):
+            self.pwdkey.data.session_key[i] = (random.randint(0, maxsize) & 0xFF)
+
+        for i in range(len(self.pwdkey.data.nonce)):
+            self.pwdkey.data.nonce[i] = (random.randint(0, maxsize) & 0xFF)
+
+        #  TODO
+        #  m_nonceSeq
+
+        self.key_time = time.time()
+
         pass
 
 
 class Key:
-
+    def __init__(self):
+        self.key = None
+        self.key_len = 0
     def get_pubkey_from_file(self, file):
         pass
-    pass
+
+    def import_pub_key(self, key:crypto.PKey):
+        self.key = key
+        self.key_len = 256 if self.key.bits() / 8 > 128 else 128
 
 class Certificate:
-    def __init__(self, cer_file):
-        pass
+    def __init__(self):
+        self.cer_obj = None
 
-    def get_cert(self):
-        pass
+    def import_cert(self, cer):
+        self.cer_obj = crypto.load_certificate(crypto.FILETYPE_PEM, cer.encode("utf-8"))
 
+    def import_cert_file(self, cer_file):
+        # TODO
+        return None
+
+    def get_pubkey(self):
+        return self.cer_obj.get_pubkey()
 
 class SecdefsCommon:
 
@@ -159,9 +185,7 @@ class SecdefsCommon:
      PROCINFO_SIZE =  8
      PWDID_SIZE = 4
      EXPDATESIZE = 12
-     PWDKEY_SIZE_LESS_LOGINDATA = (PWDID_SIZE + ROLENAME_SIZE + DIGEST_LENGTH +  TIMESTAMP_SIZE)
-
-     # For public key encryption, the number of bytes
+     PWDKEY_SIZE_LESS_LOGINDATA = (PWDID_SIZE + ROLENAME_SIZE + DIGEST_LENGTH +  TIMESTAMP_SIZE)       # For public key encryption, the number of bytes
      #    to be encrypted is 11 bytes less than the public key length
 
      UNUSEDBYTES = 11

@@ -55,29 +55,32 @@ class TrafConnection(TrafConnectionAbstract):
     def secure_login(self):
         #  if there is no certificate in local system, downloading
         #  if from mxosrvr first.
-        #
+        #  now download certificate every time
 
-        self.download_cer()
+        init_reply = self.download_cer()
+        #  TODO save certificate into file
+        self.encrypt_password(init_reply.out_context.certificate)
+
+    def encrypt_password(self, certificate):
+
         pass
-
     def download_cer(self):
         # attempt download
         self._in_context.connectOptions = ''
-        self.init_diag(True, True)
-        pass
+        init_reply = self.init_diag(True, True)
+        return init_reply
 
     def old_encrypt_password(self):
         pass
 
-    def init_diag(self, setTimestamp, downloadCert):
+    def init_diag(self, set_timestamp, downloadCert):
 
         #  get connection
 
         option_flags1 = self.INCONTEXT_OPT1_CLIENT_USERNAME
         option_flags2 = 0
-        if setTimestamp:
+        if set_timestamp:
             option_flags1 |= self.INCONTEXT_OPT1_CERTIFICATE_TIMESTAMP
-
 
         if self._session_name is not None and len(self._session_name) > 0:
             option_flags1 |= self.INCONTEXT_OPT1_SESSIONNAME
@@ -86,16 +89,18 @@ class TrafConnection(TrafConnectionAbstract):
             option_flags1 |= self.INCONTEXT_OPT1_FETCHAHEAD
 
         wbuffer = self._marshal_initdialog(self._user_desc,
-                                 self._in_context,
-                                 self._dialogue_id,
-                                 option_flags1,
-                                 option_flags2,
-                                 "")
+                                           self._in_context,
+                                           self._dialogue_id,
+                                           option_flags1,
+                                           option_flags2,
+                                           "")
 
         mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
         data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, mxosrvr_conn)
         try:
             init_reply = self._handle_mxosrvr_data(data)
+            # TODO init connection information to property
+
             return init_reply
         except:
             print("what?")
@@ -160,11 +165,11 @@ class TrafConnection(TrafConnectionAbstract):
         srvr_type = self.property.srvr_type
 
         wbuffer = self._marshal_getobjref(self._in_context,
-                                self._user_desc,
-                                srvr_type,
-                                retry_count,
-                                0x10000000
-                                )
+                                          self._user_desc,
+                                          srvr_type,
+                                          retry_count,
+                                          0x10000000
+                                          )
         master_conn = self._get_connection(self._master_host, self._master_port)
         print(master_conn)
         data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
@@ -211,14 +216,14 @@ class TrafConnection(TrafConnectionAbstract):
         return c
 
     def _marshal_getobjref(self,
-                 in_context,
-                 user_desc,
-                 srvr_type,
-                 retry_count,
-                 option_flags_1,
-                 option_flags_2=0,
-                 vproc="Traf_pybc_${buildId}",
-                 ):
+                           in_context,
+                           user_desc,
+                           srvr_type,
+                           retry_count,
+                           option_flags_1,
+                           option_flags_2=0,
+                           vproc="Traf_pybc_${buildId}",
+                           ):
         wlength = Header.sizeOf()
         buf = b''
 
