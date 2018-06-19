@@ -34,17 +34,41 @@ xqHLMLszP/DVbnAF
 
 if __name__ == '__main__':
     import OpenSSL.crypto
+    from OpenSSL.crypto import dump_publickey
     c = OpenSSL.crypto
     cert = c.load_certificate(c.FILETYPE_PEM, cer.encode("utf-8"))
-    c = cert.get_pubkey()
-    dd = 256 if c.bits() / 8 > 128 else 128
-    print(cert.get_notBefore())
+    print(cert.get_version())
+    print(cert.get_serial_number())
+    print(cert.get_notAfter())
 
-    import random
-    from sys import maxsize
-    b = bytearray(10)
-    for i in range(len(b)):
-        b[i] = (random.randint(0, maxsize) & 0xFF)
-    print(b)
+    pk = cert.get_pubkey()
+    print(pk)
+    pkk = dump_publickey(c.FILETYPE_PEM, pk)
+    print(pkk)
+    s = "ggb"
+    import rsa
+    pubk = rsa.PublicKey.load_pkcs1_openssl_pem(pkk)
+    cry = rsa.encrypt(s.encode(), pubk)
+    print(cry)
+    import hmac
     import time
-    print(time.time())
+    #ff = time.strftime("yyMMddHHmmss", cert.get_notAfter())
+    #% Y % m % d % H % M % S
+    dd = "190410153652"
+    ff = time.strptime(dd, "%Y%m%d%H%M%S")
+    #ff=time.localtime(cert.get_notAfter())
+    #print(ff)
+    s = bytearray("haolin".encode())
+    s[2:3] = "23".encode()
+    print(s)
+
+    qq = cert.get_notAfter()
+    from pyasn1.type import useful
+    tt = useful.UTCTime("9803081200Z")
+    vv = useful.UTCTime(dd)
+    print(vv.asNumbers())
+
+
+
+
+

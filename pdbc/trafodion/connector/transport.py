@@ -236,32 +236,33 @@ class Transport:
 
     # end class TRANSPORT
 
+
 class convert:
 
     @classmethod
-    def convert_buf(self, values):
+    def convert_buf(cls, values):
         pass
 
     @classmethod
-    def int_to_byteshort(self, num, little=False):
+    def int_to_byteshort(cls, num, little=False):
         if not little:
             return struct.pack('!h', num)
         else:
             return struct.pack('<h', num)
 
     @classmethod
-    def int_to_byteint(self, num, little=False):
+    def int_to_byteint(cls, num, little=False):
         if not little:
             return struct.pack('!i', num)
         else:
             return struct.pack('<i', num)
 
     @classmethod
-    def char_to_bytechar(self, char):
+    def char_to_bytechar(cls, char):
         return struct.pack('!c', char)
 
     @classmethod
-    def put_data_memview(self,mem, buf):
+    def put_data_memview(cls, mem, buf):
         """
         :param mem: memoryview
         :param buf: 
@@ -273,17 +274,31 @@ class convert:
                 mem[index] = byte
 
     @classmethod
-    def put_string(self, str, buf_view: memoryview, little=False):
+    def put_string(self, string, buf_view: memoryview, little=False):
         """
-        :param str: 
+        :param string: 
         :param buf_view: Python memoryview
         :return: buf_view in current position
         """
-        tmp_len = len(str) + 1 #server need to handle the '\0'
+        tmp_len = len(string) + 1 #server need to handle the '\0'
         buf_view = self.put_int(tmp_len, buf_view, little)  #
         if (tmp_len is not 0):
+            self.put_data_memview(buf_view, string.encode("utf-8"))  # string
+            buf_view = buf_view[tmp_len:]
+        return buf_view
 
-            self.put_data_memview(buf_view, str.encode("utf-8"))  # string
+    @classmethod
+    def put_bytes(self, string, buf_view: memoryview, little=False):
+        """
+        :param string: 
+        :param buf_view: Python memoryview
+        :param little:
+        :return: buf_view in current position
+        """
+        tmp_len = len(string) + 1  # server need to handle the '\0'
+        buf_view = self.put_int(tmp_len, buf_view, little)  #
+        if (tmp_len is not 0):
+            self.put_data_memview(buf_view, string)  # string
             buf_view = buf_view[tmp_len:]
         return buf_view
 
@@ -348,5 +363,10 @@ class convert:
         time = buf_view[0:8].tobytes()
         return (time, buf_view[8:])
 
-
+    @staticmethod
+    def turple_to_bytes(tur:tuple)-> bytes:
+        s = ''
+        for x in tur:
+            s = s + chr(x)
+        return s.encode("utf-8")
 

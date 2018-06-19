@@ -87,6 +87,23 @@ if __name__ == '__main__':
             if token == "RN":
                 print(value)
 
+    nn = 3
+    dd = 4
+    bb = b''
+    bb = bb + nn.to_bytes(length=4, byteorder='big') + dd.to_bytes(length=4, byteorder='big')
+    print(bb)
+
+    cv = bytearray("ccc", "utf-8")
+    bb = bytearray("456".encode())
+    print(bb)
+    import sys
+
+    pwd_key_result = bytearray(20)
+    buf_view = memoryview(pwd_key_result)
+    buf_view[7:7 + len(cv)] = cv
+    pwd_key_result[0:0 +len(bb)] = bb
+    print(pwd_key_result)
+
 """
     print(env['HOMEPATH'])
     print(os.sep)

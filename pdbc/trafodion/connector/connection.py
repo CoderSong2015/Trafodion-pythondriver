@@ -7,7 +7,7 @@ from .transport import Transport,convert
 import time
 import getpass
 from . import errors
-
+from . import authentication
 
 class TrafConnection(TrafConnectionAbstract):
     """
@@ -57,13 +57,44 @@ class TrafConnection(TrafConnectionAbstract):
         #  if from mxosrvr first.
         #  now download certificate every time
 
+        proc_info = self.create_proc_info(self.mxosrvr_info.server_process_id,
+                                         self.mxosrvr_info.server_node_id,
+                                         self.mxosrvr_info.timestamp)
+
+        #  spj_mode = this.t4props_.getSPJEnv() & & this.t4props_.getTokenAuth();
+
+        # TODO init directory and filename in property
+        self.secpwd = authentication.SecPwd('', '', False, self.mxosrvr_info.cluster_name, proc_info)
         init_reply = self.download_cer()
         #  TODO save certificate into file
-        self.encrypt_password(init_reply.out_context.certificate)
+        try:
+            self._user_desc.password = self.encrypt_password(init_reply)
+        except:
+            raise errors.DataError("encrypt error")
+        init_reply = self.init_diag(True, False)
+        return init_reply
 
-    def encrypt_password(self, certificate):
+    def create_proc_info(self, server_process_id,
+                         server_node_id,
+                         timestamp: bytes,
+                         )-> bytes:
+        proc = server_process_id.to_bytes(length=4, byteorder='little') \
+               + server_node_id.to_bytes(length=4, byteorder='little') \
+               + timestamp
 
-        pass
+        return proc
+
+    def encrypt_password(self, init_reply):
+
+        self.secpwd.open_certificate(certificate=init_reply.out_context.certificate)
+        #out_context = init_reply.out_context
+        role_name = self.property.userRole
+        try:
+            pwd = self.secpwd.encrypt_pwd(self._password, role_name)
+            return pwd
+        except:
+            raise errors.DataError
+
     def download_cer(self):
         # attempt download
         self._in_context.connectOptions = ''
@@ -73,7 +104,7 @@ class TrafConnection(TrafConnectionAbstract):
     def old_encrypt_password(self):
         pass
 
-    def init_diag(self, set_timestamp, downloadCert):
+    def init_diag(self, set_timestamp, download_cert:bool):
 
         #  get connection
 
@@ -88,6 +119,7 @@ class TrafConnection(TrafConnectionAbstract):
         if self.property.fetch_ahead:
             option_flags1 |= self.INCONTEXT_OPT1_FETCHAHEAD
 
+        self._in_context.connectOptions = ''.encode("utf-8") if download_cert else convert.turple_to_bytes(self.secpwd.get_cer_exp_date())
         wbuffer = self._marshal_initdialog(self._user_desc,
                                            self._in_context,
                                            self._dialogue_id,
@@ -114,6 +146,7 @@ class TrafConnection(TrafConnectionAbstract):
         except:
             raise errors.DataError(2345)
         return c
+
     def _marshal_initdialog(self, _user_desc,
                             _in_context,
                             dialogue_id,
@@ -121,40 +154,45 @@ class TrafConnection(TrafConnectionAbstract):
                             option_flags2,
                             session_name,
                             ):
-        wlength = Header.sizeOf()
+        try:
+            wlength = Header.sizeOf()
 
-        client_user = getpass.getuser()
+            client_user = getpass.getuser()
+            try:
+                wlength += (_in_context.sizeOf()
+                        + _user_desc.sizeOf()
+                        + Transport.size_int  # dialogueId
+                        + Transport.size_int  # option_flags_1
+                        + Transport.size_int  # option_flags_2
+                        + Transport.size_bytes(session_name.encode("utf-8")) #sessionBytes
+                        + Transport.size_bytes(client_user.encode("utf-8")))
+            except:
+                raise errors.InternalError("sizeOf error")
 
-        wlength += (_in_context.sizeOf()
-                    + _user_desc.sizeOf()
-                    + Transport.size_int  # dialogueId
-                    + Transport.size_int  # option_flags_1
-                    + Transport.size_int  # option_flags_2
-                    + Transport.size_bytes(session_name.encode("utf-8")) #sessionBytes
-                    + Transport.size_bytes(client_user.encode("utf-8")))
+            buf = bytearray(b'')
 
-        buf = bytearray(b'')
+            buf.extend(bytearray(wlength))
 
-        buf.extend(bytearray(wlength))
+            print(len(buf))
+            # use memoryview to avoid mem copy
+            # remain space for header
+            buf_view = memoryview(buf)
+            buf_view = buf_view[Header.sizeOf():]
+            # construct bytebuffer
+            buf_view = _user_desc.insertIntoByteArray(buf_view, little=True)
+            buf_view = _in_context.insertIntoByteArray(buf_view, little=True)
 
-        print(len(buf))
-        # use memoryview to avoid mem copy
-        # remain space for header
-        buf_view = memoryview(buf)
-        buf_view = buf_view[Header.sizeOf():]
-        # construct bytebuffer
-        buf_view = _user_desc.insertIntoByteArray(buf_view, little=True)
-        buf_view = _in_context.insertIntoByteArray(buf_view, little=True)
+            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = convert.put_int(option_flags1, buf_view, little=True)
+            buf_view = convert.put_int(option_flags2, buf_view, little=True)
 
-        buf_view = convert.put_int(dialogue_id, buf_view, little=True)
-        buf_view = convert.put_int(option_flags1, buf_view, little=True)
-        buf_view = convert.put_int(option_flags2, buf_view, little=True)
-
-        if (option_flags1 & self.INCONTEXT_OPT1_SESSIONNAME) is not 0:
-            buf_view = convert.put_string(session_name, buf_view, little=True)
-        if (option_flags1 & self.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
-            buf_view = convert.put_string(client_user, buf_view, little=True)
-        return buf
+            if (option_flags1 & self.INCONTEXT_OPT1_SESSIONNAME) is not 0:
+                buf_view = convert.put_string(session_name, buf_view, little=True)
+            if (option_flags1 & self.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
+                buf_view = convert.put_string(client_user, buf_view, little=True)
+            return buf
+        except:
+            raise errors.InternalError("marshal init dialog error")
 
     def _get_objref(self):
         self._in_context = self._get_context()

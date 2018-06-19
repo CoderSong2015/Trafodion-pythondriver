@@ -36,7 +36,7 @@ class CONNECTION_CONTEXT_def:
         self.cpuToUse = -1  # short
         self.cpuToUseEnd = -1  # short for future use by DBTransporter
 
-        self.connectOptions = ""  # string
+        self.connectOptions = "".encode()  # bytes here
 
         self.clientVersionList = VERSION_LIST_def()
 
@@ -60,7 +60,7 @@ class CONNECTION_CONTEXT_def:
         self.userRole_bytes = self.userRole.encode('utf-8')
         self.computerName_bytes = self.computerName.encode('utf-8')
         self.windowText_bytes = self.windowText.encode('utf-8')
-        self.connectOptions_bytes = self.connectOptions.encode('utf-8')
+        #self.connectOptions_bytes = self.connectOptions.encode('utf-8')
 
         size = Transport.size_bytes(self.datasource_bytes)
         size += Transport.size_bytes(self.catalog_bytes)
@@ -89,7 +89,7 @@ class CONNECTION_CONTEXT_def:
 
         size += Transport.size_short  # cpuToUse
         size += Transport.size_short  # cpuToUseEnd
-        size += Transport.size_bytes(self.connectOptions_bytes)
+        size += Transport.size_bytes(self.connectOptions)
 
         size += self.clientVersionList.sizeOf()
 
@@ -125,7 +125,7 @@ class CONNECTION_CONTEXT_def:
         buf_view = convert.put_short(self.cpuToUse, buf_view, little) # short
         buf_view = convert.put_short(self.cpuToUseEnd, buf_view, little)  # short for future use by DBTransporter
 
-        buf_view = convert.put_string(self.connectOptions, buf_view, little) # string
+        buf_view = convert.put_string(self.connectOptions.decode("utf-8"), buf_view, little)  # string
 
         buf_view = self.clientVersionList.insertIntoByteArray(buf_view, little)
         return buf_view
@@ -356,7 +356,7 @@ class USER_DESC_def:
         self.userSid = ''
         self.domainName = ''
         self.userName = ''
-        self.password = ''
+        self.password = ''.encode("utf-8")
         self.domainName_bytes = self.domainName.encode("utf-8")
         self.userName_bytes = self.userName.encode("utf-8")
 
@@ -377,7 +377,7 @@ class USER_DESC_def:
         buf_view = convert.put_string(self.userSid, buf_view, little)
         buf_view = convert.put_string(self.domainName, buf_view, little)
         buf_view = convert.put_string(self.userName, buf_view, little)
-        buf_view = convert.put_string(self.password,buf_view, little)
+        buf_view = convert.put_bytes(self.password, buf_view, little)
 
         return buf_view
 
@@ -647,9 +647,12 @@ class InitializeDialogueReply:
             buf_view = self.out_context.extractFromByteArray(buf_view)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
-            buf_view = self.SQLError.extractFromByteArray(buf_view)
-            if (self.exception_detail == self.SQL_PASSWORD_EXPIRING  or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
-                self.out_context.extractFromByteArray(buf_view)
+            try:
+                buf_view = self.SQLError.extractFromByteArray(buf_view)
+                if (self.exception_detail == self.SQL_PASSWORD_EXPIRING or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
+                    self.out_context.extractFromByteArray(buf_view)
+            except:
+                raise errors.InternalError("extract error")
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
             buf_view = self.SQLError.extractFromByteArray(buf_view)
@@ -719,5 +722,5 @@ class ERROR_DESC_Def:
         self.Param5, buf_view = convert.get_string(buf_view, little=True)
         self.Param6, buf_view = convert.get_string(buf_view, little=True)
         self.Param7, buf_view = convert.get_string(buf_view, little=True)
-        return  buf_view
+        return buf_view
 
