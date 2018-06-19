@@ -349,10 +349,20 @@ class convert:
         # they are different in calculating length of string
         offset = 1 if not byteoffset else 0
         if len is not 0:
-            toBytes = buf_view[0:len - offset].tobytes()
-            return (toBytes.decode("utf-8"), buf_view[len + (1 - offset):])
+            to_bytes = buf_view[0:len - offset].tobytes()
+            return (to_bytes.decode("utf-8"), buf_view[len + (1 - offset):])
         else:
             return ('', buf_view)
+
+
+    @classmethod
+    def get_bytes(self, buf_view: memoryview, len=0, byteoffset=False):
+
+        if len is not 0:
+            to_bytes = buf_view[0:len].tobytes()
+            return (to_bytes, buf_view[len:])
+        else:
+            return (''.encode("utf-8"), buf_view)
 
     @classmethod
     def get_char(self, buf_view: memoryview):

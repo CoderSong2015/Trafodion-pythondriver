@@ -711,7 +711,7 @@ class ERROR_DESC_Def:
         self.sqlcode, buf_view = convert.get_int(buf_view, little=True)
 
         # Note, SQLSTATE is logically 5 bytes, but ODBC uses 6 bytes for some reason.
-        self.sqlstate, buf_view = convert.get_string(buf_view, little=True)
+        self.sqlstate, buf_view = convert.get_bytes(buf_view, len=6)
         self.errorText, buf_view = convert.get_string(buf_view, little=True)
         self.operationAbortId, buf_view = convert.get_int(buf_view, little=True)
         self.errorCodeType, buf_view = convert.get_int(buf_view, little=True)

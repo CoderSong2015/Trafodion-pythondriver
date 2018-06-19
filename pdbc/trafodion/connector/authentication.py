@@ -157,14 +157,13 @@ class Security:
             pass
 
         pwd_key_result = bytearray(self.keyobj.key_len + SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA)
-
-        try :
+        try:
             # Build password key
             # Copy 4 bytes of id
             pwd_key_result[0:4] = self.pwdkey.id
             # Copy rolename
             if (rolename != ''):
-                rolename_len  = len(rolename)
+                rolename_len = len(rolename)
                 pwd_key_result[4:rolename_len] = pwd_key_result + rolename.encode("utf-8")
             else:
                 rolename_len = 0
@@ -172,7 +171,9 @@ class Security:
             # Copy 16 bytes of procInfo and timestamp(4 + 4 + 8) to
             # password key store procInfo in the digest starting from
             # digest[20]
-            pwd_key_result[4 + rolename_len: 16] = proc_info
+            s =SecdefsCommon.PWDID_SIZE + SecdefsCommon.ROLENAME_SIZE + SecdefsCommon.DIGEST_LENGTH - \
+                            SecdefsCommon.PROCINFO_SIZE
+            pwd_key_result[s: s + 16] = proc_info
 
             # Build plain text to encrypt
             to_encrypt = self.pwdkey.data.session_key + self.pwdkey.data.nonce + pwd.encode()
@@ -181,19 +182,20 @@ class Security:
             cipher_text = self.encrypt(to_encrypt, self.keyobj.public_key)
 
             # # Copy cipherText to pwdkey
-            pwd_key_result += cipher_text
+            s = SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA
+            pwd_key_result[s:s + len(cipher_text)] = cipher_text
 
             # # Create digest
             # # Get bytes from digest[20] on
             s = SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA - SecdefsCommon.TIMESTAMP_SIZE - SecdefsCommon.PROCINFO_SIZE
-            e = s + SecdefsCommon.PROCINFO_SIZE + SecdefsCommon.TIMESTAMP_SIZE + len(cipher_text)
+            e = SecdefsCommon.PROCINFO_SIZE + SecdefsCommon.TIMESTAMP_SIZE + len(cipher_text)
 
-            to_digest = pwd_key_result[s:e]
+            to_digest = pwd_key_result[s:s + e]
             digested_msg = self.digest(self.pwdkey.data.session_key, to_digest)
             if len(digested_msg) != SecdefsCommon.DIGEST_LENGTH:
                 raise errors.NotSupportedError
             s = SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA - SecdefsCommon.TIMESTAMP_SIZE - SecdefsCommon.DIGEST_LENGTH
-            pwd_key_result[s:s + len(digested_msg) ] = digested_msg
+            pwd_key_result[s:s + len(digested_msg)] = digested_msg
 
             return pwd_key_result
         except:
@@ -214,10 +216,12 @@ class Security:
 
     def generate_session_key(self):
         for i in range(len(self.pwdkey.data.session_key)):
-            self.pwdkey.data.session_key[i] = (random.randint(0, maxsize) & 0xFF)
+            #self.pwdkey.data.session_key[i] = (random.randint(0, maxsize) & 0xFF)
+            self.pwdkey.data.session_key[i] = 7
 
         for i in range(len(self.pwdkey.data.nonce)):
-            self.pwdkey.data.nonce[i] = (random.randint(0, maxsize) & 0xFF)
+            #self.pwdkey.data.nonce[i] = (random.randint(0, maxsize) & 0xFF)
+            self.pwdkey.data.nonce[i] = 7
 
         #  TODO
         #  m_nonceSeq

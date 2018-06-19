@@ -26,7 +26,7 @@ class TrafConnection(TrafConnectionAbstract):
         self._connection_timeout = 60
         self._dialogue_id = 0
         self._session_name = ''
-
+        self._mxosrvr_conn = None
         super(TrafConnection, self).__init__(**kwargs)
 
         print("kwargs!?")
@@ -127,12 +127,17 @@ class TrafConnection(TrafConnectionAbstract):
                                            option_flags2,
                                            "")
 
-        mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
-        data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, mxosrvr_conn)
+        if self._mxosrvr_conn is None:
+            self._mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
+        data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, self._mxosrvr_conn)
         try:
             init_reply = self._handle_mxosrvr_data(data)
             # TODO init connection information to property
-
+            if init_reply.exception_nr == Transport.CEE_SUCCESS:
+                # TODO
+                pass
+            else:
+                pass
             return init_reply
         except:
             print("what?")
@@ -144,7 +149,7 @@ class TrafConnection(TrafConnectionAbstract):
             c = InitializeDialogueReply()
             c.init_reply(buf_view, self)
         except:
-            raise errors.DataError(2345)
+            raise errors.InternalError("handle mxosrvr data error")
         return c
 
     def _marshal_initdialog(self, _user_desc,
