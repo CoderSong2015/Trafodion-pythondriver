@@ -1,13 +1,16 @@
-from .abstracts import TrafConnectionAbstract
-import os
-import sys
-from .network import TrafTCPSocket, TrafUnixSocket,socket
-from .struct_def import ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def, VERSION_def, Header, InitializeDialogueReply
-from .transport import Transport,convert
-import time
 import getpass
+
+from .abstracts import TrafConnectionAbstract
+from .struct_def import (
+    ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def,
+    VERSION_def, Header, InitializeDialogueReply
+)
+
+from .transport import Transport, convert
 from . import errors
 from . import authentication
+from .cursor import CursorBase, TrafCursor
+
 
 class TrafConnection(TrafConnectionAbstract):
     """
@@ -364,16 +367,173 @@ class TrafConnection(TrafConnectionAbstract):
 
     def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
                dictionary=None, named_tuple=None):
+        """Instantiates and returns a cursor
+
+                By default, TrafCursor is returned. 
+
+                Returns a cursor-object
+                """
+        #self.handle_unread_result()
+
+        if not self.is_connected():
+            raise errors.OperationalError("MySQL Connection not available.")
+        if cursor_class is not None:
+            if not issubclass(cursor_class, CursorBase):
+                raise errors.ProgrammingError(
+                    "Cursor class needs be to subclass of cursor.CursorBase")
+            return (cursor_class)(self)
+
+        buffered = buffered if buffered is not None else self._buffered
+        raw = raw if raw is not None else self._raw
+
+        cursor_type = 0
+        if buffered is True:
+            cursor_type |= 1
+        if raw is True:
+            cursor_type |= 2
+        if dictionary is True:
+            cursor_type |= 4
+        if named_tuple is True:
+            cursor_type |= 8
+        if prepared is True:
+            cursor_type |= 16
+
+        #0: TrafCursor,  # 0
+        #1: TrafCursorBuffered,
+        #2: TrafCursorRaw,
+        #3: TrafCursorBufferedRaw,
+        #4: TrafCursorDict,
+        #5: TrafCursorBufferedDict,
+        #8: TrafCursorNamedTuple,
+        #9: TrafCursorBufferedNamedTuple,
+        #16:TrafCursorPrepared#
+        types = {
+            0: TrafCursor,  # 0
+        }
+        try:
+            return (types[cursor_type])(self)
+        except KeyError:
+            args = ('buffered', 'raw', 'dictionary', 'named_tuple', 'prepared')
+            raise ValueError('Cursor not available with given criteria: ' +
+                             ', '.join([args[i] for i in range(5)
+                                        if cursor_type & (1 << i) != 0]))
         pass
 
     def disconnect(self):
         pass
 
     def is_connected(self):
-        pass
+        """Reports whether the connection to mxosrvr Server is available
+
+           Returns True or False.
+        """
+        # TODO it is not enough only using connection, ping is needed
+        self.ping()
+        return True if self._mxosrvr_conn is not None else False
 
     def ping(self, reconnect=False, attempts=1, delay=0):
         pass
 
     def rollback(self):
         pass
+
+    def cmd_query(self, query, raw=False, buffered=False, raw_as_string=False):
+        """Send a query to the mxosrvr server
+
+        This method send the query to the mxosrvr server and returns the result.
+
+        If there was a text result, a tuple will be returned consisting of
+        the number of columns and a list containing information about these
+        columns.
+
+        When the query doesn't return a text result, the OK or EOF packet
+        information as dictionary will be returned. In case the result was
+        an error, exception errors.Error will be raised.
+
+        Returns a tuple()
+        """
+        if not isinstance(query, bytes):
+            query = query.encode('utf-8')
+
+        statement_type = self._get_statement_type(query)
+        result = self._handle_result(self._send_cmd(statement_type, query))
+
+        if self._have_next_result:
+            raise errors.InterfaceError(
+                'Use cmd_query_iter for statements with multiple queries.')
+
+        return result
+
+    def _send_cmd(self, command, argument=None, packet_number=0, packet=None,
+                  expect_response=True, compressed_packet_number=0):
+        """Send a command to the mxosrvr server
+
+        Returns a mxosrvr packet or None.
+        """
+        self.handle_unread_result()
+
+        try:
+            self._socket.send(
+                self._protocol.make_command(command, packet or argument),
+                packet_number, compressed_packet_number)
+        except AttributeError:
+            raise errors.OperationalError("mxosrvr Connection not available.")
+
+        if not expect_response:
+            return None
+        return self._socket.recv()
+
+    @staticmethod
+    def _get_statement_type(query):
+
+        # TODO There are different mode in trafodion
+        # MODE_SQL\MODE_WMS\MODE_CMD
+        # default is MODE_SQL
+        type_dict = {
+            "JOINXATXN": Transport.TYPE_SELECT,
+            "WMSOPEN": Transport.TYPE_QS_OPEN,
+            "WMSCLOSE": Transport.TYPE_QS_CLOSE,
+            "CMDOPEN": Transport.TYPE_CMD_OPEN,
+            "CMDCLOSE": Transport.TYPE_CMD_CLOSE,
+            "SELECT": Transport.TYPE_SELECT,
+            "WITH": Transport.TYPE_SELECT,
+            "SHOWSHAPE": Transport.TYPE_SELECT,
+            "INVOKE": Transport.TYPE_SELECT,
+            "SHOWCONTROL": Transport.TYPE_SELECT,
+            "SHOWDDL": Transport.TYPE_SELECT,
+            "EXPLAIN": Transport.TYPE_SELECT,
+            "SHOWPLAN": Transport.TYPE_SELECT,
+            "REORGANIZE": Transport.TYPE_SELECT,
+            "MAINTAIN": Transport.TYPE_SELECT,
+            "SHOWLABEL": Transport.TYPE_SELECT,
+            "VALUES": Transport.TYPE_SELECT,
+            "REORG": Transport.TYPE_SELECT,
+            "SEL": Transport.TYPE_SELECT,
+            "GET": Transport.TYPE_SELECT,
+            "SHOWSTATS": Transport.TYPE_SELECT,
+            "GIVE": Transport.TYPE_SELECT,
+            "STATUS": Transport.TYPE_SELECT,
+            "INFO": Transport.TYPE_SELECT,
+            "LIST": Transport.TYPE_SELECT,
+            "UPDATE": Transport.TYPE_UPDATE,
+            "MERGE": Transport.TYPE_UPDATE,
+            "DELETE": Transport.TYPE_DELETE,
+            "STOP": Transport.TYPE_DELETE,
+            "START": Transport.TYPE_DELETE,
+            "INSERT": Transport.TYPE_INSERT,
+            "INS": Transport.TYPE_INSERT,
+            "UPSERT": Transport.TYPE_INSERT,
+            "CREATE": Transport.TYPE_CREATE,
+            "GRANT": Transport.TYPE_GRANT,
+            "DROP": Transport.TYPE_DROP,
+            "CALL": Transport.TYPE_CALL,
+            "INFOSTATS": TRANSPORT.TYPE_STATS,
+            #  "EXPLAIN": Transport.TYPE_EXPLAIN,
+        }
+
+        if isinstance(query, (bytearray, bytes)):
+            first_word = query.split(" ".encode())[0].decode().upper()
+        else:
+            first_word = query.split(" ")[0].upper()
+
+        return type_dict[first_word]

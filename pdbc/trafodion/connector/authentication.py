@@ -1,13 +1,17 @@
 import os
-from . import errors
-from OpenSSL import crypto
-from OpenSSL.crypto import dump_publickey
 import random
 import time
 import rsa
-import hashlib, hmac
+import hashlib
+import hmac
+from OpenSSL import crypto
+from OpenSSL.crypto import dump_publickey
 from sys import maxsize
 from pyasn1.type import useful
+
+from . import errors
+
+
 class SecPwd:
 
     def __init__(self, directory, filename, spj_mode, server_name, proc_info):
@@ -149,11 +153,11 @@ class Security:
 
         # Get public key length int
         pubkey_len = self.keyobj.key_len
-        maxPlainTextLen = pubkey_len - SecdefsCommon.UNUSEDBYTES
+        max_plaintext_len = pubkey_len - SecdefsCommon.UNUSEDBYTES
 
         # Password + nonce + session key can't be longer than the public key's length
         if SecdefsCommon.NONCE_SIZE + SecdefsCommon.SESSION_KEYLEN \
-                 + len(pwd) > maxPlainTextLen:
+                 + len(pwd) > max_plaintext_len:
             pass
 
         pwd_key_result = bytearray(self.keyobj.key_len + SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA)
@@ -216,12 +220,12 @@ class Security:
 
     def generate_session_key(self):
         for i in range(len(self.pwdkey.data.session_key)):
-            #self.pwdkey.data.session_key[i] = (random.randint(0, maxsize) & 0xFF)
-            self.pwdkey.data.session_key[i] = 7
+            self.pwdkey.data.session_key[i] = (random.randint(0, maxsize) & 0xFF)
+            #self.pwdkey.data.session_key[i] = 7
 
         for i in range(len(self.pwdkey.data.nonce)):
-            #self.pwdkey.data.nonce[i] = (random.randint(0, maxsize) & 0xFF)
-            self.pwdkey.data.nonce[i] = 7
+            self.pwdkey.data.nonce[i] = (random.randint(0, maxsize) & 0xFF)
+            #self.pwdkey.data.nonce[i] = 7
 
         #  TODO
         #  m_nonceSeq

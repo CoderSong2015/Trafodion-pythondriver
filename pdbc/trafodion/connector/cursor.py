@@ -1,5 +1,8 @@
-from .abstracts import TrafCursorAbstract
 import weakref
+
+from .abstracts import TrafCursorAbstract
+from . import errors
+
 
 class CursorBase(TrafCursorAbstract):
     """
@@ -106,6 +109,7 @@ class CursorBase(TrafCursorAbstract):
         """
         return self._last_insert_id
 
+
 class TrafCursor(CursorBase):
     def __init__(self, connection=None):
         CursorBase.__init__(self)
@@ -136,3 +140,60 @@ class TrafCursor(CursorBase):
         except (AttributeError, TypeError):
             pass
 
+    def execute(self, operation, params=None, multi=False):
+        """Executes the given operation
+
+        Executes the given operation substituting any markers with
+        the given parameters.
+
+        For example, getting all rows where id is 5:
+          cursor.execute("SELECT * FROM t1 WHERE id = %s", (5,))
+
+        The multi argument should be set to True when executing multiple
+        statements in one operation. If not set and multiple results are
+        found, an InterfaceError will be raised.
+
+        If warnings where generated, and connection.get_warnings is True, then
+        self._warnings will be a list containing these warnings.
+
+        Returns an iterator when multi is True, otherwise None.
+        """
+        if not operation:
+            return None
+
+        if not self._connection:
+            raise errors.ProgrammingError("Cursor is not connected")
+
+        self._connection.handle_unread_result()
+
+        self._reset_result()
+        stmt = ''
+
+        try:
+            if not isinstance(operation, (bytes, bytearray)):
+                stmt = operation.encode("utf-8")
+            else:
+                stmt = operation
+        except (UnicodeDecodeError, UnicodeEncodeError) as err:
+            raise errors.ProgrammingError(str(err))
+
+        if params is not None:
+            if isinstance(params, dict):
+                stmt = _bytestr_format_dict(
+                    stmt, self._process_params_dict(params))
+            elif isinstance(params, (list, tuple)):
+                pass
+
+        self._executed = stmt
+        if multi:
+            self._executed_list = []
+            return self._execute_iter(self._connection.cmd_query_iter(stmt))
+
+        try:
+            self._handle_result(self._connection.cmd_query(stmt))
+        except errors.InterfaceError:
+            if self._connection._have_next_result:  # pylint: disable=W0212
+                raise errors.InterfaceError(
+                    "Use multi=True when executing multiple statements")
+            raise
+        return None

@@ -10,22 +10,20 @@ class Transport:
     UNAUTHENTICATED_USER_TYPE = 2  # regular password
     PASSWORD_ENCRYPTED_USER_TYPE = 3  # used for SAS
 
-
-
     #
-	# IO_BUFFER_LENGTH is used to determin the
-	# size of physical buffers as they are
-	# created and used by the transport layer
-	# for doing ernal buffering as well
-	# as I/O.
-	#
-	# The static value here corresponds to the
-	# expected buffer size by the ODBC server.
-	# It's a fixed value here, but could
-	# easly be changed to a System properties
-	# value, or gotten programmatically from
-	# the ODBC server.
-	#
+    # IO_BUFFER_LENGTH is used to determin the
+    # size of physical buffers as they are
+    # created and used by the transport layer
+    # for doing ernal buffering as well
+    # as I/O.
+    #
+    # The static value here corresponds to the
+    # expected buffer size by the ODBC server.
+    # It's a fixed value here, but could
+    # easly be changed to a System properties
+    # value, or gotten programmatically from
+    # the ODBC server.
+    #
 
     IO_BUFFER_LENGTH = 4096
     IO_BUFFER_BLOCKS = 8

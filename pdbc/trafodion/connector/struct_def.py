@@ -1,7 +1,7 @@
-
-from .transport import Transport, convert
 import socket
 import time
+
+from .transport import Transport, convert
 from . import errors
 
 
