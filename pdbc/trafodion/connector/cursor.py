@@ -2,8 +2,8 @@ import weakref
 
 from .abstracts import TrafCursorAbstract
 from . import errors
-
-
+from .transport import Transport
+from .statement import Statement
 class CursorBase(TrafCursorAbstract):
     """
     Base for defining TrafCursor. This class is a skeleton and defines
@@ -121,6 +121,13 @@ class TrafCursor(CursorBase):
         self._executed = None
         self._executed_list = []
         self._binary = False
+        self._st = None
+        self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
+        self._input_params_length = 0
+        self._max_rows = 0
+        self._cursorName_ = ''
+        self._stmt_name = self._generate_stmtlabel()
+        self._using_rawrowset_ = False
 
         if connection is not None:
             self._set_connection(connection)
@@ -178,22 +185,33 @@ class TrafCursor(CursorBase):
             raise errors.ProgrammingError(str(err))
 
         if params is not None:
-            if isinstance(params, dict):
-                stmt = _bytestr_format_dict(
-                    stmt, self._process_params_dict(params))
-            elif isinstance(params, (list, tuple)):
-                pass
+        # execute prepare statement
+            pass
+            #if isinstance(params, dict):
+            #    stmt = _bytestr_format_dict(
+            #        stmt, self._process_params_dict(params))
+            #elif isinstance(params, (list, tuple)):
+            #    pass
+        # execute directly
+        else:
+            self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
 
+        if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
+            self._st = Statement(self._connection, self)
         self._executed = stmt
         if multi:
-            self._executed_list = []
-            return self._execute_iter(self._connection.cmd_query_iter(stmt))
+            pass
 
         try:
-            self._handle_result(self._connection.cmd_query(stmt))
+            self._st.execute(stmt, self._execute_type)
         except errors.InterfaceError:
             if self._connection._have_next_result:  # pylint: disable=W0212
                 raise errors.InterfaceError(
                     "Use multi=True when executing multiple statements")
             raise
         return None
+
+    def _generate_stmtlabel(self):
+
+        cursor_id = self._connection.get_seq()
+        return "SQL_CUR_" + cursor_id

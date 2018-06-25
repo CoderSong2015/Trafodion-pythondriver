@@ -724,3 +724,126 @@ class ERROR_DESC_Def:
         self.Param7, buf_view = convert.get_string(buf_view, little=True)
         return buf_view
 
+
+class SQL_DataValue_def:
+
+    def __init__(self):
+        self.buffer = None
+        self.user_buffer = None
+
+    def sizeof(self):
+        return Transport.size_int if self.buffer is None else Transport.size_int + len(self.buffer) + 1
+
+    def insertIntoByteArray(self, buf_view, little=False):
+        try:
+            if self.buffer is not None:
+                if isinstance(self.buffer, str):
+                    buf_view = convert.put_string(self.buffer, buf_view, little)  # string
+                else:
+                    raise errors.InternalError("string is needed by buffer converted")
+            else:
+                buf_view = convert.put_int(0, buf_view, little)
+        except:
+            raise errors.InternalError("convert buffer error")
+
+        return buf_view
+
+    def set_buffer(self, buffer:str):
+        self.buffer = buffer
+
+    def set_user_buffer(self, buffer:str):
+        self.user_buffer = buffer
+
+    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
+        self.buffer, buf_view = convert.get_string(buf_view, little=True)
+        return buf_view
+
+    @staticmethod
+    def fill_in_sql_values(locale, cursor, param_rowcount, param_count, param_values, client_errors):
+        data_value = SQL_DataValue_def()
+
+        if (param_rowcount == 0 and param_values is not None and  len(param_values) > 0):
+            param_rowcount = 1 # fake a single row if we are doing inputParams
+        # for an SPJ
+
+        # TODO: we should really figure out WHY this could happen
+        if (cursor._input_params_length < 0):
+            data_value.buffer = bytearray(0)
+            data_value.length = 0
+        else:
+            buf_len = cursor._input_params_length * param_rowcount
+
+
+            for  row in range(param_rowcount):
+                for col in range(param_count):
+                    pass
+                    #convertObjectToSQL2(locale, stmt, paramValues[row * paramCount + col], paramRowCount, col,
+                    #dataValue.buffer, row - clientErrors.size());
+
+        data_value.length = cursor._input_params_length * (param_rowcount - len(client_errors))
+
+        return data_value
+
+
+class SQLValue_def:
+
+    def __init__(self):
+        self.data_type = 0                      #  int
+        self.data_ind = 0                       #  short
+        self.data_value = SQL_DataValue_def()
+        self.data_charset = 0                   #  int
+
+
+    def sizeof(self):
+        return Transport.size_int * 2 + Transport.size_short + self.data_value.sizeof()
+
+    def insertIntoByteArray(self, buf_view, little=True):
+        buf_view = convert.put_int(self.data_type, buf_view, little=little)
+        buf_view = convert.put_short(self.data_ind, buf_view, little=little)
+        buf_view = self.data_value.insertIntoByteArray(buf_view, little=little)
+        buf_view = convert.put_int(self.data_charset, buf_view, little=little)
+
+        return buf_view
+
+    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
+        self.data_type, buf_view = convert.get_int(buf_view, little=True)
+        self.data_ind, buf_view = convert.get_short(buf_view, little=True)
+        buf_view = self.data_value.extractFromByteArray(buf_view)
+        self.data_charset, buf_view = convert.get_int(buf_view, little=True)
+        return buf_view
+
+
+class SQLValueList_def:
+
+    def __init__(self):
+        self.value_list = []
+
+    def sizeof(self):
+        size = Transport.size_int
+        if (len(self.value_list)) is not 0:
+            for x in self.value_list:
+                size += x.sizeof()
+
+        return size
+
+    def insertIntoByteArray(self, buf_view, little=True):
+        count = len(self.value_list)
+        if count is not 0:
+            convert.put_int(count, buf_view,little)
+            for x in self.value_list:
+                x.insertIntoByteArray(buf_view)
+        else:
+            convert.put_int(0, buf_view, little)
+        return buf_view
+
+    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
+        count, buf_view = convert.get_int(buf_view, little=True)
+
+        for x in range(count):
+            temp_sql_value = SQLValue_def()
+            buf_view = temp_sql_value.extractFromByteArray(buf_view)
+            self.value_list.append(buf_view)
+
+        return buf_view
+
+

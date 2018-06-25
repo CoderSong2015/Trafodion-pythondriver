@@ -81,6 +81,17 @@ class ServerCmd():
     }
 
 
+class testa:
+    nihaoma = 123
+    def __init__(self):
+        dqwdf =3
+        self.song = 1
+        self.hao = '123'
+
+    def print(self):
+        for name, value in vars(self).items():
+            print('%s=%s' % (name, value))
+
 if __name__ == '__main__':
     ss = test1.test2()
     ss.id[1] = 1
@@ -104,3 +115,15 @@ if __name__ == '__main__':
     print(type_dict[first_name[0].decode().upper()])
 
     _send_cmd(ServerCmd.QUERY,"queryddd")
+
+    ss = 3
+    tt = type(ss)
+    print(tt)
+
+    s = testa()
+    s.print()
+
+    rr = []
+
+    print(isinstance(s, int))
+    print(len(rr))

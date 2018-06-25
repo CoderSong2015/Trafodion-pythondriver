@@ -1,4 +1,5 @@
 import getpass
+import threading
 
 from .abstracts import TrafConnectionAbstract
 from .struct_def import (
@@ -30,6 +31,8 @@ class TrafConnection(TrafConnectionAbstract):
         self._dialogue_id = 0
         self._session_name = ''
         self._mxosrvr_conn = None
+        self._seq_num = 0
+        self._stmt_name_lock = threading.Lock()
         super(TrafConnection, self).__init__(**kwargs)
 
         print("kwargs!?")
@@ -437,7 +440,7 @@ class TrafConnection(TrafConnectionAbstract):
     def rollback(self):
         pass
 
-    def cmd_query(self, query, raw=False, buffered=False, raw_as_string=False):
+    def cmd_query(self, query, execute_type, raw=False, buffered=False, raw_as_string=False):
         """Send a query to the mxosrvr server
 
         This method send the query to the mxosrvr server and returns the result.
@@ -456,7 +459,8 @@ class TrafConnection(TrafConnectionAbstract):
             query = query.encode('utf-8')
 
         statement_type = self._get_statement_type(query)
-        result = self._handle_result(self._send_cmd(statement_type, query))
+        result = self._send_cmd(statement_type, execute_type, query)
+        result = self._handle_result()
 
         if self._have_next_result:
             raise errors.InterfaceError(
@@ -483,57 +487,8 @@ class TrafConnection(TrafConnectionAbstract):
             return None
         return self._socket.recv()
 
-    @staticmethod
-    def _get_statement_type(query):
-
-        # TODO There are different mode in trafodion
-        # MODE_SQL\MODE_WMS\MODE_CMD
-        # default is MODE_SQL
-        type_dict = {
-            "JOINXATXN": Transport.TYPE_SELECT,
-            "WMSOPEN": Transport.TYPE_QS_OPEN,
-            "WMSCLOSE": Transport.TYPE_QS_CLOSE,
-            "CMDOPEN": Transport.TYPE_CMD_OPEN,
-            "CMDCLOSE": Transport.TYPE_CMD_CLOSE,
-            "SELECT": Transport.TYPE_SELECT,
-            "WITH": Transport.TYPE_SELECT,
-            "SHOWSHAPE": Transport.TYPE_SELECT,
-            "INVOKE": Transport.TYPE_SELECT,
-            "SHOWCONTROL": Transport.TYPE_SELECT,
-            "SHOWDDL": Transport.TYPE_SELECT,
-            "EXPLAIN": Transport.TYPE_SELECT,
-            "SHOWPLAN": Transport.TYPE_SELECT,
-            "REORGANIZE": Transport.TYPE_SELECT,
-            "MAINTAIN": Transport.TYPE_SELECT,
-            "SHOWLABEL": Transport.TYPE_SELECT,
-            "VALUES": Transport.TYPE_SELECT,
-            "REORG": Transport.TYPE_SELECT,
-            "SEL": Transport.TYPE_SELECT,
-            "GET": Transport.TYPE_SELECT,
-            "SHOWSTATS": Transport.TYPE_SELECT,
-            "GIVE": Transport.TYPE_SELECT,
-            "STATUS": Transport.TYPE_SELECT,
-            "INFO": Transport.TYPE_SELECT,
-            "LIST": Transport.TYPE_SELECT,
-            "UPDATE": Transport.TYPE_UPDATE,
-            "MERGE": Transport.TYPE_UPDATE,
-            "DELETE": Transport.TYPE_DELETE,
-            "STOP": Transport.TYPE_DELETE,
-            "START": Transport.TYPE_DELETE,
-            "INSERT": Transport.TYPE_INSERT,
-            "INS": Transport.TYPE_INSERT,
-            "UPSERT": Transport.TYPE_INSERT,
-            "CREATE": Transport.TYPE_CREATE,
-            "GRANT": Transport.TYPE_GRANT,
-            "DROP": Transport.TYPE_DROP,
-            "CALL": Transport.TYPE_CALL,
-            "INFOSTATS": TRANSPORT.TYPE_STATS,
-            #  "EXPLAIN": Transport.TYPE_EXPLAIN,
-        }
-
-        if isinstance(query, (bytearray, bytes)):
-            first_word = query.split(" ".encode())[0].decode().upper()
-        else:
-            first_word = query.split(" ")[0].upper()
-
-        return type_dict[first_word]
+    def get_seq(self):
+        self._stmt_name_lock.acquire()
+        self._seq_num = self._seq_num + 1
+        self._stmt_name_lock.release()
+        return self._seq_num
