@@ -33,6 +33,8 @@ class TrafConnection(TrafConnectionAbstract):
         self._mxosrvr_conn = None
         self._seq_num = 0
         self._stmt_name_lock = threading.Lock()
+        self._buffered = None
+        self._raw = None
         super(TrafConnection, self).__init__(**kwargs)
 
         print("kwargs!?")

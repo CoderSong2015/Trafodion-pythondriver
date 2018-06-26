@@ -4,6 +4,8 @@ from .abstracts import TrafCursorAbstract
 from . import errors
 from .transport import Transport
 from .statement import Statement
+
+
 class CursorBase(TrafCursorAbstract):
     """
     Base for defining TrafCursor. This class is a skeleton and defines
@@ -125,12 +127,12 @@ class TrafCursor(CursorBase):
         self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
         self._input_params_length = 0
         self._max_rows = 0
-        self._cursorName_ = ''
-        self._stmt_name = self._generate_stmtlabel()
-        self._using_rawrowset_ = False
+        self._cursor_name = ''
+        self._using_rawrowset = False
 
         if connection is not None:
             self._set_connection(connection)
+        self._stmt_name = self._generate_stmtlabel()
 
     def __iter__(self):
         """
@@ -171,9 +173,9 @@ class TrafCursor(CursorBase):
         if not self._connection:
             raise errors.ProgrammingError("Cursor is not connected")
 
-        self._connection.handle_unread_result()
+        #self._connection.handle_unread_result()
 
-        self._reset_result()
+        #self._reset_result()
         stmt = ''
 
         try:
@@ -214,4 +216,4 @@ class TrafCursor(CursorBase):
     def _generate_stmtlabel(self):
 
         cursor_id = self._connection.get_seq()
-        return "SQL_CUR_" + cursor_id
+        return "SQL_CUR_" + str(cursor_id)

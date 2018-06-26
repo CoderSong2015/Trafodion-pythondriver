@@ -711,7 +711,7 @@ class ERROR_DESC_Def:
         self.sqlcode, buf_view = convert.get_int(buf_view, little=True)
 
         # Note, SQLSTATE is logically 5 bytes, but ODBC uses 6 bytes for some reason.
-        self.sqlstate, buf_view = convert.get_bytes(buf_view, len=6)
+        self.sqlstate, buf_view = convert.get_bytes(buf_view, length=6)
         self.errorText, buf_view = convert.get_string(buf_view, little=True)
         self.operationAbortId, buf_view = convert.get_int(buf_view, little=True)
         self.errorCodeType, buf_view = convert.get_int(buf_view, little=True)
@@ -754,7 +754,7 @@ class SQL_DataValue_def:
     def set_user_buffer(self, buffer:str):
         self.user_buffer = buffer
 
-    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
+    def extractFromByteArray(self, buf_view: memoryview)->memoryview:
         self.buffer, buf_view = convert.get_string(buf_view, little=True)
         return buf_view
 
@@ -847,3 +847,153 @@ class SQLValueList_def:
         return buf_view
 
 
+class ExecuteReply:
+    def __init__(self):
+        self.return_code = 0
+        self.total_error_length = 0
+        self.errorlist = []
+        self.output_desc_length = 0
+        self.descriptor_list = []
+        self.rows_affected = 0
+        self.query_type = 0
+        self.estimated_cost = 0
+        self.out_values = None
+        self.num_resultsets = 0
+        self.output_desc_list = []
+        self.stmt_labels_list = []
+        self.proxy_syntax_list = []
+
+    def init_reply(self, buf_view):
+        self.return_code, buf_view = convert.get_int(buf_view, little=True)
+        self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+        if self.total_error_length > 0:
+            error_count, buf_view = convert.get_int(buf_view, little=True)
+            for x in error_count:
+                t = SQLWarningOrError()
+                buf_view = t.extractFromByteArray(buf_view)
+                self.errorlist.append(t)
+
+        self.output_desc_length, buf_view = convert.get_int(buf_view, little=True)
+        if self.output_desc_length > 0:
+
+            output_param_length, buf_view = convert.get_int(buf_view, little=True)
+            output_number_params, buf_view = convert.get_int(buf_view, little=True)
+            for x in range(output_number_params):
+                t = Descriptor()
+                t.extractFromByteArray(buf_view)
+                t.set_row_length(output_param_length)
+                self.descriptor_list.append(t)
+
+        self.rows_affected, buf_view = convert.get_int(buf_view, little=True)
+        self.query_type, buf_view = convert.get_int(buf_view, little=True)
+        self.estimated_cost, buf_view = convert.get_int(buf_view, little=True)
+
+        # 64 bit rows_affected,this is a horrible hack because we cannot change the protocol yet
+        # rows_affected should be made a regular 64 bit value when possible
+        self.rows_affected = self.rows_affected or (self.estimated_cost << 32)
+        self.out_values = convert.get_bytes(buf_view)
+        self.num_resultsets, buf_view = convert.get_int(buf_view, little=True)
+
+        if self.num_resultsets > 0:
+
+            self.output_desc_list = []
+            for x in range(self.num_resultsets):
+                _, buf_view = convert.get_int(buf_view, little=True) # stmt handle
+                stmt_lable, buf_view = convert.get_string(buf_view, little=True)
+                self.stmt_labels_list.append(stmt_lable)
+                _, buf_view = convert.get_int(buf_view, little=True)  # long stmt_label_charset
+                output_desc_length, buf_view = convert.get_int(buf_view, little=True)
+
+                temp_descriptor_list = []
+                if self.output_desc_length > 0:
+
+                    output_param_length, buf_view = convert.get_int(buf_view, little=True)
+                    output_number_params, buf_view = convert.get_int(buf_view, little=True)
+
+                    for x in range(output_number_params):
+                        t = Descriptor()
+                        t.extractFromByteArray(buf_view)
+                        t.set_row_length(output_param_length)
+                        temp_descriptor_list.append(t)
+
+                self.output_desc_list.append(temp_descriptor_list)
+                proxy_syntax, buf_view = convert.get_string(buf_view, little=True)
+                self.proxy_syntax_list.append(proxy_syntax)
+
+        single_syntax, buf_view = convert.get_string(buf_view, little=True)
+
+        if not self.proxy_syntax_list:
+            self.proxy_syntax_list.append(single_syntax)
+
+
+
+class SQLWarningOrError:
+
+    def __init__(self,row_id=None, sql_code=None, text=None, sql_state=None):
+        self.row_id = row_id
+        self.sql_code = sql_code
+        self.text = text
+        self.sql_state = sql_state
+
+    def extractFromByteArray(self, buf_view: memoryview) -> memoryview:
+        self.row_id, buf_view = convert.get_int(buf_view, little=True)
+        self.sql_code, buf_view = convert.get_int(buf_view, little=True)
+        self.text, buf_view = convert.get_string(buf_view, little=True)
+        self.sql_state = convert.get_bytes(buf_view, 5)
+        _ = convert.get_char(buf_view)
+        return buf_view
+
+
+class Descriptor:
+
+    def __init__(self):
+        self.noNullValue_ = 0
+        self.nullValue_ = 0
+        self.version_ = 0
+        self.dataType_ = 0
+        self.datetimeCode_ = 0
+        self.maxLen_ = 0
+        self.precision_ = 0
+        self.scale_ = 0
+        self.nullInfo_ = 0
+        self.signed_ = 0
+        self.odbcDataType_ = 0
+        self.odbcPrecision_ = 0
+        self.sqlCharset_ = 0
+        self.odbcCharset_ = 0
+        self.colHeadingNm_ = None
+        self.tableName_ = None
+        self.catalogName_ = None
+        self.schemaName_ = None
+        self.headingName_ = None
+        self.intLeadPrec_ = 0
+        self.paramMode_ = 0
+        self.row_length = 0
+
+    def set_row_length(self, num):
+        self.row_length = num
+
+    def extractFromByteArray(self, buf_view: memoryview) -> memoryview:
+        self.noNullValue_, buf_view = convert.get_int(buf_view, little=True)
+        self.nullValue_, buf_view = convert.get_int(buf_view, little=True)
+        self.version_, buf_view = convert.get_int(buf_view, little=True)
+        self.dataType_, buf_view = convert.get_int(buf_view, little=True)
+        self.datetimeCode_, buf_view = convert.get_int(buf_view, little=True)
+        self.maxLen_, buf_view = convert.get_int(buf_view, little=True)
+        self.precision_, buf_view = convert.get_int(buf_view, little=True)
+        self.scale_, buf_view = convert.get_int(buf_view, little=True)
+        self.nullInfo_, buf_view = convert.get_int(buf_view, little=True)
+        self.signed_, buf_view = convert.get_int(buf_view, little=True)
+        self.odbcDataType_, buf_view = convert.get_int(buf_view, little=True)
+        self.odbcPrecision_, buf_view = convert.get_int(buf_view, little=True)
+        self.sqlCharset_, buf_view = convert.get_int(buf_view, little=True)
+        self.odbcCharset_, buf_view = convert.get_int(buf_view, little=True)
+        self.colHeadingNm_, buf_view = convert.get_string(buf_view, little=True)
+        self.tableName_, buf_view = convert.get_string(buf_view, little=True)
+        self.catalogName_, buf_view = convert.get_string(buf_view, little=True)
+        self.schemaName_, buf_view = convert.get_string(buf_view, little=True)
+        self.headingName_, buf_view = convert.get_string(buf_view, little=True)
+        self.intLeadPrec_, buf_view = convert.get_int(buf_view, little=True)
+        self.paramMode_, buf_view = convert.get_int(buf_view, little=True)
+
+        return buf_view

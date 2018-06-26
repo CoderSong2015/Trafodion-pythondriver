@@ -325,42 +325,43 @@ class convert:
         self.put_data_memview(buf_view, data)
         return buf_view[1:]
 
-    @classmethod
-    def get_short(self, buf_view: memoryview, little=False):
+    @staticmethod
+    def get_short(buf_view: memoryview, little=False):
         if not little:
             return (struct.unpack('!h', buf_view[0:2])[0], buf_view[2:])
         else:
             return (struct.unpack('<h', buf_view[0:2])[0], buf_view[2:])
 
-    @classmethod
-    def get_int(self, buf_view: memoryview, little=False):
+    @staticmethod
+    def get_int(buf_view: memoryview, little=False):
         if not little:
             return (struct.unpack('!i', buf_view[0:4])[0], buf_view[4:])
         else:
             return (struct.unpack('<i', buf_view[0:4])[0], buf_view[4:])
 
     @classmethod
-    def get_string(self, buf_view: memoryview, little=False, byteoffset=False):
-        len, buf_view = self.get_int(buf_view, little)
+    def get_string(cls, buf_view: memoryview, little=False, byteoffset=False):
+        length, buf_view = cls.get_int(buf_view, little=little)
 
-        #In server there are two function:put_string and put_bytestring,
+        # In server there are two function:put_string and put_bytestring,
         # they are different in calculating length of string
         offset = 1 if not byteoffset else 0
-        if len is not 0:
-            to_bytes = buf_view[0:len - offset].tobytes()
-            return (to_bytes.decode("utf-8"), buf_view[len + (1 - offset):])
+        if length is not 0:
+            to_bytes = buf_view[0:length - offset].tobytes()
+            return (to_bytes.decode("utf-8"), buf_view[length + (1 - offset):])
         else:
             return ('', buf_view)
 
+    @staticmethod
+    def get_bytes(buf_view: memoryview, length=0, little=True):
 
-    @classmethod
-    def get_bytes(self, buf_view: memoryview, len=0, byteoffset=False):
-
-        if len is not 0:
-            to_bytes = buf_view[0:len].tobytes()
-            return (to_bytes, buf_view[len:])
+        if length is not 0:
+            to_bytes = buf_view[0:length].tobytes()
+            return (to_bytes, buf_view[length:])
         else:
-            return (''.encode("utf-8"), buf_view)
+            length, buf_view = convert.get_int(buf_view, little=little)
+            to_bytes = buf_view[0: length].tobytes()
+            return (to_bytes, buf_view)
 
     @classmethod
     def get_char(self, buf_view: memoryview):

@@ -17,6 +17,8 @@ if __name__ == '__main__':
     }
 
     out = pdbc.trafodion.connector.connect(**config)
+    cur = out.cursor()
+    cur.execute("select * from song")
 
     while True:
         pass
