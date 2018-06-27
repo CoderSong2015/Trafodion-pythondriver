@@ -13,12 +13,16 @@ class Statement:
         self._stmt_handle_ = 0
         self.sql_stmt_type_ = 0
         self.stmt_explain_label = ""
+        self._rowcount = 0
+        self._last_count = 0
+        self._batch_row_count = []
+        self.stmt_name = cursor._stmt_name
+        self._descriptor = None
         pass
 
     def execute(self, query: bytes, execute_api):
         #sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
         cursor_name = self._cursor._cursor_name
-        rowCount_ = 0
         sql_async_enable  = 1
         input_row_count = 0
         max_rowset_size = self._cursor._max_rows
@@ -28,7 +32,7 @@ class Statement:
         stmt_label_charset = 1
         tx_id = 0
         param_count = 0
-        client_errors = []
+        client_errors_list = []
 
         """
          if (stmt.transactionToJoin != null)
@@ -47,14 +51,17 @@ class Statement:
 
     #if (.usingRawRowset_):
     #else:
-        input_data_value = SQL_DataValue_def.fill_in_sql_values("zh", self._cursor, input_row_count, param_count, None, client_errors)
+        input_data_value = SQL_DataValue_def.fill_in_sql_values("zh", self._cursor, input_row_count, param_count, None, client_errors_list)
 
-        er = self._to_send(execute_api, sql_async_enable, input_row_count - len(client_errors),
+        self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count - len(client_errors_list),
                            max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring, sqlstring_charset,
                            cursor_name,
                            cursor_name_charset, self._cursor._stmt_name, stmt_label_charset, input_data_value,
                            input_value_list, tx_id,
                            self._cursor._using_rawrowset)
+
+        # TODO now there is no need to make a resultset
+        #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
 
     def _to_send(self, execute_api, sql_async_enable, input_row_count, max_rowset_size, sql_stmt_type,
                  stmt_handle, sqlstring, sqlstring_charset, cursor_name, cursor_name_charset,
@@ -69,11 +76,11 @@ class Statement:
                                           stmt_label, stmt_label_charset, self.stmt_explain_label, input_data_value,
                                           input_value_list, tx_id, user_buffer)
 
-        data = self._connection._get_from_server(Transport.SRVR_API_SQLEXECDIRECT, wbuffer, self._connection._mxosrvr_conn)
-        recv_reply = self._handle_recv_data(data)
-        return 0
+        data = self._connection._get_from_server(execute_api, wbuffer, self._connection._mxosrvr_conn)
+        recv_reply = self._extract_recv_data(data)
+        return recv_reply
 
-    def _handle_recv_data(self, data):
+    def _extract_recv_data(self, data):
         try:
             buf_view = memoryview(data)
             c = ExecuteReply()
@@ -81,6 +88,72 @@ class Statement:
         except:
             raise errors.InternalError("handle mxosrvr data error")
         return c
+
+    def _handle_recv_data(self, recv_reply, execute_api, client_errors_list, input_row_count):
+        if execute_api == Transport.SRVR_API_SQLEXECDIRECT:
+            self.sql_query_type = recv_reply.query_type
+
+        if len(client_errors_list) > 0:
+            if not recv_reply.errorlist:
+                recv_reply.errorlist = client_errors_list
+            else:
+                pass
+                # TODO recv_reply.errorlist = mergeerror(recv_reply.errorlist, client_errors_list)
+        self._result_set_offset = 0
+        self._rowcount = recv_reply.rows_affected
+
+        num_status = 0
+        delay_error_mode = self._connection.property.DelayedErrorMode
+        if delay_error_mode:
+            if self._last_count > 0:
+                num_status = self._last_count
+
+            else:
+                num_status = input_row_count
+        else:
+            num_status = input_row_count
+
+        if (num_status < 1):
+            num_status = 1
+
+        batch_exception = False
+
+        if (delay_error_mode  and  self._last_count < 1):
+            for x in range(num_status):
+                self._batch_row_count.append(-2)  # fill with success
+        elif (recv_reply.return_code == Transport.SQL_SUCCESS or
+              recv_reply.return_code == Transport.SQL_SUCCESS_WITH_INFO or
+              recv_reply.return_code == Transport.NO_DATA_FOUND):
+            for x in range(num_status):
+                self._batch_row_count.append(-2)  # fill with success
+
+            if recv_reply.errorlist:
+                for item in recv_reply.errorlist:
+                    row = item.row_id -1
+                    if (row >= 0 and row < len(self._batch_row_count)):
+                        self._batch_row_count[row] = -3
+                        batch_exception = True
+
+            #if self.sql_stmt_type_ == Transport.TYPE_QS_OPEN:
+            #TODO  set the statement mode as the command succeeded
+            #if (self.sql_stmt_type_ == Transport.TYPE_QS_OPEN):
+            #elif (self.sql_stmt_type_ == Transport.TYPE_QS_CLOSE):
+            #elif (self.sql_stmt_type_ == Transport.TYPE_CMD_OPEN):
+            #elif(self.sql_stmt_type_ == Transport.TYPE_CMD_CLOSE):
+
+            # set the statement label if we didnt get one back.
+            if len(recv_reply.stmt_labels_list):
+                recv_reply.stmt_labels_list = []
+                recv_reply.stmt_labels_list.append(self.stmt_name)
+
+
+        else:
+            for x in range(num_status):
+                self._batch_row_count.append(-3)  # fill with failed
+
+
+
+
     def _marshal_statement(self, dialogueId, sql_async_enable, queryTimeout, input_row_count,
                            max_rowset_size, sql_stmt_type, stmt_handle, stmt_type, sqlstring, sqlstring_charset,
                            cursor_name: str, cursor_name_charset, stmt_label: str, stmt_label_charset, stmtExplainLabel,

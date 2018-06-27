@@ -880,7 +880,7 @@ class ExecuteReply:
             output_number_params, buf_view = convert.get_int(buf_view, little=True)
             for x in range(output_number_params):
                 t = Descriptor()
-                t.extractFromByteArray(buf_view)
+                buf_view = t.extractFromByteArray(buf_view)
                 t.set_row_length(output_param_length)
                 self.descriptor_list.append(t)
 

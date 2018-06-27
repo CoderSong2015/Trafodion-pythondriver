@@ -92,6 +92,9 @@ class testa:
         for name, value in vars(self).items():
             print('%s=%s' % (name, value))
 
+def testlist(mlist):
+    mlist.append(7778)
+
 if __name__ == '__main__':
     ss = test1.test2()
     ss.id[1] = 1
@@ -124,6 +127,6 @@ if __name__ == '__main__':
     s.print()
 
     rr = []
-
+    testlist(rr)
     print(isinstance(s, int))
-    print(len(rr))
+    print(rr)

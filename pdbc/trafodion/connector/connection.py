@@ -139,7 +139,7 @@ class TrafConnection(TrafConnectionAbstract):
             self._mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
         data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, self._mxosrvr_conn)
         try:
-            init_reply = self._handle_mxosrvr_data(data)
+            init_reply = self._extract_mxosrvr_data(data)
             # TODO init connection information to property
             if init_reply.exception_nr == Transport.CEE_SUCCESS:
                 # TODO
@@ -151,7 +151,7 @@ class TrafConnection(TrafConnectionAbstract):
             print("what?")
             return ''
 
-    def _handle_mxosrvr_data(self, data):
+    def _extract_mxosrvr_data(self, data):
         try:
             buf_view = memoryview(data)
             c = InitializeDialogueReply()
@@ -224,7 +224,7 @@ class TrafConnection(TrafConnectionAbstract):
         master_conn = self._get_connection(self._master_host, self._master_port)
         print(master_conn)
         data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
-        connect_reply = self._handle_master_data(data)
+        connect_reply = self._extract_master_data(data)
         if not master_conn:
             #error handle
             pass
@@ -257,7 +257,7 @@ class TrafConnection(TrafConnectionAbstract):
         # TODO handle connect_reply
         return data
 
-    def _handle_master_data(self, data):
+    def _extract_master_data(self, data):
         try:
             buf_view = memoryview(data)
             c = ConnectReply()
