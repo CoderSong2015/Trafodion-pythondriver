@@ -18,18 +18,24 @@ class Statement:
         self._batch_row_count = []
         self.stmt_name = cursor._stmt_name
         self._descriptor = None
+        self._max_row_count = 100
+        self._sql_async_enable = 1
+        self._stmt_label_charset = self._cursor._stmt_name_charset
+        self._cursor_name = None
+        self._cursor_name_charset = 1
+        self._stmt_options = ""
         pass
 
     def execute(self, query: bytes, execute_api):
         #sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
-        cursor_name = self._cursor._cursor_name
-        sql_async_enable  = 1
+        self._cursor_name = self._cursor._cursor_name
+        sql_async_enable = self._sql_async_enable
         input_row_count = 0
         max_rowset_size = self._cursor._max_rows
         sqlstring = query
         sqlstring_charset = 1
-        cursor_name_charset = 1
-        stmt_label_charset = 1
+
+        stmt_label_charset = self._cursor._stmt_name_charset
         tx_id = 0
         param_count = 0
         client_errors_list = []
@@ -42,7 +48,6 @@ class Statement:
         """
 
         input_value_list = SQLValueList_def()
-        input_params = None
 
         if (execute_api == Transport.SRVR_API_SQLEXECDIRECT):
             self.sql_stmt_type_ = self._get_statement_type(sqlstring)
@@ -54,14 +59,65 @@ class Statement:
         input_data_value = SQL_DataValue_def.fill_in_sql_values("zh", self._cursor, input_row_count, param_count, None, client_errors_list)
 
         self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count - len(client_errors_list),
-                           max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring, sqlstring_charset,
-                           cursor_name,
-                           cursor_name_charset, self._cursor._stmt_name, stmt_label_charset, input_data_value,
-                           input_value_list, tx_id,
-                           self._cursor._using_rawrowset)
+                                         max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
+                                         sqlstring_charset,
+                                         self._cursor_name,
+                                         self._cursor_name_charset, self.stmt_name, stmt_label_charset, input_data_value,
+                                         input_value_list, tx_id,
+                                         self._cursor._using_rawrowset)
 
+        return self._descriptor.rows_affected
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
+
+    def fetch(self):
+        max_row_count = self._max_row_count
+
+        wbuffer = self._marshal_fetch(self._connection._dialogue_id, self._sql_async_enable,
+                                      self._connection.property.query_timeout,
+                                      self._stmt_handle_, self.stmt_name, self._stmt_label_charset, max_row_count, 0,
+                                      self._cursor_name, self._cursor_name_charset, self._stmt_options)
+
+        data = self._connection._get_from_server(Transport.SRVR_API_SQLFETCH, wbuffer, self._connection._mxosrvr_conn)
+        return data
+
+    def _marshal_fetch(self, dialogue_id, sql_async_enable, query_timeout, stmt_handle,
+                       stmt_label, stmt_label_charset, max_row_count, max_row_len, cursor_name, cursor_name_charset,
+                       stmt_options):
+        try:
+            wlength = Header.sizeOf()
+
+            wlength += Transport.size_int  # dialogue_id
+            wlength += Transport.size_int  # sql_async_enable
+            wlength += Transport.size_int  # query_timeout
+            wlength += Transport.size_int  # stmt_handle
+            wlength += Transport.size_bytes(stmt_label.encode("utf-8"))
+            wlength += Transport.size_int  # stmt_label_charset
+            wlength += Transport.size_long  # max_row_count
+            wlength += Transport.size_long  # max_row_len
+            wlength += Transport.size_bytes(cursor_name.encode("utf-8"))
+            wlength += Transport.size_int  # cursor_name_charset
+            wlength += Transport.size_bytes(stmt_options.encode("utf-8"))
+            buf = bytearray(b'')
+
+            buf.extend(bytearray(wlength))
+            buf_view = memoryview(buf)
+            buf_view = buf_view[Header.sizeOf():]
+
+            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
+            buf_view = convert.put_int(query_timeout, buf_view, little=True)
+            buf_view = convert.put_int(stmt_handle, buf_view, little=True)
+            buf_view = convert.put_string(stmt_label, buf_view, little=True)
+            buf_view = convert.put_int(stmt_label_charset, buf_view, little=True)
+            buf_view = convert.put_longlong(max_row_count, buf_view, little=True)
+            buf_view = convert.put_longlong(max_row_len, buf_view, little=True)
+            buf_view = convert.put_string(cursor_name, buf_view, little=True)
+            buf_view = convert.put_int(cursor_name_charset, buf_view, little=True)
+            buf_view = convert.put_string(stmt_options, buf_view, little=True)
+        except:
+            raise errors.InternalError("fetch data marshalling error")
+        return buf
 
     def _to_send(self, execute_api, sql_async_enable, input_row_count, max_rowset_size, sql_stmt_type,
                  stmt_handle, sqlstring, sqlstring_charset, cursor_name, cursor_name_charset,
@@ -154,13 +210,13 @@ class Statement:
 
 
 
-    def _marshal_statement(self, dialogueId, sql_async_enable, queryTimeout, input_row_count,
+    def _marshal_statement(self, dialogue_id, sql_async_enable, queryTimeout, input_row_count,
                            max_rowset_size, sql_stmt_type, stmt_handle, stmt_type, sqlstring, sqlstring_charset,
                            cursor_name: str, cursor_name_charset, stmt_label: str, stmt_label_charset, stmtExplainLabel,
                            input_data_value, input_value_list, tx_id, user_buffer):
         try:
             wlength = Header.sizeOf()
-            wlength += Transport.size_int        # dialogueId
+            wlength += Transport.size_int        # dialogue_id
             wlength += Transport.size_int        # sqlAsyncEnable
             wlength += Transport.size_int        # queryTimeout
             wlength += Transport.size_int        # inputRowCnt
@@ -187,7 +243,7 @@ class Statement:
             buf_view = memoryview(buf)
             buf_view = buf_view[Header.sizeOf():]
 
-            buf_view = convert.put_int(dialogueId, buf_view, little=True)
+            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
             buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
             buf_view = convert.put_int(queryTimeout, buf_view, little=True)
             buf_view = convert.put_int(input_row_count, buf_view, little=True)

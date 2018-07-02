@@ -129,7 +129,7 @@ class TrafCursor(CursorBase):
         self._max_rows = 0
         self._cursor_name = ''
         self._using_rawrowset = False
-
+        self._stmt_name_charset = 1
         if connection is not None:
             self._set_connection(connection)
         self._stmt_name = self._generate_stmtlabel()
@@ -217,3 +217,6 @@ class TrafCursor(CursorBase):
 
         cursor_id = self._connection.get_seq()
         return "SQL_CUR_" + str(cursor_id)
+
+    def fetchone(self):
+        self._st.fetch()

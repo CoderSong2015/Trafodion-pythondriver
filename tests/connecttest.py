@@ -1,5 +1,6 @@
 import sys
 sys.path.append("..")
+
 import pdbc.trafodion.connector
 
 
@@ -17,8 +18,10 @@ if __name__ == '__main__':
     }
 
     out = pdbc.trafodion.connector.connect(**config)
+
     cur = out.cursor()
     cur.execute("select * from song")
+    cur.fetchone()
 
     while True:
         pass

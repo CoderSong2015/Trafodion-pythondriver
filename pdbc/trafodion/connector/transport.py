@@ -256,6 +256,13 @@ class convert:
             return struct.pack('<i', num)
 
     @classmethod
+    def int_to_bytelonglong(cls, num, little=False):
+        if not little:
+            return struct.pack('!q', num)
+        else:
+            return struct.pack('<q', num)
+
+    @classmethod
     def char_to_bytechar(cls, char):
         return struct.pack('!c', char)
 
@@ -316,6 +323,12 @@ class convert:
         data = self.int_to_byteint(num, little)
         self.put_data_memview(buf_view, data)
         return buf_view[4:]
+
+    @classmethod
+    def put_longlong(self, num, buf_view: memoryview, little=False):
+        data = self.int_to_bytelonglong(num, little)
+        self.put_data_memview(buf_view, data)
+        return buf_view[8:]
 
     @classmethod
     def put_char(self, char, buf_view: memoryview):
