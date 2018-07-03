@@ -1,6 +1,6 @@
 from .transport import Transport
 from .struct_def import (SQL_DataValue_def, SQLValueList_def, SQLValue_def,
-                         Header, ExecuteReply)
+                         Header, ExecuteReply, FetchReply)
 from .transport import convert
 from . import errors
 
@@ -70,8 +70,9 @@ class Statement:
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
 
-    def fetch(self):
-        max_row_count = self._max_row_count
+    def fetch(self, row_count=None):
+
+        max_row_count = row_count if row_count else self._max_row_count
 
         wbuffer = self._marshal_fetch(self._connection._dialogue_id, self._sql_async_enable,
                                       self._connection.property.query_timeout,
@@ -79,7 +80,12 @@ class Statement:
                                       self._cursor_name, self._cursor_name_charset, self._stmt_options)
 
         data = self._connection._get_from_server(Transport.SRVR_API_SQLFETCH, wbuffer, self._connection._mxosrvr_conn)
-        return data
+
+        buf_view = memoryview(data)
+        t = FetchReply()
+        t.init_reply(buf_view)
+        t.set_out_puts(self._descriptor)
+        return t
 
     def _marshal_fetch(self, dialogue_id, sql_async_enable, query_timeout, stmt_handle,
                        stmt_label, stmt_label_charset, max_row_count, max_row_len, cursor_name, cursor_name_charset,

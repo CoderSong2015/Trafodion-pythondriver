@@ -373,8 +373,8 @@ class convert:
             return (to_bytes, buf_view[length:])
         else:
             length, buf_view = convert.get_int(buf_view, little=little)
-            to_bytes = buf_view[0: length].tobytes()
-            return (to_bytes, buf_view)
+            to_bytes = buf_view[0:length].tobytes()
+            return (to_bytes, buf_view[length:])
 
     @classmethod
     def get_char(self, buf_view: memoryview):

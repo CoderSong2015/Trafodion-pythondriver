@@ -778,7 +778,7 @@ class SQL_DataValue_def:
                 for col in range(param_count):
                     pass
                     #convertObjectToSQL2(locale, stmt, paramValues[row * paramCount + col], paramRowCount, col,
-                    #dataValue.buffer, row - clientErrors.size());
+                    #dataValue.buffer, row - clientErrors.size())
 
         data_value.length = cursor._input_params_length * (param_rowcount - len(client_errors))
 
@@ -852,8 +852,7 @@ class ExecuteReply:
         self.return_code = 0
         self.total_error_length = 0
         self.errorlist = []
-        self.output_desc_length = 0
-        self.descriptor_list = []
+        self.output_desc_length = 0   #column length
         self.rows_affected = 0
         self.query_type = 0
         self.estimated_cost = 0
@@ -882,7 +881,7 @@ class ExecuteReply:
                 t = Descriptor()
                 buf_view = t.extractFromByteArray(buf_view)
                 t.set_row_length(output_param_length)
-                self.descriptor_list.append(t)
+                self.output_desc_list.append(t)
 
         self.rows_affected, buf_view = convert.get_int(buf_view, little=True)
         self.query_type, buf_view = convert.get_int(buf_view, little=True)
@@ -891,7 +890,7 @@ class ExecuteReply:
         # 64 bit rows_affected,this is a horrible hack because we cannot change the protocol yet
         # rows_affected should be made a regular 64 bit value when possible
         self.rows_affected = self.rows_affected or (self.estimated_cost << 32)
-        self.out_values = convert.get_bytes(buf_view)
+        self.out_values, buf_view = convert.get_bytes(buf_view)
         self.num_resultsets, buf_view = convert.get_int(buf_view, little=True)
 
         if self.num_resultsets > 0:
@@ -950,14 +949,14 @@ class Descriptor:
         self.noNullValue_ = 0
         self.nullValue_ = 0
         self.version_ = 0
-        self.dataType_ = 0
+        self.dataType_ = 0   # sql_data_type
         self.datetimeCode_ = 0
         self.maxLen_ = 0
         self.precision_ = 0
         self.scale_ = 0
         self.nullInfo_ = 0
         self.signed_ = 0
-        self.odbcDataType_ = 0
+        self.odbcDataType_ = 0  # odbc_data_type
         self.odbcPrecision_ = 0
         self.sqlCharset_ = 0
         self.odbcCharset_ = 0
@@ -997,3 +996,175 @@ class Descriptor:
         self.paramMode_, buf_view = convert.get_int(buf_view, little=True)
 
         return buf_view
+
+
+class FetchReply:
+
+    SQLTYPECODE_CHAR = 1
+    # NUMERIC * /
+    SQLTYPECODE_NUMERIC = 2
+    SQLTYPECODE_NUMERIC_UNSIGNED = -201
+    # DECIMAL * /
+    SQLTYPECODE_DECIMAL = 3
+    SQLTYPECODE_DECIMAL_UNSIGNED = -301
+    SQLTYPECODE_DECIMAL_LARGE = -302
+    SQLTYPECODE_DECIMAL_LARGE_UNSIGNED = -303
+    # INTEGER / INT * /
+    SQLTYPECODE_INTEGER = 4
+    SQLTYPECODE_INTEGER_UNSIGNED = -401
+    SQLTYPECODE_LARGEINT = -402
+    SQLTYPECODE_LARGEINT_UNSIGNED = -405
+    # SMALLINT
+    SQLTYPECODE_SMALLINT = 5
+    SQLTYPECODE_SMALLINT_UNSIGNED = -502
+    SQLTYPECODE_BPINT_UNSIGNED = -503
+
+        # TINYINT */
+    SQLTYPECODE_TINYINT                = -403
+    SQLTYPECODE_TINYINT_UNSIGNED       = -404
+
+    # DOUBLE depending on precision
+    SQLTYPECODE_FLOAT = 6
+    SQLTYPECODE_REAL = 7
+    SQLTYPECODE_DOUBLE = 8
+
+    # DATE,TIME,TIMESTAMP */
+    SQLTYPECODE_DATETIME = 9
+
+    # TIMESTAMP */
+    SQLTYPECODE_INTERVAL = 10
+
+    # no ANSI value 11 */
+
+	# VARCHAR/CHARACTER VARYING */
+    SQLTYPECODE_VARCHAR = 12
+
+    # SQL/MP stype VARCHAR with length prefix:
+
+    SQLTYPECODE_VARCHAR_WITH_LENGTH = -601
+    SQLTYPECODE_BLOB = -602
+    SQLTYPECODE_CLOB = -603
+    # LONG VARCHAR/ODBC CHARACTER VARYING */
+    SQLTYPECODE_VARCHAR_LONG = -1 # ## NEGATIVE??? */
+
+    # no ANSI value 13 */
+
+	# BIT */
+    SQLTYPECODE_BIT = 14 # not supported */
+
+    # BIT VARYING */
+    SQLTYPECODE_BITVAR = 15 # not supported */
+
+    # NCHAR -- CHAR(n) CHARACTER SET s -- where s uses two bytes per char */
+    SQLTYPECODE_CHAR_DBLBYTE = 16
+    # NCHAR VARYING -- VARCHAR(n) CHARACTER SET s -- s uses 2 bytes per char */
+    SQLTYPECODE_VARCHAR_DBLBYTE = 17
+    # BOOLEAN TYPE */
+    SQLTYPECODE_BOOLEAN = -701
+
+    # Date/Time/TimeStamp related constants */
+    SQLDTCODE_DATE = 1
+    SQLDTCODE_TIME = 2
+    SQLDTCODE_TIMESTAMP = 3
+    SQLDTCODE_MPDATETIME = 4
+    dateLength = 10
+    timeLength = 8
+    timestampLength = 26
+
+    def __init__(self):
+        self.return_code = 0
+        self.errorlist = []
+        self.out_values_format = 0
+        self.out_values = None
+        self.rows_affected = 0
+        self.total_error_length = 0
+
+    def init_reply(self, buf_view:memoryview):
+        self.return_code, buf_view = convert.get_int(buf_view, little=True)
+        if self.return_code != Transport.SQL_SUCCESS and self.return_code != Transport.NO_DATA_FOUND:
+            self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+            if self.total_error_length > 0:
+                error_count, buf_view = convert.get_int(buf_view, little=True)
+                for x in error_count:
+                    t = SQLWarningOrError()
+                    buf_view = t.extractFromByteArray(buf_view)
+                    self.errorlist.append(t)
+
+        if len(self.errorlist) == 0:
+            self.errorlist.append(SQLWarningOrError())
+
+        self.rows_affected, buf_view = convert.get_int(buf_view, little=True)
+        self.out_values_format, buf_view = convert.get_int(buf_view, little=True)
+
+        if self.return_code == Transport.SQL_SUCCESS or self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
+            self.out_values, buf_view = convert.get_bytes(buf_view, little=True)
+
+    def set_out_puts(self, execute_desc: ExecuteReply):
+
+        buf_view = memoryview(self.out_values)
+
+        data_len = 0
+        out_desc_list = execute_desc.output_desc_list
+        if len(out_desc_list) != 0:
+            data_len = out_desc_list[0].row_length
+
+        column_count = len(execute_desc.output_desc_list)
+        for rows_x in range(self.rows_affected):
+            row_offset = rows_x * data_len
+            for column_x in range(column_count):
+                nonull_value_offset = out_desc_list[column_x].noNullValue_
+                null_value_offset = out_desc_list[column_x].nullValue_
+
+                if null_value_offset != -1:
+                    null_value_offset += row_offset
+                if nonull_value_offset != -1:
+                    nonull_value_offset += row_offset
+
+                null_value = 0
+                if null_value_offset != -1:
+                    null_value, _ = convert.get_short(buf_view[null_value_offset:], little=True)
+
+                columnValue = None
+                if null_value_offset != -1 and null_value == -1:
+                    columnValue = None
+                else:
+                    columnValue = self._get_execute_to_fetch_string(nonull_value_offset, out_desc_list[column_x])
+                    if not columnValue:
+                        raise errors.InternalError("column value is null")
+
+    def _get_execute_to_fetch_string(self, nonull_value_offset, column_desc: Descriptor):
+        ret_obj = None
+        buf_view = memoryview(self.out_values)
+        sql_data_type = column_desc.dataType_
+        if sql_data_type == self.SQLTYPECODE_CHAR:
+            length = column_desc.maxLen_
+            ret_obj = convert.get_bytes(buf_view[nonull_value_offset:], length=length)
+
+        if sql_data_type == self.SQLTYPECODE_VARCHAR or \
+                        sql_data_type == self.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
+                        sql_data_type == self.SQLTYPECODE_VARCHAR_LONG or \
+                        sql_data_type == self.SQLTYPECODE_BLOB or \
+                        sql_data_type == self.SQLTYPECODE_CLOB:
+
+            short_length = 2 if column_desc.precision_ < 2**15 else 4
+            data_offset = nonull_value_offset + short_length
+
+            data_len = 0
+            if short_length == 2:
+                data_len, _ = convert.get_short(buf_view[nonull_value_offset:], little=True)
+            else:
+                data_len, _ = convert.get_int(buf_view[nonull_value_offset:], little=True)
+
+            length_left = len(self.out_values) - data_offset
+
+            data_len = length_left if length_left < data_len else data_len
+
+            ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
+
+        if sql_data_type == self.SQLTYPECODE_INTERVAL:
+            pass
+
+        return ret_obj
+
+
+
