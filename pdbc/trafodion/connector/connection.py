@@ -37,9 +37,7 @@ class TrafConnection(TrafConnectionAbstract):
         self._raw = None
         super(TrafConnection, self).__init__(**kwargs)
 
-        print("kwargs!?")
         if kwargs:
-            print("kwargs!")
             self.connect(**kwargs)
 
     def _connect_to_mxosrvr(self):
@@ -148,8 +146,7 @@ class TrafConnection(TrafConnectionAbstract):
                 pass
             return init_reply
         except:
-            print("what?")
-            return ''
+            raise errors.InternalError("init dialog error")
 
     def _extract_mxosrvr_data(self, data):
         try:
@@ -186,7 +183,6 @@ class TrafConnection(TrafConnectionAbstract):
 
             buf.extend(bytearray(wlength))
 
-            print(len(buf))
             # use memoryview to avoid mem copy
             # remain space for header
             buf_view = memoryview(buf)
@@ -222,7 +218,6 @@ class TrafConnection(TrafConnectionAbstract):
                                           0x10000000
                                           )
         master_conn = self._get_connection(self._master_host, self._master_port)
-        print(master_conn)
         data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
         connect_reply = self._extract_master_data(data)
         if not master_conn:
@@ -292,7 +287,6 @@ class TrafConnection(TrafConnectionAbstract):
 
         buf.extend(bytearray(wlength))
 
-        print(len(buf))
         # use memoryview to avoid mem copy
         # remain space for header
         buf_view = memoryview(buf)

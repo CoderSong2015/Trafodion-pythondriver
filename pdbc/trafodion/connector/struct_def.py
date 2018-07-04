@@ -1067,9 +1067,7 @@ class FetchReply:
     SQLDTCODE_TIME = 2
     SQLDTCODE_TIMESTAMP = 3
     SQLDTCODE_MPDATETIME = 4
-    dateLength = 10
-    timeLength = 8
-    timestampLength = 26
+
 
     def __init__(self):
         self.return_code = 0
@@ -1078,8 +1076,10 @@ class FetchReply:
         self.out_values = None
         self.rows_affected = 0
         self.total_error_length = 0
+        self.result_set = []
+        self.end_of_data = False
 
-    def init_reply(self, buf_view:memoryview):
+    def init_reply(self, buf_view: memoryview, execute_desc: ExecuteReply):
         self.return_code, buf_view = convert.get_int(buf_view, little=True)
         if self.return_code != Transport.SQL_SUCCESS and self.return_code != Transport.NO_DATA_FOUND:
             self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
@@ -1099,7 +1099,15 @@ class FetchReply:
         if self.return_code == Transport.SQL_SUCCESS or self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
             self.out_values, buf_view = convert.get_bytes(buf_view, little=True)
 
-    def set_out_puts(self, execute_desc: ExecuteReply):
+            if len(self.errorlist) != 0:
+                pass
+            self._set_out_puts(execute_desc)
+            self.end_of_data = False
+
+        if self.return_code == Transport.NO_DATA_FOUND:
+            self.end_of_data = True
+
+    def _set_out_puts(self, execute_desc: ExecuteReply):
 
         buf_view = memoryview(self.out_values)
 
@@ -1111,6 +1119,8 @@ class FetchReply:
         column_count = len(execute_desc.output_desc_list)
         for rows_x in range(self.rows_affected):
             row_offset = rows_x * data_len
+
+            column_result_list = []
             for column_x in range(column_count):
                 nonull_value_offset = out_desc_list[column_x].noNullValue_
                 null_value_offset = out_desc_list[column_x].nullValue_
@@ -1124,13 +1134,25 @@ class FetchReply:
                 if null_value_offset != -1:
                     null_value, _ = convert.get_short(buf_view[null_value_offset:], little=True)
 
-                columnValue = None
+                column_value = None
                 if null_value_offset != -1 and null_value == -1:
-                    columnValue = None
+                    column_value = None
                 else:
-                    columnValue = self._get_execute_to_fetch_string(nonull_value_offset, out_desc_list[column_x])
-                    if not columnValue:
+                    column_value = self._get_execute_to_fetch_string(nonull_value_offset, out_desc_list[column_x])
+                    if not column_value:
                         raise errors.InternalError("column value is null")
+
+                column_result_list.append(column_value)
+
+            self.result_set.append(column_result_list)
+
+        self._clear_and_set()
+
+    def _clear_and_set(self):
+
+        # save result set and clear out_values
+        self.out_values = None
+        self.rows_fetched = len(self.result_set)
 
     def _get_execute_to_fetch_string(self, nonull_value_offset, column_desc: Descriptor):
         ret_obj = None

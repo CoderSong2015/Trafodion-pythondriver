@@ -116,13 +116,7 @@ class TrafCursor(CursorBase):
     def __init__(self, connection=None):
         CursorBase.__init__(self)
         self._connection = None
-        self._stored_results = []
-        self._nextrow = (None, None)
-        self._warnings = None
-        self._warning_count = 0
-        self._executed = None
-        self._executed_list = []
-        self._binary = False
+        self._next_row = 0
         self._st = None
         self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
         self._input_params_length = 0
@@ -130,6 +124,9 @@ class TrafCursor(CursorBase):
         self._cursor_name = ''
         self._using_rawrowset = False
         self._stmt_name_charset = 1
+        self._result_set = None
+        self._end_data = False
+        self._row_cached = 0
         if connection is not None:
             self._set_connection(connection)
         self._stmt_name = self._generate_stmtlabel()
@@ -219,4 +216,20 @@ class TrafCursor(CursorBase):
         return "SQL_CUR_" + str(cursor_id)
 
     def fetchone(self):
-        self._st.fetch()
+
+        if self._next_row < self._row_cached:
+            self._next_row += 1
+            return self._result_set[self._next_row - 1]
+
+        # if no data found, do not fetch again
+        if self._end_data:
+            return None
+
+        fetch_reply = self._st.fetch()
+        self._result_set = fetch_reply.result_set
+        self._end_data = fetch_reply.end_of_data
+        if self._end_data:
+            return None
+        self._row_cached = fetch_reply.rows_fetched
+        self._next_row += 1
+        return self._result_set[self._next_row - 1]

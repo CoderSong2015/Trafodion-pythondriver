@@ -83,8 +83,7 @@ class Statement:
 
         buf_view = memoryview(data)
         t = FetchReply()
-        t.init_reply(buf_view)
-        t.set_out_puts(self._descriptor)
+        t.init_reply(buf_view, self._descriptor)
         return t
 
     def _marshal_fetch(self, dialogue_id, sql_async_enable, query_timeout, stmt_handle,

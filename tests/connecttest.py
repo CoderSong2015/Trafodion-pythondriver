@@ -21,7 +21,9 @@ if __name__ == '__main__':
 
     cur = out.cursor()
     cur.execute("select * from song")
-    cur.fetchone()
+    rs = cur.fetchone()
+    while rs:
+        print(rs)
+        rs = cur.fetchone()
 
-    while True:
-        pass
+    print(rs)
