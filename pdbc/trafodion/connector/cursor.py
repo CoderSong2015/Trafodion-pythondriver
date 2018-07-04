@@ -204,10 +204,14 @@ class TrafCursor(CursorBase):
         try:
             self._st.execute(stmt, self._execute_type)
         except errors.InterfaceError:
-            if self._connection._have_next_result:  # pylint: disable=W0212
-                raise errors.InterfaceError(
-                    "Use multi=True when executing multiple statements")
+            #TODO
+            # if self._connection._have_next_result:
+            #    raise errors.InterfaceError(
+            #         "use multi=True when executing multiple statements")
             raise
+
+        # reset end_data when execute called successfully, which is needed by self.fetchone()
+        self._end_data = False
         return None
 
     def _generate_stmtlabel(self):
@@ -217,13 +221,15 @@ class TrafCursor(CursorBase):
 
     def fetchone(self):
 
-        if self._next_row < self._row_cached:
-            self._next_row += 1
-            return self._result_set[self._next_row - 1]
-
+        if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
+            raise errors.InternalError("No result set available.")
         # if no data found, do not fetch again
         if self._end_data:
             return None
+
+        if self._next_row < self._row_cached:
+            self._next_row += 1
+            return self._result_set[self._next_row - 1]
 
         fetch_reply = self._st.fetch()
         self._result_set = fetch_reply.result_set
@@ -231,5 +237,21 @@ class TrafCursor(CursorBase):
         if self._end_data:
             return None
         self._row_cached = fetch_reply.rows_fetched
-        self._next_row += 1
+
+        # restart read from cache
+        self._next_row = 1
         return self._result_set[self._next_row - 1]
+
+    def fetchmany(self, size=1):
+
+        if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
+            raise errors.InternalError("No result set available.")
+
+        res = []
+        cnt = (size or self.arraysize)
+        while cnt > 0:
+            cnt -= 1
+            row = self.fetchone()
+            if row:
+                res.append(row)
+        return res

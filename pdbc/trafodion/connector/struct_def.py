@@ -1160,7 +1160,7 @@ class FetchReply:
         sql_data_type = column_desc.dataType_
         if sql_data_type == self.SQLTYPECODE_CHAR:
             length = column_desc.maxLen_
-            ret_obj = convert.get_bytes(buf_view[nonull_value_offset:], length=length)
+            ret_obj, _ = convert.get_bytes(buf_view[nonull_value_offset:], length=length)
 
         if sql_data_type == self.SQLTYPECODE_VARCHAR or \
                         sql_data_type == self.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
@@ -1186,6 +1186,9 @@ class FetchReply:
         if sql_data_type == self.SQLTYPECODE_INTERVAL:
             pass
 
+        if sql_data_type == self.SQLTYPECODE_INTEGER:
+            ret_obj, _ = convert.get_int(buf_view[nonull_value_offset:], little=True)
+            # TODO scale of big decimal
         return ret_obj
 
 

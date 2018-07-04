@@ -20,7 +20,7 @@ if __name__ == '__main__':
     out = pdbc.trafodion.connector.connect(**config)
 
     cur = out.cursor()
-    cur.execute("select * from song")
+    cur.execute("select * from songsong")
     rs = cur.fetchone()
     while rs:
         print(rs)
