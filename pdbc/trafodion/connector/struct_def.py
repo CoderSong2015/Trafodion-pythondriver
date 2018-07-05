@@ -759,30 +759,44 @@ class SQL_DataValue_def:
         return buf_view
 
     @staticmethod
-    def fill_in_sql_values(locale, cursor, param_rowcount, param_count, param_values, client_errors):
+    def fill_in_sql_values(describer, param_rowcount, param_values, client_errors):
         data_value = SQL_DataValue_def()
 
+        #TODO handle param_values
         if (param_rowcount == 0 and param_values is not None and  len(param_values) > 0):
             param_rowcount = 1 # fake a single row if we are doing inputParams
         # for an SPJ
 
+        param_count = 0
+        if param_values is not None:
+            param_count = len(param_values)
         # TODO: we should really figure out WHY this could happen
-        if (cursor._input_params_length < 0):
-            data_value.buffer = bytearray(0)
+
+        row_len = 0
+        if param_count <= 0:
+            data_value.buffer = ''
             data_value.length = 0
-        else:
-            buf_len = cursor._input_params_length * param_rowcount
+        else:  # prepare first
+            row_len = describer.input_desc_list[0].row_len
+            if (row_len < 0):
+                # TODO: we should really figure out WHY this could happen
+                data_value.buffer = ''
+                data_value.length = 0
+            else:
+                buf_len = row_len * param_rowcount
 
+                for row in range(param_rowcount):
+                    for col in range(param_count):
+                        pass
+                        #self.convert_object_to_SQL(locale, stmt, paramValues[row * paramCount + col], paramRowCount, col,
+                        #dataValue.buffer, row - clientErrors.size())
 
-            for  row in range(param_rowcount):
-                for col in range(param_count):
-                    pass
-                    #convertObjectToSQL2(locale, stmt, paramValues[row * paramCount + col], paramRowCount, col,
-                    #dataValue.buffer, row - clientErrors.size())
-
-        data_value.length = cursor._input_params_length * (param_rowcount - len(client_errors))
+        data_value.length = row_len * (param_rowcount - len(client_errors))
 
         return data_value
+
+    def convert_object_to_SQL(self, cursor, param_rowcount, param_count, param_values, client_errors):
+        pass
 
 
 class SQLValue_def:
@@ -1088,7 +1102,7 @@ class FetchReply:
             self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
             if self.total_error_length > 0:
                 error_count, buf_view = convert.get_int(buf_view, little=True)
-                for x in error_count:
+                for x in range(error_count):
                     t = SQLWarningOrError()
                     buf_view = t.extractFromByteArray(buf_view)
                     self.errorlist.append(t)
@@ -1254,7 +1268,7 @@ class PrepareReply:
             self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
             if self.total_error_length > 0:
                 error_count, buf_view = convert.get_int(buf_view, little=True)
-                for x in error_count:
+                for x in range(error_count):
                     t = SQLWarningOrError()
                     buf_view = t.extractFromByteArray(buf_view)
                     self.errorlist.append(t)

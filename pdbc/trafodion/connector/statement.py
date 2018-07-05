@@ -32,11 +32,11 @@ class Statement:
         self.stmt_type = 0  # EXTERNAL_STMT
         pass
 
-    def execute(self, query: bytes, execute_api):
+    def execute(self, query: bytes, execute_api, params=None):
         # sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
         self._cursor_name = self._cursor._cursor_name
         sql_async_enable = self._sql_async_enable
-        input_row_count = 0
+        input_row_count = 0  #used for batch insert
         max_rowset_size = self._max_rowset_size
         sqlstring = query
         sqlstring_charset = 1
@@ -62,13 +62,15 @@ class Statement:
 
     #if (.usingRawRowset_):
     #else:
-        input_data_value = SQL_DataValue_def.fill_in_sql_values("zh", self._cursor, input_row_count, param_count, None, client_errors_list)
+        input_data_value = SQL_DataValue_def.fill_in_sql_values(self._descriptor, input_row_count,
+                                                                params, client_errors_list)
 
         self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count - len(client_errors_list),
                                          max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
                                          sqlstring_charset,
                                          self._cursor_name,
-                                         self._cursor_name_charset, self.stmt_label, stmt_label_charset, input_data_value,
+                                         self._cursor_name_charset, self.stmt_label, stmt_label_charset,
+                                         input_data_value,
                                          input_value_list, tx_id,
                                          self._cursor._using_rawrowset)
 
@@ -144,15 +146,9 @@ class Statement:
                                           input_value_list, tx_id, user_buffer)
 
         data = self._connection._get_from_server(execute_api, wbuffer, self._connection._mxosrvr_conn)
-        recv_reply = self._extract_recv_data(data)
-        return recv_reply
-
-    def _extract_recv_data(self, data):
-
         buf_view = memoryview(data)
         c = ExecuteReply()
         c.init_reply(buf_view)
-
         return c
 
     def _handle_recv_data(self, recv_reply, execute_api, client_errors_list, input_row_count):
@@ -360,6 +356,7 @@ class PreparedStatement(Statement):
         self._prepare(operation)
 
         # second: execute
+        self.execute(operation, execute_type, params)
         pass
 
     def _prepare(self, operation):

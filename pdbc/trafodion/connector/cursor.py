@@ -119,7 +119,6 @@ class TrafCursor(CursorBase):
         self._next_row = 0
         self._st = None
         self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
-        self._input_params_length = 0
         self._max_rows = 0
         self._cursor_name = ''
         self._using_rawrowset = False
