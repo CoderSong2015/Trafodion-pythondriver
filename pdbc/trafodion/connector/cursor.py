@@ -174,17 +174,17 @@ class TrafCursor(CursorBase):
         #self._connection.handle_unread_result()
 
         #self._reset_result()
-        stmt = ''
+        _operation = ''
 
         try:
             if not isinstance(operation, (bytes, bytearray)):
-                stmt = operation.encode("utf-8")
+                _operation = operation.encode("utf-8")
             else:
-                stmt = operation
+                _operation = operation
         except (UnicodeDecodeError, UnicodeEncodeError) as err:
             raise errors.ProgrammingError(str(err))
 
-        self._executed = stmt
+        self._executed = _operation
         if params is not None:
         # execute prepare statement
             self._execute_type = Transport.SRVR_API_SQLEXECUTE2
@@ -193,15 +193,14 @@ class TrafCursor(CursorBase):
             self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
             self._st = Statement(self._connection, self)
 
-
         if multi:
             pass
 
         try:
             if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
-                self._st.execute(stmt, self._execute_type)
+                self._st.execute(_operation, self._execute_type)
             else:
-                self._st.execute_all(stmt, self._execute_type)
+                self._st.execute_all(_operation, self._execute_type, params)
         except errors.InterfaceError:
             #TODO
             # if self._connection._have_next_result:

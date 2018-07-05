@@ -1072,7 +1072,6 @@ class FetchReply:
     SQLDTCODE_TIMESTAMP = 3
     SQLDTCODE_MPDATETIME = 4
 
-
     def __init__(self):
         self.return_code = 0
         self.errorlist = []
@@ -1083,7 +1082,7 @@ class FetchReply:
         self.result_set = []
         self.end_of_data = False
 
-    def init_reply(self, buf_view: memoryview, execute_desc: ExecuteReply):
+    def init_reply(self, buf_view: memoryview, execute_desc):
         self.return_code, buf_view = convert.get_int(buf_view, little=True)
         if self.return_code != Transport.SQL_SUCCESS and self.return_code != Transport.NO_DATA_FOUND:
             self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
@@ -1094,8 +1093,10 @@ class FetchReply:
                     buf_view = t.extractFromByteArray(buf_view)
                     self.errorlist.append(t)
 
-        if len(self.errorlist) == 0:
-            self.errorlist.append(SQLWarningOrError())
+                error_info = ''
+                for item in self.errorlist:
+                    error_info += item.text + '\n'
+                raise errors.ProgrammingError(error_info)
 
         self.rows_affected, buf_view = convert.get_int(buf_view, little=True)
         self.out_values_format, buf_view = convert.get_int(buf_view, little=True)
@@ -1111,7 +1112,7 @@ class FetchReply:
         if self.return_code == Transport.NO_DATA_FOUND:
             self.end_of_data = True
 
-    def _set_out_puts(self, execute_desc: ExecuteReply):
+    def _set_out_puts(self, execute_desc):
 
         buf_view = memoryview(self.out_values)
 
@@ -1196,4 +1197,68 @@ class FetchReply:
         return ret_obj
 
 
+class PrepareReply:
+    def __init__(self):
+        self.errorlist = []
+        self.return_code = 0
+        self.sql_query_type = 0
+        self.stmt_handle = 0
+        self.estimated_cost = 0
+        self.input_desc_length = 0
+        self.input_desc_list = []
+        self.output_desc_list = []
+        self.output_desc_length = 0
+        self.total_error_length = 0
 
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = convert.get_int(buf_view, little=True)
+
+        if self.return_code == Transport.SQL_SUCCESS or self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
+            if self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
+                self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+                if self.total_error_length > 0:
+                    error_count, buf_view = convert.get_int(buf_view, little=True)
+                    for x in error_count:
+                        t = SQLWarningOrError()
+                        buf_view = t.extractFromByteArray(buf_view)
+                        self.errorlist.append(t)
+                    error_info = ''
+                    for item in self.errorlist:
+                        error_info += item.text + '\n'
+                    raise errors.Warning(error_info)
+            self.sql_query_type, buf_view = convert.get_int(buf_view, little=True)
+            self.stmt_handle, buf_view = convert.get_int(buf_view, little=True)
+            self.estimated_cost, buf_view = convert.get_int(buf_view, little=True)
+            self.input_desc_length, buf_view = convert.get_int(buf_view, little=True)
+
+            if self.input_desc_length > 0:
+                input_param_length, buf_view = convert.get_int(buf_view, little=True)
+                input_number_params, buf_view = convert.get_int(buf_view, little=True)
+                for x in range(input_number_params):
+                    t = Descriptor()
+                    buf_view = t.extractFromByteArray(buf_view)
+                    t.set_row_length(input_param_length)
+                    self.input_desc_list.append(t)
+
+            self.output_desc_length, buf_view = convert.get_int(buf_view, little=True)
+            if self.output_desc_length > 0:
+                output_param_length, buf_view = convert.get_int(buf_view, little=True)
+                output_number_params, buf_view = convert.get_int(buf_view, little=True)
+                for x in range(output_number_params):
+                    t = Descriptor()
+                    buf_view = t.extractFromByteArray(buf_view)
+                    t.set_row_length(output_param_length)
+                    self.output_desc_list.append(t)
+
+        else:
+            self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+            if self.total_error_length > 0:
+                error_count, buf_view = convert.get_int(buf_view, little=True)
+                for x in error_count:
+                    t = SQLWarningOrError()
+                    buf_view = t.extractFromByteArray(buf_view)
+                    self.errorlist.append(t)
+                error_info = ''
+                for item in self.errorlist:
+                    error_info += item.text + '\n'
+                raise errors.ProgrammingError(error_info)

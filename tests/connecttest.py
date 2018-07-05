@@ -20,7 +20,7 @@ if __name__ == '__main__':
     out = pdbc.trafodion.connector.connect(**config)
 
     cur = out.cursor()
-    cur.execute("create table testtest(id int, name char(15))")
+    cur.execute("select * from song where name = ?", "12345678901")
     rs = cur.fetchone()
     while rs:
         print(rs)

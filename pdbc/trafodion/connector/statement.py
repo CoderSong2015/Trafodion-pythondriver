@@ -1,6 +1,6 @@
 from .transport import Transport
 from .struct_def import (SQL_DataValue_def, SQLValueList_def, SQLValue_def,
-                         Header, ExecuteReply, FetchReply)
+                         Header, ExecuteReply, FetchReply, PrepareReply)
 from .transport import convert
 from . import errors
 
@@ -17,14 +17,19 @@ class Statement:
         self._rowcount = 0
         self._last_count = 0
         self._batch_row_count = []
-        self.stmt_name = cursor._stmt_name
+        self.stmt_label = cursor._stmt_name
         self._descriptor = None
         self._max_row_count = 100
         self._sql_async_enable = 1
         self._stmt_label_charset = self._cursor._stmt_name_charset
-        self._cursor_name = None
+        self._cursor_name = self._cursor._cursor_name
         self._cursor_name_charset = 1
         self._stmt_options = ""
+        self._max_rowset_size = self._cursor._max_rows
+        self._module_name = ""
+        self._module_name_charset = 1
+        self._module_timestamp = 0
+        self.stmt_type = 0  # EXTERNAL_STMT
         pass
 
     def execute(self, query: bytes, execute_api):
@@ -32,7 +37,7 @@ class Statement:
         self._cursor_name = self._cursor._cursor_name
         sql_async_enable = self._sql_async_enable
         input_row_count = 0
-        max_rowset_size = self._cursor._max_rows
+        max_rowset_size = self._max_rowset_size
         sqlstring = query
         sqlstring_charset = 1
 
@@ -63,7 +68,7 @@ class Statement:
                                          max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
                                          sqlstring_charset,
                                          self._cursor_name,
-                                         self._cursor_name_charset, self.stmt_name, stmt_label_charset, input_data_value,
+                                         self._cursor_name_charset, self.stmt_label, stmt_label_charset, input_data_value,
                                          input_value_list, tx_id,
                                          self._cursor._using_rawrowset)
 
@@ -77,7 +82,7 @@ class Statement:
 
         wbuffer = self._marshal_fetch(self._connection._dialogue_id, self._sql_async_enable,
                                       self._connection.property.query_timeout,
-                                      self._stmt_handle_, self.stmt_name, self._stmt_label_charset, max_row_count, 0,
+                                      self._stmt_handle_, self.stmt_label, self._stmt_label_charset, max_row_count, 0,
                                       self._cursor_name, self._cursor_name_charset, self._stmt_options)
 
         data = self._connection._get_from_server(Transport.SRVR_API_SQLFETCH, wbuffer, self._connection._mxosrvr_conn)
@@ -205,14 +210,13 @@ class Statement:
             # set the statement label if we didnt get one back.
             if len(recv_reply.stmt_labels_list):
                 recv_reply.stmt_labels_list = []
-                recv_reply.stmt_labels_list.append(self.stmt_name)
-
+                recv_reply.stmt_labels_list.append(self.stmt_label)
 
         else:
             for x in range(num_status):
                 self._batch_row_count.append(-3)  # fill with failed
 
-    def _marshal_statement(self, dialogue_id, sql_async_enable, queryTimeout, input_row_count,
+    def _marshal_statement(self, dialogue_id, sql_async_enable, query_timeout, input_row_count,
                            max_rowset_size, sql_stmt_type, stmt_handle, stmt_type, sqlstring, sqlstring_charset,
                            cursor_name: str, cursor_name_charset, stmt_label: str, stmt_label_charset, stmtExplainLabel,
                            input_data_value, input_value_list, tx_id, user_buffer):
@@ -247,7 +251,7 @@ class Statement:
 
             buf_view = convert.put_int(dialogue_id, buf_view, little=True)
             buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
-            buf_view = convert.put_int(queryTimeout, buf_view, little=True)
+            buf_view = convert.put_int(query_timeout, buf_view, little=True)
             buf_view = convert.put_int(input_row_count, buf_view, little=True)
             buf_view = convert.put_int(max_rowset_size, buf_view, little=True)
             buf_view = convert.put_int(sql_stmt_type, buf_view, little=True)
@@ -338,19 +342,126 @@ class Statement:
 
         return type_dict[first_word]
 
-    def execute_all(self, stmt, execute_type):
+    def execute_all(self, operation, execute_type, params):
         # make for prepared statement
         pass
 
 
 class PreparedStatement(Statement):
+
     def __init__(self, conn, cursor):
         super(PreparedStatement, self).__init__(conn, cursor)
+        self._descriptor = None
         pass
 
-    def execute_all(self, stmt, execute_type):
+    def execute_all(self, operation, execute_type, params):
 
         # first: prepare
+        self._prepare(operation)
+
         # second: execute
         pass
 
+    def _prepare(self, operation):
+
+        cursor_name_charset = self._cursor_name_charset
+        module_name = self._module_name
+        module_name_charset = self._module_name_charset
+        module_timestamp = self._module_timestamp
+        stmt_options = ""
+        stmt_type = self.stmt_type = 0  # EXTERNAL_STMT
+        sql_async_enable = self._sql_async_enable
+        input_row_count = 0
+        max_rowset_size = self._max_rowset_size
+        sql_string = operation
+        sql_string_charset = 1
+        tx_id = 0
+        stmt_label_charset = self._stmt_label_charset
+
+        self._descriptor = self._to_send_prepare(sql_async_enable, stmt_type, self.sql_stmt_type_,
+                                                 self.stmt_label, stmt_label_charset,
+                                                 self._cursor_name, cursor_name_charset, module_name,
+                                                 module_name_charset,
+                                                 module_timestamp,
+                                                 sql_string, sql_string_charset, stmt_options, max_rowset_size,
+                                                 tx_id)
+
+    def _to_send_prepare(self, sql_async_enable, stmt_type, sql_stmt_type, stmt_label, stmt_label_charset,
+                         cursor_name, cursor_name_charset, module_name, module_name_charset, module_timestamp,
+                         sql_string, sql_string_charset, stmt_options, max_rowset_size, tx_id):
+
+        wbuffer = self._marshal_prepare_statement(self._connection._dialogue_id, sql_async_enable,
+                                                  self._connection.property.query_timeout,
+                                                  stmt_type, sql_stmt_type,
+                                                  stmt_label, stmt_label_charset,
+                                                  cursor_name, cursor_name_charset, module_name, module_name_charset,
+                                                  module_timestamp,
+                                                  sql_string, sql_string_charset, stmt_options, self.stmt_explain_label,
+                                                  max_rowset_size,
+                                                  tx_id)
+        data = self._connection._get_from_server(Transport.SRVR_API_SQLPREPARE, wbuffer, self._connection._mxosrvr_conn)
+        buf_view = memoryview(data)
+        t = PrepareReply()
+        t.init_reply(buf_view)
+        return t
+
+    def _marshal_prepare_statement(self, dialogue_id, sql_async_enable, query_timeout, stmt_type, sql_stmt_type,
+                                   stmt_label, stmt_label_charset,
+                                   cursor_name, cursor_name_charset, module_name, module_name_charset, module_timestamp,
+                                   sql_string, sql_string_charset, stmt_options, stmt_explain_label, max_rowset_size,
+                                   tx_id):
+
+        try:
+            wlength = Header.sizeOf()
+            wlength += Transport.size_int        # dialogue_id
+            wlength += Transport.size_int        # sqlAsyncEnable
+            wlength += Transport.size_int        # queryTimeout
+            wlength += Transport.size_short      # stmt_type
+            wlength += Transport.size_int        # sqlStmtType
+
+            wlength += Transport.size_bytes(stmt_label.encode("utf-8"))
+            wlength += Transport.size_int        # stmtLabelCharset
+            wlength += Transport.size_bytes(cursor_name.encode("utf-8"))
+            wlength += Transport.size_int        # cursorNameCharset
+            wlength += Transport.size_bytes(module_name.encode("utf-8"))
+            wlength += Transport.size_int        # moduleName charset
+
+            #if len(module_name) > 0:
+            wlength += Transport.size_long  # in fact server will read moduleTimestamp anyway
+
+            wlength += Transport.size_bytes(sql_string)
+            wlength += Transport.size_int  # sql_string charset
+            wlength += Transport.size_bytes(stmt_options.encode("utf-8"))
+            wlength += Transport.size_bytes(stmt_explain_label.encode("utf-8"))
+            wlength += Transport.size_int  # maxRowsetSize
+            wlength += Transport.size_int  # tx_id
+
+            buf = bytearray(b'')
+
+            buf.extend(bytearray(wlength))
+
+            buf_view = memoryview(buf)
+            buf_view = buf_view[Header.sizeOf():]
+
+            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
+            buf_view = convert.put_int(query_timeout, buf_view, little=True)
+            buf_view = convert.put_short(stmt_type, buf_view, little=True)
+            buf_view = convert.put_int(sql_stmt_type, buf_view, little=True)
+            buf_view = convert.put_string(stmt_label, buf_view, little=True)
+            buf_view = convert.put_int(stmt_label_charset, buf_view, little=True)
+            buf_view = convert.put_string(cursor_name, buf_view, little=True)
+            buf_view = convert.put_int(cursor_name_charset, buf_view, little=True)
+            buf_view = convert.put_string(module_name, buf_view, little=True)
+            buf_view = convert.put_int(module_name_charset, buf_view, little=True)
+            #if len(module_name) > 0:
+            buf_view = convert.put_longlong(module_timestamp, buf_view, little=True)
+            buf_view = convert.put_bytes(sql_string, buf_view, little=True)
+            buf_view = convert.put_int(sql_string_charset, buf_view, little=True)
+            buf_view = convert.put_string(stmt_options, buf_view, little=True)
+            buf_view = convert.put_string(stmt_explain_label, buf_view, little=True)
+            buf_view = convert.put_int(max_rowset_size, buf_view, little=True)
+            buf_view = convert.put_int(tx_id, buf_view, little=True)
+        except:
+            raise errors.InternalError("marshal error")
+        return buf
