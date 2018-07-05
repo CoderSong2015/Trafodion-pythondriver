@@ -4,6 +4,7 @@ from .struct_def import (SQL_DataValue_def, SQLValueList_def, SQLValue_def,
 from .transport import convert
 from . import errors
 
+
 class Statement:
 
     def __init__(self, conn, cursor):
@@ -27,7 +28,7 @@ class Statement:
         pass
 
     def execute(self, query: bytes, execute_api):
-        #sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
+        # sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
         self._cursor_name = self._cursor._cursor_name
         sql_async_enable = self._sql_async_enable
         input_row_count = 0
@@ -51,7 +52,7 @@ class Statement:
 
         if (execute_api == Transport.SRVR_API_SQLEXECDIRECT):
             self.sql_stmt_type_ = self._get_statement_type(sqlstring)
-            #self.set_transaction_status(stmt.connection_, sql)
+            # self.set_transaction_status(stmt.connection_, sql)
             self._outputDesc_ = None  # clear the output descriptors
 
     #if (.usingRawRowset_):
@@ -211,9 +212,6 @@ class Statement:
             for x in range(num_status):
                 self._batch_row_count.append(-3)  # fill with failed
 
-
-
-
     def _marshal_statement(self, dialogue_id, sql_async_enable, queryTimeout, input_row_count,
                            max_rowset_size, sql_stmt_type, stmt_handle, stmt_type, sqlstring, sqlstring_charset,
                            cursor_name: str, cursor_name_charset, stmt_label: str, stmt_label_charset, stmtExplainLabel,
@@ -238,7 +236,7 @@ class Statement:
 
             if not user_buffer:
                 wlength += input_data_value.sizeof()
-                wlength += Transport.size_int # transId
+                wlength += Transport.size_int  # transId
 
             buf = bytearray(b'')
 
@@ -273,7 +271,6 @@ class Statement:
         except:
             raise errors.InternalError("marshal error")
         return buf
-
 
     def set_transaction_status(self, conn, sql):
         tran_status = self.get_transaction_status(sql)
@@ -341,7 +338,19 @@ class Statement:
 
         return type_dict[first_word]
 
-class PreparedStatement(Statement):
-    def __init__(self, conn):
-        super(PreparedStatement, self).__init__(conn)
+    def execute_all(self, stmt, execute_type):
+        # make for prepared statement
         pass
+
+
+class PreparedStatement(Statement):
+    def __init__(self, conn, cursor):
+        super(PreparedStatement, self).__init__(conn, cursor)
+        pass
+
+    def execute_all(self, stmt, execute_type):
+
+        # first: prepare
+        # second: execute
+        pass
+

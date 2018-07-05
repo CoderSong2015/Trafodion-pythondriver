@@ -3,7 +3,7 @@ import weakref
 from .abstracts import TrafCursorAbstract
 from . import errors
 from .transport import Transport
-from .statement import Statement
+from .statement import Statement, PreparedStatement
 
 
 class CursorBase(TrafCursorAbstract):
@@ -127,6 +127,7 @@ class TrafCursor(CursorBase):
         self._result_set = None
         self._end_data = False
         self._row_cached = 0
+        self._executed = None
         if connection is not None:
             self._set_connection(connection)
         self._stmt_name = self._generate_stmtlabel()
@@ -183,26 +184,24 @@ class TrafCursor(CursorBase):
         except (UnicodeDecodeError, UnicodeEncodeError) as err:
             raise errors.ProgrammingError(str(err))
 
+        self._executed = stmt
         if params is not None:
         # execute prepare statement
-            pass
-            #if isinstance(params, dict):
-            #    stmt = _bytestr_format_dict(
-            #        stmt, self._process_params_dict(params))
-            #elif isinstance(params, (list, tuple)):
-            #    pass
-        # execute directly
+            self._execute_type = Transport.SRVR_API_SQLEXECUTE2
+            self._st = PreparedStatement(self._connection, self)
         else:
             self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
-
-        if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
             self._st = Statement(self._connection, self)
-        self._executed = stmt
+
+
         if multi:
             pass
 
         try:
-            self._st.execute(stmt, self._execute_type)
+            if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
+                self._st.execute(stmt, self._execute_type)
+            else:
+                self._st.execute_all(stmt, self._execute_type)
         except errors.InterfaceError:
             #TODO
             # if self._connection._have_next_result:
