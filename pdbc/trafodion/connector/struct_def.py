@@ -867,10 +867,14 @@ class ExecuteReply:
         self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
         if self.total_error_length > 0:
             error_count, buf_view = convert.get_int(buf_view, little=True)
-            for x in error_count:
+            for x in range(error_count):
                 t = SQLWarningOrError()
                 buf_view = t.extractFromByteArray(buf_view)
                 self.errorlist.append(t)
+            error_info = ''
+            for item in self.errorlist:
+                error_info += item.text + '\n'
+            raise errors.ProgrammingError(error_info)
 
         self.output_desc_length, buf_view = convert.get_int(buf_view, little=True)
         if self.output_desc_length > 0:
@@ -909,7 +913,7 @@ class ExecuteReply:
                     output_param_length, buf_view = convert.get_int(buf_view, little=True)
                     output_number_params, buf_view = convert.get_int(buf_view, little=True)
 
-                    for x in range(output_number_params):
+                    for y in range(output_number_params):
                         t = Descriptor()
                         t.extractFromByteArray(buf_view)
                         t.set_row_length(output_param_length)
@@ -938,8 +942,8 @@ class SQLWarningOrError:
         self.row_id, buf_view = convert.get_int(buf_view, little=True)
         self.sql_code, buf_view = convert.get_int(buf_view, little=True)
         self.text, buf_view = convert.get_string(buf_view, little=True)
-        self.sql_state = convert.get_bytes(buf_view, 5)
-        _ = convert.get_char(buf_view)
+        self.sql_state, buf_view = convert.get_bytes(buf_view, 5)
+        _, buf_view = convert.get_char(buf_view)
         return buf_view
 
 

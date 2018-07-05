@@ -142,12 +142,11 @@ class Statement:
         return recv_reply
 
     def _extract_recv_data(self, data):
-        try:
-            buf_view = memoryview(data)
-            c = ExecuteReply()
-            c.init_reply(buf_view)
-        except:
-            raise errors.InternalError("handle mxosrvr data error")
+
+        buf_view = memoryview(data)
+        c = ExecuteReply()
+        c.init_reply(buf_view)
+
         return c
 
     def _handle_recv_data(self, recv_reply, execute_api, client_errors_list, input_row_count):
