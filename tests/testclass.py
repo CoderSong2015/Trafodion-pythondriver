@@ -99,5 +99,18 @@ def testlist(mlist):
 if __name__ == '__main__':
     ss = test1.test2()
     ss.id[1] = 1
-    t = testa()
-    t.print()
+
+    t = bytearray(10)
+    t.insert(3, 14)
+    print(t)
+
+    t = bytes(10)
+
+    maxLength = 5
+    b = bytearray()
+    for x in range(maxLength - 2):
+        b.append(ord('7'))
+
+    ss = 'q3we'
+    print(ss.encode("UTF-8"))
+    print(b'8')

@@ -1,5 +1,5 @@
 import struct
-
+from . import errors
 
 class Transport:
     size_long = 8
@@ -224,13 +224,37 @@ class Transport:
     # From Global.h
     ESTIMATEDCOSTRGERRWARN = 2
 
+    charset_to_value = {
+        "ISO8859_1": 1,  # ISO
+        "MS932": 10,  # SJIS
+        "UTF-16BE": 11,  # UCS2
+        "EUCJP": 12,  # EUCJP
+        "MS950": 13,  # BIG5
+        "GB18030": 14,  # GB18030
+        "UTF-8": 15,  # UTF8
+        "MS949": 16,  # MB_KSC5601
+        "GB2312": 17,  # GB2312
+    }
+
+    value_to_charset = {
+        1: "ISO8859_1",
+        10: "MS932",
+        11: "UTF-16BE",
+        12: "EUCJP",
+        13: "MS950",
+        14: "GB18030",
+        15: "UTF-8",
+        16: "MS949",
+        17: "GB2312",
+    }
+
     @classmethod
-    def size_bytes(self, buf, fixForServer = None):
-        return self.size_int + len(buf) + 1 if (buf != None and (len(buf) > 0)) else self.size_int + 1
+    def size_bytes(cls, buf, fixForServer = None):
+        return cls.size_int + len(buf) + 1 if (buf and (len(buf) > 0)) else cls.size_int + 1
 
-
-    def size_bytesWithCharset(self, buf):
-        return self.size_int + len(buf) + 1 + self.size_int if (buf != None and len(buf) > 0) else self.size_int
+    @classmethod
+    def size_bytes_with_charset(cls, buf):
+        return cls.size_int + len(buf) + 1 + cls.size_int if buf and len(buf) > 0 else cls.size_int
 
     # end class TRANSPORT
 
@@ -279,43 +303,49 @@ class convert:
                 mem[index] = byte
 
     @classmethod
-    def put_string(self, string, buf_view: memoryview, little=False):
-        """
-        :param string: 
-        :param buf_view: Python memoryview
-        :return: buf_view in current position
-        """
-        tmp_len = len(string) + 1 #server need to handle the '\0'
-        buf_view = self.put_int(tmp_len, buf_view, little)  #
-        if (tmp_len is not 0):
-            self.put_data_memview(buf_view, string.encode("utf-8"))  # string
-            buf_view = buf_view[tmp_len:]
-        return buf_view
+    def put_string(self, string, buf_view: memoryview, little=False, charset="utf-8"):
+        if not isinstance(string, str):
+            raise errors.InternalError("function needs input type is string")
 
-    @classmethod
-    def put_bytes(self, string, buf_view: memoryview, little=False):
-        """
-        :param string: 
-        :param buf_view: Python memoryview
-        :param little:
-        :return: buf_view in current position
-        """
         tmp_len = len(string) + 1  # server need to handle the '\0'
         buf_view = self.put_int(tmp_len, buf_view, little)  #
-        if (tmp_len is not 0):
-            self.put_data_memview(buf_view, string)  # string
+        if tmp_len is not 0:
+            self.put_data_memview(buf_view, string.encode(charset))  # string
             buf_view = buf_view[tmp_len:]
         return buf_view
 
     @classmethod
-    def put_short(self, num, buf_view: memoryview, little=False):
+    def put_bytes(cls, data, buf_view: memoryview, little=False, nolen=False, is_data=False):
+        """
+        :param data: 
+        :param buf_view: Python memoryview
+        :param little:
+        :param nolen: if nolen, put bytes directly without length
+        :return: buf_view in current position
+        """
+
+        if not nolen:
+            # server need to handle the '\0', when used in data value , not '\0'
+            tmp_len = len(data) + 1 if not is_data else len(data)
+            buf_view = cls.put_int(tmp_len, buf_view, little)  #
+            if tmp_len is not 0:
+                cls.put_data_memview(buf_view, data)
+                buf_view = buf_view[tmp_len:]
+            return buf_view
+        else:
+            cls.put_data_memview(buf_view, data)
+            buf_view = buf_view[len(data):]
+            return buf_view
+
+    @classmethod
+    def put_short(cls, num, buf_view: memoryview, little=False):
         """
         :param num: short 
         :param buf_view: Python memoryview
         :return: buf_view in current position
         """
-        data = self.int_to_byteshort(num, little)
-        self.put_data_memview(buf_view, data)
+        data = cls.int_to_byteshort(num, little)
+        cls.put_data_memview(buf_view, data)
         return buf_view[2:]
 
     @classmethod

@@ -20,11 +20,11 @@ if __name__ == '__main__':
     out = pdbc.trafodion.connector.connect(**config)
 
     cur = out.cursor()
-    cur.execute("select * from songsong")
+    cur.execute("insert into songsong values('pdbc', ? , 3)", ['test',])
     #cur.execute("select * from songsong where name = ? and id = ?", "12345678901")
-    rs = cur.fetchone()
-    while rs:
-        print(rs)
-        rs = cur.fetchone()
-
-    print(rs)
+    #rs = cur.fetchone()
+    #$while rs:
+    #    print(rs)
+    #    rs = cur.fetchone()
+#
+   # print(rs)

@@ -36,7 +36,7 @@ class Statement:
         # sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
         self._cursor_name = self._cursor._cursor_name
         sql_async_enable = self._sql_async_enable
-        input_row_count = 0  #used for batch insert
+        input_row_count = self._handle_params(params)  #used for batch insert
         max_rowset_size = self._max_rowset_size
         sqlstring = query
         sqlstring_charset = 1
@@ -62,10 +62,9 @@ class Statement:
 
     #if (.usingRawRowset_):
     #else:
-        input_data_value = SQL_DataValue_def.fill_in_sql_values(self._descriptor, input_row_count,
-                                                                params, client_errors_list)
+        input_data_value = SQL_DataValue_def.fill_in_sql_values(self._descriptor, input_row_count, params)
 
-        self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count - len(client_errors_list),
+        self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count,
                                          max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
                                          sqlstring_charset,
                                          self._cursor_name,
@@ -77,6 +76,12 @@ class Statement:
         return self._descriptor.rows_affected
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
+
+    def _handle_params(self, params):
+        if params:
+            return 1
+        else:
+            return 0
 
     def fetch(self, row_count=None):
 
@@ -227,16 +232,16 @@ class Statement:
             wlength += Transport.size_int        # stmtHandle
             wlength += Transport.size_int        # stmtType#
             wlength += Transport.size_bytes(sqlstring)
-            wlength += Transport.size_int        # sqlStringCharset
-            wlength += Transport.size_bytes(cursor_name.encode("utf-8"))
-            wlength += Transport.size_int        # cursorNameCharset
-            wlength += Transport.size_bytes(stmt_label.encode("utf-8"))
-            wlength += Transport.size_int        # stmtLabelCharset
+            wlength += Transport.size_int  # sqlStringCharset
+            wlength += Transport.size_bytes(cursor_name.encode("utf-8"))       # cursorNameCharset
+            wlength += Transport.size_int
+            wlength += Transport.size_bytes(stmt_label.encode("utf-8"))        # stmtLabelCharset
+            wlength += Transport.size_int
             wlength += Transport.size_bytes(stmtExplainLabel.encode("utf-8"))
 
             if not user_buffer:
                 wlength += input_data_value.sizeof()
-                wlength += Transport.size_int  # transId
+                wlength += Transport.size_int + Transport.size_int + 1 # transId
 
             buf = bytearray(b'')
 
@@ -266,8 +271,10 @@ class Statement:
             if user_buffer:
                 pass
             else:
-                input_data_value.insertIntoByteArray(buf_view, little=True)
+                buf_view = input_data_value.insertIntoByteArray(buf_view, little=True)
+                buf_view = convert.put_int(4 + 1, buf_view, little=True)
                 buf_view = convert.put_int(tx_id, buf_view, little=True)
+                buf_view = convert.put_bytes(b'\x00', buf_view, nolen=True)
         except:
             raise errors.InternalError("marshal error")
         return buf
@@ -382,6 +389,7 @@ class PreparedStatement(Statement):
                                                  module_timestamp,
                                                  sql_string, sql_string_charset, stmt_options, max_rowset_size,
                                                  tx_id)
+        self._stmt_handle_ = self._descriptor.stmt_handle
 
     def _to_send_prepare(self, sql_async_enable, stmt_type, sql_stmt_type, stmt_label, stmt_label_charset,
                          cursor_name, cursor_name_charset, module_name, module_name_charset, module_timestamp,

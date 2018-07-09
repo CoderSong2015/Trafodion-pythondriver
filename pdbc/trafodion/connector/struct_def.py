@@ -740,7 +740,7 @@ class SQL_DataValue_def:
                 if isinstance(self.buffer, str):
                     buf_view = convert.put_string(self.buffer, buf_view, little)  # string
                 else:
-                    raise errors.InternalError("string is needed by buffer converted")
+                    buf_view = convert.put_bytes(self.buffer, buf_view, little, is_data=True)
             else:
                 buf_view = convert.put_int(0, buf_view, little)
         except:
@@ -758,8 +758,8 @@ class SQL_DataValue_def:
         self.buffer, buf_view = convert.get_string(buf_view, little=True)
         return buf_view
 
-    @staticmethod
-    def fill_in_sql_values(describer, param_rowcount, param_values, client_errors):
+    @classmethod
+    def fill_in_sql_values(cls, describer, param_rowcount, param_values):
         data_value = SQL_DataValue_def()
 
         #TODO handle param_values
@@ -777,26 +777,125 @@ class SQL_DataValue_def:
             data_value.buffer = ''
             data_value.length = 0
         else:  # prepare first
-            row_len = describer.input_desc_list[0].row_len
-            if (row_len < 0):
+            row_len = describer.input_desc_list[0].row_length
+            if row_len < 0:
                 # TODO: we should really figure out WHY this could happen
-                data_value.buffer = ''
+                data_value.buffer = bytes(0)
                 data_value.length = 0
             else:
                 buf_len = row_len * param_rowcount
-
+                data_value.buffer = bytearray(buf_len)
+                buf_view = memoryview(data_value.buffer)
                 for row in range(param_rowcount):
                     for col in range(param_count):
-                        pass
-                        #self.convert_object_to_SQL(locale, stmt, paramValues[row * paramCount + col], paramRowCount, col,
-                        #dataValue.buffer, row - clientErrors.size())
+                        buf_view = cls.convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
+                                                              param_values[col],
+                                                              row, buf_view)
 
-        data_value.length = row_len * (param_rowcount - len(client_errors))
+        data_value.length = row_len * param_rowcount
 
         return data_value
 
-    def convert_object_to_SQL(self, cursor, param_rowcount, param_count, param_values, client_errors):
-        pass
+    @classmethod
+    def convert_object_to_sql(cls, input_desc_list, param_rowcount, param_count, param_values, row_num,
+                              buf_view: memoryview):
+
+        desc = input_desc_list[param_count]
+
+        precision = desc.odbcPrecision_
+        scale = desc.scale_
+        sqlDatetimeCode = desc.datetimeCode_
+        FSDataType = desc.dataType_
+        OdbcDataType = desc.odbcDataType_
+        maxLength = desc.maxLen_
+        dataType = desc.dataType_
+        dataCharSet = desc.sqlCharset_
+        # setup the offsets
+        noNullValue = desc.noNullValue_
+        nullValue = desc.nullValue_
+        dataLength = desc.maxLen_
+
+        dataOffset = 2
+        shortLength = False
+
+        if dataType == FetchReply.SQLTYPECODE_VARCHAR_WITH_LENGTH:
+            shortLength = precision < 2**15
+            dataOffset = 2 if shortLength else 4
+            dataLength += dataOffset
+
+            if dataLength % 2 != 0:
+                dataLength = dataLength + 1
+        elif dataType == FetchReply.SQLTYPECODE_BLOB or dataType == FetchReply.SQLTYPECODE_CLOB:
+            shortLength = False
+            dataOffset = 4
+            dataLength += dataOffset
+
+            if dataLength % 2 != 0:
+                dataLength = dataLength + 1
+
+        if nullValue != -1:
+            nullValue = (nullValue * param_rowcount) + (row_num * 2)
+
+        noNullValue = (noNullValue * param_rowcount) + (row_num * dataLength)
+        if param_values == None :
+            if nullValue == -1:
+                raise errors.ProgrammingError("null_parameter_for_not_null_column")
+            # values[nullValue] = -1
+            _ = convert.put_short(-1, buf_view[nullValue:], True)
+            return buf_view
+
+        if dataType == FetchReply.SQLTYPECODE_CHAR:
+            if param_values == None:
+                # Note for future optimization. We can probably remove the next line,
+                # because the array is already initialized to 0.
+                _ = convert.put_short(0, buf_view[noNullValue:], True)
+                return buf_view
+            elif isinstance(param_values, (bytes, str)):
+                charSet = ""
+
+                try:
+                    if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
+                        charSet = "UTF-8"
+                    elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
+                        charSet = "UTF-16LE"
+                    else:
+                        charSet = Transport.value_to_charset[dataCharSet]
+                    if isinstance(param_values, bytes):
+                        param_values = param_values.decode("utf-8").encode(charSet)
+                    else:
+                        param_values = param_values.encode(charSet)
+                except:
+                    raise errors.NotSupportedError("unsupported_encoding")
+            else:
+                raise errors.DataError("invalid_parameter_value, data should be either bytes or String for column: %d",
+                                       param_count)
+
+            # We now have a byte array containing the parameter
+            dataLen = len(param_values)
+            if maxLength >= dataLen:
+                _ = convert.put_bytes(param_values, buf_view[noNullValue:], True, nolen=True)
+                # Blank pad for rest of the buffer
+                if maxLength > dataLen:
+                    if dataCharSet == Transport.charset_to_value["UTF-16BE"]:
+                        # pad with Unicode spaces (0x00 0x20)
+                        i2 = dataLen
+                        while i2 < maxLength:
+                            _ = convert.put_bytes(' '.encode(), buf_view[noNullValue + i2:], little=True,
+                                             nolen=True)
+                            _ = convert.put_bytes(' '.encode(), buf_view[noNullValue + i2 + 1:], little=True,
+                                             nolen=True)
+                            i2 = i2 + 2
+
+                    else:
+                        b = bytearray()
+                        for x in range(maxLength - dataLen):
+                            b.append(ord(' '))
+                        _ = convert.put_bytes(b, buf_view[noNullValue + dataLen:], little=True, nolen=True)
+            else:
+                raise errors.ProgrammingError(
+                        "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
+
+            return buf_view
 
 
 class SQLValue_def:
@@ -888,7 +987,11 @@ class ExecuteReply:
             error_info = ''
             for item in self.errorlist:
                 error_info += item.text + '\n'
-            raise errors.ProgrammingError(error_info)
+
+            if self.return_code != 0:
+                raise errors.ProgrammingError(error_info)
+            else:
+                raise errors.Warning(error_info)
 
         self.output_desc_length, buf_view = convert.get_int(buf_view, little=True)
         if self.output_desc_length > 0:
