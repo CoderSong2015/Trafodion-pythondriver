@@ -1,7 +1,6 @@
 import sys
-sys.path.append("..")
 
-import pdbc.trafodion.connector
+from pdbc.trafodion.connector import Connect
 
 
 if __name__ == '__main__':
@@ -17,14 +16,15 @@ if __name__ == '__main__':
         'get_warnings': True,
     }
 
-    out = pdbc.trafodion.connector.connect(**config)
+    out = Connect(**config)
 
     cur = out.cursor()
-    cur.execute("insert into songsong values('pdbc', ? , 3)", ['test',])
-    #cur.execute("select * from songsong where name = ? and id = ?", "12345678901")
-    #rs = cur.fetchone()
-    #$while rs:
-    #    print(rs)
-    #    rs = cur.fetchone()
+    #cur.execute("create table test_type(id int,id2 SMALLINT , id3 largeint, de decimal(10,5),varchar1 varchar(100))")
+    #cur.execute("insert into songsong values('testint', 'testint' , ?)", [223])
+    cur.execute("select * from songsong ")
+    rs = cur.fetchone()
+    while rs:
+        print(rs)
+        rs = cur.fetchone()
 #
-   # print(rs)
+    print(rs)

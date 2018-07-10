@@ -3,6 +3,7 @@ import time
 
 from .transport import Transport, convert
 from . import errors
+from decimal import Decimal
 
 
 class CONNECTION_CONTEXT_def:
@@ -788,7 +789,7 @@ class SQL_DataValue_def:
                 buf_view = memoryview(data_value.buffer)
                 for row in range(param_rowcount):
                     for col in range(param_count):
-                        buf_view = cls.convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
+                        _ = cls.convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
                                                               param_values[col],
                                                               row, buf_view)
 
@@ -807,7 +808,7 @@ class SQL_DataValue_def:
         sqlDatetimeCode = desc.datetimeCode_
         FSDataType = desc.dataType_
         OdbcDataType = desc.odbcDataType_
-        maxLength = desc.maxLen_
+        max_len = desc.maxLen_
         dataType = desc.dataType_
         dataCharSet = desc.sqlCharset_
         # setup the offsets
@@ -839,13 +840,13 @@ class SQL_DataValue_def:
         noNullValue = (noNullValue * param_rowcount) + (row_num * dataLength)
         if param_values == None :
             if nullValue == -1:
-                raise errors.ProgrammingError("null_parameter_for_not_null_column")
+                raise errors.DataError("null_parameter_for_not_null_column")
             # values[nullValue] = -1
             _ = convert.put_short(-1, buf_view[nullValue:], True)
             return buf_view
 
         if dataType == FetchReply.SQLTYPECODE_CHAR:
-            if param_values == None:
+            if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
                 _ = convert.put_short(0, buf_view[noNullValue:], True)
@@ -871,15 +872,15 @@ class SQL_DataValue_def:
                                        param_count)
 
             # We now have a byte array containing the parameter
-            dataLen = len(param_values)
-            if maxLength >= dataLen:
+            data_len = len(param_values)
+            if max_len >= data_len:
                 _ = convert.put_bytes(param_values, buf_view[noNullValue:], True, nolen=True)
                 # Blank pad for rest of the buffer
-                if maxLength > dataLen:
+                if max_len > data_len:
                     if dataCharSet == Transport.charset_to_value["UTF-16BE"]:
                         # pad with Unicode spaces (0x00 0x20)
-                        i2 = dataLen
-                        while i2 < maxLength:
+                        i2 = data_len
+                        while i2 < max_len:
                             _ = convert.put_bytes(' '.encode(), buf_view[noNullValue + i2:], little=True,
                                              nolen=True)
                             _ = convert.put_bytes(' '.encode(), buf_view[noNullValue + i2 + 1:], little=True,
@@ -888,14 +889,287 @@ class SQL_DataValue_def:
 
                     else:
                         b = bytearray()
-                        for x in range(maxLength - dataLen):
+                        for x in range(max_len - data_len):
                             b.append(ord(' '))
-                        _ = convert.put_bytes(b, buf_view[noNullValue + dataLen:], little=True, nolen=True)
+                        _ = convert.put_bytes(b, buf_view[noNullValue + data_len:], little=True, nolen=True)
             else:
                 raise errors.ProgrammingError(
                         "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
 
+            return None
+        if dataType == FetchReply.SQLTYPECODE_VARCHAR:
+            if param_values is None:
+                # Note for future optimization. We can probably remove the next line,
+                # because the array is already initialized to 0.
+                _ = convert.put_short(0, buf_view[noNullValue:], True)
+                return None
+            elif isinstance(param_values, (bytes, str)):
+                charSet = ""
+
+                try:
+                    if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
+                        charSet = "UTF-8"
+                    elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
+                        charSet = "UTF-16LE"
+                    else:
+                        charSet = Transport.value_to_charset[dataCharSet]
+                    if isinstance(param_values, bytes):
+                        param_values = param_values.decode("utf-8").encode(charSet)
+                    else:
+                        param_values = param_values.encode(charSet)
+                except:
+                    raise errors.NotSupportedError("unsupported_encoding")
+            else:
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either bytes or String for column: {0}".format(
+                        param_count))
+
+            data_len = len(param_values)
+            if max_len >= data_len:
+                _ = convert.put_short(data_len, buf_view[noNullValue:], little=True)
+                _ = convert.put_bytes(param_values, buf_view[noNullValue + 2:], nolen=True)
+            else:
+                raise errors.DataError(
+                    "invalid_string_parameter input data is longer than the length for column: {0}".format(
+                        param_count))
+            return None
+        if dataType == FetchReply.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FetchReply.SQLTYPECODE_VARCHAR_LONG:
+            if param_values is None:
+                # Note for future optimization. We can probably remove the next line,
+                # because the array is already initialized to 0.
+                _ = convert.put_short(0, buf_view[noNullValue:], True)
+                return buf_view
+            elif isinstance(param_values, (bytes, str)):
+                charSet = ""
+
+                try:
+                    if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
+                        charSet = "UTF-8"
+                    elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
+                        charSet = "UTF-16LE"
+                    else:
+                        charSet = Transport.value_to_charset[dataCharSet]
+                    if isinstance(param_values, bytes):
+                        param_values = param_values.decode("utf-8").encode(charSet)
+                    else:
+                        param_values = param_values.encode(charSet)
+                except:
+                    raise errors.NotSupportedError("unsupported_encoding")
+            else:
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either bytes or String for column: {0}".format(
+                        param_count))
+
+            data_len = len(param_values)
+            if max_len > (data_len + dataOffset):
+                max_len = data_len + dataOffset
+                if shortLength:
+                    _ = convert.put_short(data_len, buf_view[noNullValue:], little=True)
+                else:
+                    _ = convert.put_int(data_len, buf_view[noNullValue:], little=True)
+                _ = convert.put_bytes(param_values, buf_view[noNullValue + dataOffset:], nolen=True)
+            else:
+                raise errors.DataError(
+                    "invalid_string_parameter input data is longer than the length for column: {0}".format(
+                        param_count))
+            return None
+        if dataType == FetchReply.SQLTYPECODE_INTEGER:
+            if not isinstance(param_values,(int, float)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                        param_count))
+            if scale > 0:
+                param_values = round(param_values * (10 ** scale))
+
+            if param_values > Transport.max_int or param_values < Transport.min_int:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            # check for numeric(x, y)
+            if precision > 0:
+                pre = 10 ** precision
+                if param_values > pre or param_values < -pre:
+                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_int(param_values, buf_view[noNullValue:], little=True)
+            return None
+
+        if dataType == FetchReply.SQLTYPECODE_INTEGER_UNSIGNED:
+            if not isinstance(param_values,(int, float)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                        param_count))
+            if scale > 0:
+                param_values = round(param_values * (10 ** scale))
+
+            if param_values > Transport.max_uint or param_values < Transport.min_uint:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            # check for numeric(x, y)
+            if precision > 0:
+                pre = 10 ** precision
+                if param_values > pre or param_values < -pre:
+                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_uint(param_values, buf_view[noNullValue:], little=True)
+
+        if dataType == FetchReply.SQLTYPECODE_TINYINT:
+            # TODO have not finished
+            """
+                        if not isinstance(param_values,(int, float)):
+                            raise errors.ProgrammingError(
+                                "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                                    param_count))
+                        if scale > 0:
+                            raise errors.DataError("invalid_parameter_value: Cannot have scale for param {0}".format(param_values))
+
+                        if param_values > Transport.max_tinyint or param_values < Transport.min_tinyint:
+                            raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+                        """
+            raise errors.NotSupportedError("not support tinyint")
+
+        if dataType == FetchReply.SQLTYPECODE_TINYINT_UNSIGNED:
+            raise errors.NotSupportedError("not support utinyint")
+
+        if dataType == FetchReply.SQLTYPECODE_SMALLINT:
+            if not isinstance(param_values,(int, float)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                        param_count))
+            if scale > 0:
+                param_values = round(param_values * (10 ** scale))
+
+            if param_values > Transport.max_short or param_values < Transport.min_short:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            # check for numeric(x, y)
+            if precision > 0:
+                pre = 10 ** precision
+                if param_values > pre or param_values < -pre:
+                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_short(param_values, buf_view[noNullValue:], little=True)
+            return None
+
+        if dataType == FetchReply.SQLTYPECODE_SMALLINT_UNSIGNED:
+            if not isinstance(param_values,(int, float)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                        param_count))
+            if scale > 0:
+                param_values = round(param_values * (10 ** scale))
+
+            if param_values > Transport.max_ushort or param_values < Transport.min_ushort:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            # check for numeric(x, y)
+            if precision > 0:
+                pre = 10 ** precision
+                if param_values > pre or param_values < -pre:
+                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_ushort(param_values, buf_view[noNullValue:], little=True)
+            return None
+
+        if dataType == FetchReply.SQLTYPECODE_LARGEINT:
+            if not isinstance(param_values, (int, float)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                        param_count))
+            if scale > 0:
+                param_values = round(param_values * (10 ** scale))
+
+            if param_values > Transport.max_long or param_values < Transport.min_long:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            # check for numeric(x, y)
+            if precision > 0:
+                pre = 10 ** precision
+                if param_values > pre or param_values < -pre:
+                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_longlong(param_values, buf_view[noNullValue:], little=True)
+            return None
+        if dataType == FetchReply.SQLTYPECODE_LARGEINT_UNSIGNED:
+            if not isinstance(param_values, (int, float)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                        param_count))
+            if scale > 0:
+                param_values = round(param_values * (10 ** scale))
+
+            if param_values > Transport.max_ulong or param_values < Transport.min_ulong:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            # check for numeric(x, y)
+            if precision > 0:
+                pre = 10 ** precision
+                if param_values > pre or param_values < -pre:
+                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
+            return None
+
+        if dataType == FetchReply.SQLTYPECODE_DECIMAL or \
+                        dataType == FetchReply.SQLTYPECODE_DECIMAL_UNSIGNED:
+
+            if not isinstance(param_values, (int, str, Decimal)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or str or decimal for column: {0}".format(
+                        param_count))
+
+            try:
+                param_values = Decimal(param_values)
+            except:
+                raise errors.DataError("decimal.ConversionSyntax")
+            if scale > 0:
+                param_values = param_values.fma(10 ** scale, 0)
+
+            sign = 1 if param_values.is_signed() else 0
+            param_values = param_values.__abs__()
+            param_values = param_values.to_integral_exact().to_eng_string()
+
+            num_zeros = max_len - len(param_values)
+            if num_zeros < 0:
+                raise errors.DataError("data_truncation_exceed {0}".format(param_count))
+
+            padding = bytes('0'.encode() * num_zeros)
+            _ = convert.put_bytes(padding, buf_view[noNullValue:], nolen=True)
+
+            if sign:
+                _ = convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:],is_data=True)
+
+                # byte -80 : 0xFFFFFFB0
+                _ = convert.put_bytes(b'0xB0', buf_view[noNullValue:], nolen=True, is_data=True)
+            else:
+                _ = convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
+
             return buf_view
+        if dataType == FetchReply.SQLTYPECODE_REAL:
+            pass
+        if dataType == FetchReply.SQLTYPECODE_FLOAT:
+            if not isinstance(param_values, float):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either float for column: {0}".format(
+                        param_count))
+            if param_values > Transport.max_float:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_float(param_values, buf_view[noNullValue:], little=True)
+
+        if dataType == FetchReply.SQLTYPECODE_DOUBLE:
+            pass
+        if dataType == FetchReply.SQLTYPECODE_NUMERIC or \
+                        dataType == FetchReply.SQLTYPECODE_NUMERIC_UNSIGNED:
+            pass
+        if dataType == FetchReply.SQLTYPECODE_BOOLEAN:
+            pass
+        if dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE or \
+                        dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
+                        dataType == FetchReply.SQLTYPECODE_BIT or \
+                        dataType == FetchReply.SQLTYPECODE_BITVAR or \
+                        dataType == FetchReply.SQLTYPECODE_BPINT_UNSIGNED:
+            pass
 
 
 class SQLValue_def:
@@ -905,7 +1179,6 @@ class SQLValue_def:
         self.data_ind = 0                       #  short
         self.data_value = SQL_DataValue_def()
         self.data_charset = 0                   #  int
-
 
     def sizeof(self):
         return Transport.size_int * 2 + Transport.size_short + self.data_value.sizeof()

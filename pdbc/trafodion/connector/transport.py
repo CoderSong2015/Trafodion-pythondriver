@@ -1,11 +1,32 @@
 import struct
 from . import errors
 
+
 class Transport:
     size_long = 8
     size_int = 4
     size_short = 2
     sql_identifier = 129
+
+    max_int = 2147483647
+    min_int = -2147483648
+    max_uint = 4294967295
+    min_uint = 0
+    max_short = 32767
+    min_short = -32768
+    max_ushort = 65535
+    min_ushort = 0
+    max_tinyint = 127
+    min_tinyint = -128
+    max_utinyint = 255
+    min_utinyint = 0
+    max_long = 9223372036854775807
+    min_long = -9223372036854775808
+    max_ulong = 18446744073709551616
+    min_ulong = 0
+    max_float = 3.40282e+038
+    max_double = 1.79769e+308
+
     # password types
     UNAUTHENTICATED_USER_TYPE = 2  # regular password
     PASSWORD_ENCRYPTED_USER_TYPE = 3  # used for SAS
@@ -273,6 +294,20 @@ class convert:
             return struct.pack('<h', num)
 
     @classmethod
+    def int_to_byteushort(cls, num, little=False):
+        if not little:
+            return struct.pack('!H', num)
+        else:
+            return struct.pack('<H', num)
+
+    @classmethod
+    def float_to_bytefloat(cls, num, little=False):
+        if not little:
+            return struct.pack('!f', num)
+        else:
+            return struct.pack('<f', num)
+
+    @classmethod
     def int_to_byteint(cls, num, little=False):
         if not little:
             return struct.pack('!i', num)
@@ -280,11 +315,25 @@ class convert:
             return struct.pack('<i', num)
 
     @classmethod
+    def int_to_byteuint(cls, num, little=False):
+        if not little:
+            return struct.pack('!I', num)
+        else:
+            return struct.pack('<I', num)
+
+    @classmethod
     def int_to_bytelonglong(cls, num, little=False):
         if not little:
             return struct.pack('!q', num)
         else:
             return struct.pack('<q', num)
+
+    @classmethod
+    def int_to_byteulonglong(cls, num, little=False):
+        if not little:
+            return struct.pack('!Q', num)
+        else:
+            return struct.pack('<Q', num)
 
     @classmethod
     def char_to_bytechar(cls, char):
@@ -344,18 +393,67 @@ class convert:
         :param buf_view: Python memoryview
         :return: buf_view in current position
         """
+        if not isinstance(num, int):
+            raise errors.InternalError("function needs input type is int")
         data = cls.int_to_byteshort(num, little)
         cls.put_data_memview(buf_view, data)
         return buf_view[2:]
 
     @classmethod
+    def put_ushort(cls, num, buf_view: memoryview, little=False):
+        """
+        :param num: short 
+        :param buf_view: Python memoryview
+        :return: buf_view in current position
+        """
+        if not isinstance(num, int):
+            raise errors.InternalError("function needs input type is int")
+        data = cls.int_to_byteushort(num, little)
+        cls.put_data_memview(buf_view, data)
+        return buf_view[2:]
+
+    @classmethod
+    def put_float(cls, num, buf_view: memoryview, little=False):
+        """
+        :param num: float
+        :param buf_view: Python memoryview
+        :return: buf_view in current position
+        """
+        if not isinstance(num, float):
+            raise errors.InternalError("function needs input type is float")
+
+        data = cls.int_to_byteushort(num, little)
+        cls.put_data_memview(buf_view, data)
+        return buf_view[4:]
+
+    @classmethod
     def put_int(self, num, buf_view: memoryview, little=False):
+        if not isinstance(num, int):
+            raise errors.InternalError("function needs input type is int")
         data = self.int_to_byteint(num, little)
         self.put_data_memview(buf_view, data)
         return buf_view[4:]
 
     @classmethod
+    def put_uint(self, num, buf_view: memoryview, little=False):
+        if not isinstance(num, int):
+            raise errors.InternalError("function needs input type is int")
+        data = self.int_to_byteuint(num, little)
+        self.put_data_memview(buf_view, data)
+        return buf_view[4:]
+
+    @classmethod
     def put_longlong(self, num, buf_view: memoryview, little=False):
+        if not isinstance(num, int):
+            raise errors.InternalError("function needs input type is int")
+        data = self.int_to_bytelonglong(num, little)
+        self.put_data_memview(buf_view, data)
+        return buf_view[8:]
+
+    @classmethod
+    def put_ulonglong(self, num, buf_view: memoryview, little=False):
+        if not isinstance(num, int):
+            raise errors.InternalError("function needs input type is int")
         data = self.int_to_bytelonglong(num, little)
         self.put_data_memview(buf_view, data)
         return buf_view[8:]
