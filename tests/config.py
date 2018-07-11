@@ -1,6 +1,6 @@
 
 config = {
-        'host': '192.168.0.59',
+        'host': '10.10.23.72',
         'port': 23400,
         'database': 'seabase',
         'user': 'db__root',
