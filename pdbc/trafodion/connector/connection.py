@@ -436,53 +436,6 @@ class TrafConnection(TrafConnectionAbstract):
     def rollback(self):
         pass
 
-    def cmd_query(self, query, execute_type, raw=False, buffered=False, raw_as_string=False):
-        """Send a query to the mxosrvr server
-
-        This method send the query to the mxosrvr server and returns the result.
-
-        If there was a text result, a tuple will be returned consisting of
-        the number of columns and a list containing information about these
-        columns.
-
-        When the query doesn't return a text result, the OK or EOF packet
-        information as dictionary will be returned. In case the result was
-        an error, exception errors.Error will be raised.
-
-        Returns a tuple()
-        """
-        if not isinstance(query, bytes):
-            query = query.encode('utf-8')
-
-        statement_type = self._get_statement_type(query)
-        result = self._send_cmd(statement_type, execute_type, query)
-        result = self._handle_result()
-
-        if self._have_next_result:
-            raise errors.InterfaceError(
-                'Use cmd_query_iter for statements with multiple queries.')
-
-        return result
-
-    def _send_cmd(self, command, argument=None, packet_number=0, packet=None,
-                  expect_response=True, compressed_packet_number=0):
-        """Send a command to the mxosrvr server
-
-        Returns a mxosrvr packet or None.
-        """
-        self.handle_unread_result()
-
-        try:
-            self._socket.send(
-                self._protocol.make_command(command, packet or argument),
-                packet_number, compressed_packet_number)
-        except AttributeError:
-            raise errors.OperationalError("mxosrvr Connection not available.")
-
-        if not expect_response:
-            return None
-        return self._socket.recv()
-
     def get_seq(self):
         self._stmt_name_lock.acquire()
         self._seq_num = self._seq_num + 1

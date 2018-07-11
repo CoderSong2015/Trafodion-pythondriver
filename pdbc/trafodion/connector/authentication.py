@@ -139,7 +139,7 @@ class Security:
             self.keyobj.import_pub_key(self.cert.get_pubkey())
             self.generate_session_key()
         except:
-            raise errors.NotSupportedError
+            raise errors.InternalError
 
     def get_cer_exp_date(self):
         timestamp = self.cert.get_not_after()
@@ -257,11 +257,12 @@ class Key:
     def public_key(self):
         return self._pub_key
 
+
 class Certificate:
     def __init__(self):
         self.cer_obj = None
 
-    def import_cert(self, cer):
+    def import_cert(self, cer: str):
         self.cer_obj = crypto.load_certificate(crypto.FILETYPE_PEM, cer.encode("utf-8"))
 
     def import_cert_file(self, cer_file):
