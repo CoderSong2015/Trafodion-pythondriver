@@ -218,7 +218,6 @@ class TrafConnection(TrafConnectionAbstract):
                                           0x10000000
                                           )
         master_conn = self._get_connection(self._master_host, self._master_port)
-        print(master_conn)
         data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
         connect_reply = self._extract_master_data(data)
         if not master_conn:

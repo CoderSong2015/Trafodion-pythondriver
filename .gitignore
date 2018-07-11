@@ -1,6 +1,14 @@
 #pycharm file
 .idea/
 .pyc
-__pycache__/
+__pycache__
 mytest.py
 connecttest.py
+*.pyo
+/.cache
+/.coverage
+/.tox
+/.venv
+/.vscode
+/build
+/dist
