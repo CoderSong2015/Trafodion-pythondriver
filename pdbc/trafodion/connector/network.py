@@ -2,6 +2,8 @@ import sys
 import socket
 import struct
 from .struct_def import Header
+from . import errors
+
 
 class BaseTrafSocket(object):
     """Base class for Trafodion socket communication
@@ -21,7 +23,7 @@ class BaseTrafSocket(object):
         try:
             self.sock.close()
         except (socket.error, AttributeError):
-            pass
+            raise
 
     def send(self, buf, *, isCompressed = False):
         if isCompressed:
@@ -33,7 +35,7 @@ class BaseTrafSocket(object):
         try:
             self.sock.sendall(buf)
         except IOError as err:
-            pass
+            raise
 
 
     def _send_compressed(self, buf):
@@ -83,7 +85,7 @@ class BaseTrafSocket(object):
             else:
                 return packet
         except IOError as err:
-            pass
+            raise
 
     def _get_data_len(self, packet):
         return len(packet)
@@ -96,6 +98,7 @@ class BaseTrafSocket(object):
 
     def set_connection_timeout(self, connection_timeout):
         self._connection_timeout = connection_timeout
+
 
 class TrafTCPSocket(BaseTrafSocket):
     """
@@ -132,7 +135,7 @@ class TrafTCPSocket(BaseTrafSocket):
             if addrinfo[0] is None:
                 addrinfo = addrinfos[0]
         except IOError as err:
-            pass
+            raise
         else:
             (self._family, self.socktype, self.proto, _, self.sockaddr) = addrinfo
 
@@ -142,11 +145,10 @@ class TrafTCPSocket(BaseTrafSocket):
             self.sock.settimeout(self._connection_timeout)
             self.sock.connect(self.sockaddr)
         except IOError as err:
-            #need error
-            pass
+            raise
         except Exception as err:
-            #need error
-            pass
+            raise
+
 
 class TrafUnixSocket(BaseTrafSocket):
     """

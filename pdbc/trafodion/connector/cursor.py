@@ -27,7 +27,7 @@ class CursorBase(TrafCursorAbstract):
 
     def close(self):
         """Close the cursor."""
-        pass
+        return True
 
     def execute(self, operation, params=(), multi=False):
         """Executes the given operation
@@ -252,3 +252,11 @@ class TrafCursor(CursorBase):
             if row:
                 res.append(row)
         return res
+
+    def close(self):
+        if self._connection is None:
+            return False
+
+        self._connection = None
+
+        return True
