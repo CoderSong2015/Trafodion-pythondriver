@@ -1,12 +1,13 @@
+import hashlib
+import hmac
 import os
 import random
 import time
+from sys import maxsize
+
 import rsa
-import hashlib
-import hmac
 from OpenSSL import crypto
 from OpenSSL.crypto import dump_publickey
-from sys import maxsize
 from pyasn1.type import useful
 
 from . import errors
@@ -157,7 +158,7 @@ class Security:
 
         # Password + nonce + session key can't be longer than the public key's length
         if SecdefsCommon.NONCE_SIZE + SecdefsCommon.SESSION_KEYLEN \
-                 + len(pwd) > max_plaintext_len:
+                + len(pwd) > max_plaintext_len:
             pass
 
         pwd_key_result = bytearray(self.keyobj.key_len + SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA)

@@ -1,9 +1,9 @@
 import weakref
 
-from .abstracts import TrafCursorAbstract
 from . import errors
-from .transport import Transport
+from .abstracts import TrafCursorAbstract
 from .statement import Statement, PreparedStatement
+from .transport import Transport
 
 
 class CursorBase(TrafCursorAbstract):

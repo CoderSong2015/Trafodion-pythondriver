@@ -1,9 +1,9 @@
 import socket
 import time
-
-from .transport import Transport, convert
-from . import errors
 from decimal import Decimal
+
+from . import errors
+from .transport import Transport, convert
 
 
 class CONNECTION_CONTEXT_def:

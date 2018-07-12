@@ -1,8 +1,6 @@
-import sys
 import socket
-import struct
+
 from .struct_def import Header
-from . import errors
 
 
 class BaseTrafSocket(object):

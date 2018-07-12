@@ -1,16 +1,15 @@
 import getpass
 import threading
 
+from . import authentication
+from . import errors
 from .abstracts import TrafConnectionAbstract
+from .cursor import CursorBase, TrafCursor
 from .struct_def import (
     ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def,
     VERSION_def, Header, InitializeDialogueReply
 )
-
 from .transport import Transport, convert
-from . import errors
-from . import authentication
-from .cursor import CursorBase, TrafCursor
 
 
 class TrafConnection(TrafConnectionAbstract):

@@ -1,8 +1,7 @@
-from .transport import Transport
-from .struct_def import (SQL_DataValue_def, SQLValueList_def, SQLValue_def,
-                         Header, ExecuteReply, FetchReply, PrepareReply)
-from .transport import convert
 from . import errors
+from .struct_def import (SQL_DataValue_def, SQLValueList_def, Header, ExecuteReply, FetchReply, PrepareReply)
+from .transport import Transport
+from .transport import convert
 
 
 class Statement:
