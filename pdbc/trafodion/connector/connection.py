@@ -23,7 +23,7 @@ class TrafConnection(TrafConnectionAbstract):
         self._master_host = '127.0.0.1'
         self._master_port = 23400
         self._force_ipv6 = False
-        self.unix_socket = None
+        self._unix_socket = None
         self._sessionToken = None
         self._isReadOnly = False
         self._autoCommit = True
@@ -137,25 +137,15 @@ class TrafConnection(TrafConnectionAbstract):
         if self._mxosrvr_conn is None:
             self._mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
         data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, self._mxosrvr_conn)
-        try:
-            init_reply = self._extract_mxosrvr_data(data)
-            # TODO init connection information to property
-            if init_reply.exception_nr == Transport.CEE_SUCCESS:
-                # TODO
-                pass
-            else:
-                pass
-            return init_reply
-        except:
-            raise errors.InternalError("init dialog error")
+
+        init_reply = self._extract_mxosrvr_data(data)
+        # TODO init connection information to property
+        return init_reply
 
     def _extract_mxosrvr_data(self, data):
-        try:
-            buf_view = memoryview(data)
-            c = InitializeDialogueReply()
-            c.init_reply(buf_view, self)
-        except:
-            raise errors.InternalError("handle mxosrvr data error")
+        buf_view = memoryview(data)
+        c = InitializeDialogueReply()
+        c.init_reply(buf_view, self)
         return c
 
     def _marshal_initdialog(self, _user_desc,

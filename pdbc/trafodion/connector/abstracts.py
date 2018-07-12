@@ -81,8 +81,8 @@ class TrafConnectionAbstract(object):
         :return: 
         """
         conn = None
-        if self.unix_socket and os.name != 'nt':
-            conn = TrafTCPSocket(self.unix_socket)
+        if self._unix_socket and os.name != 'nt':
+            conn = TrafTCPSocket(self._unix_socket)
         else:
             conn = TrafTCPSocket(host=host,
                                  port=port,

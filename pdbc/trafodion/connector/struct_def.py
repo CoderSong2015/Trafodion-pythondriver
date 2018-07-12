@@ -830,6 +830,7 @@ class SQL_DataValue_def:
 
             if dataLength % 2 != 0:
                 dataLength = dataLength + 1
+
         elif dataType == FetchReply.SQLTYPECODE_BLOB or dataType == FetchReply.SQLTYPECODE_CLOB:
             shortLength = False
             dataOffset = 4
@@ -1150,8 +1151,7 @@ class SQL_DataValue_def:
 
             return buf_view
         if dataType == FetchReply.SQLTYPECODE_REAL:
-            pass
-        if dataType == FetchReply.SQLTYPECODE_FLOAT:
+
             if not isinstance(param_values, float):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either float for column: {0}".format(
@@ -1161,19 +1161,28 @@ class SQL_DataValue_def:
 
             _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FetchReply.SQLTYPECODE_DOUBLE:
-            pass
+        if dataType == FetchReply.SQLTYPECODE_FLOAT or dataType == FetchReply.SQLTYPECODE_DOUBLE:
+            if not isinstance(param_values, float):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either float for column: {0}".format(
+                        param_count))
+            if param_values > Transport.max_double:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = convert.put_float(param_values, buf_view[noNullValue:], little=True)
+
         if dataType == FetchReply.SQLTYPECODE_NUMERIC or \
                         dataType == FetchReply.SQLTYPECODE_NUMERIC_UNSIGNED:
             pass
+
         if dataType == FetchReply.SQLTYPECODE_BOOLEAN:
-            pass
+            raise errors.NotSupportedError
         if dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE or \
                         dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
                         dataType == FetchReply.SQLTYPECODE_BIT or \
                         dataType == FetchReply.SQLTYPECODE_BITVAR or \
                         dataType == FetchReply.SQLTYPECODE_BPINT_UNSIGNED:
-            pass
+            raise errors.NotSupportedError
 
 
 class SQLValue_def:
@@ -1588,6 +1597,39 @@ class FetchReply:
         if sql_data_type == self.SQLTYPECODE_INTEGER:
             ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
+
+        if sql_data_type == self.SQLTYPECODE_TINYINT_UNSIGNED:
+            pass
+        if sql_data_type == self.SQLTYPECODE_TINYINT:
+            pass
+        if sql_data_type == self.SQLTYPECODE_SMALLINT:
+            pass
+        if sql_data_type == self.SQLTYPECODE_SMALLINT_UNSIGNED:
+            pass
+        if sql_data_type == self.SQLTYPECODE_INTEGER:
+            pass
+        if sql_data_type == self.SQLTYPECODE_INTEGER_UNSIGNED:
+            pass
+        if sql_data_type == self.SQLTYPECODE_LARGEINT:
+            pass
+        if sql_data_type == self.SQLTYPECODE_LARGEINT_UNSIGNED:
+            pass
+        if sql_data_type == self.SQLTYPECODE_NUMERIC or \
+            sql_data_type == self.SQLTYPECODE_NUMERIC_UNSIGNED:
+            pass
+        if sql_data_type == self.SQLTYPECODE_DECIMAL or \
+                        sql_data_type == self.SQLTYPECODE_DECIMAL_UNSIGNED or \
+                        sql_data_type == self.SQLTYPECODE_DECIMAL_LARGE or \
+                        sql_data_type == self.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+            pass
+        if sql_data_type == self.SQLTYPECODE_REAL:
+            pass
+        if sql_data_type == self.SQLTYPECODE_DOUBLE or sql_data_type == self.SQLTYPECODE_FLOAT:
+            pass
+        if sql_data_type == self.SQLTYPECODE_BIT or \
+                        sql_data_type == self.SQLTYPECODE_BITVAR or \
+                        sql_data_type == self.SQLTYPECODE_BPINT_UNSIGNED:
+            pass
         return ret_obj
 
 

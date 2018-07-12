@@ -308,6 +308,13 @@ class Convert:
             return struct.pack('<f', num)
 
     @classmethod
+    def float_to_bytedouble(cls, num, little=False):
+        if not little:
+            return struct.pack('!f', num)
+        else:
+            return struct.pack('<f', num)
+
+    @classmethod
     def int_to_byteint(cls, num, little=False):
         if not little:
             return struct.pack('!i', num)
@@ -422,9 +429,23 @@ class Convert:
         if not isinstance(num, float):
             raise errors.InternalError("function needs input type is float")
 
-        data = cls.int_to_byteushort(num, little)
+        data = cls.float_to_bytefloat(num, little)
         cls.put_data_memview(buf_view, data)
         return buf_view[4:]
+
+    @classmethod
+    def put_double(cls, num, buf_view: memoryview, little=False):
+        """
+        :param num: double
+        :param buf_view: Python memoryview
+        :return: buf_view in current position
+        """
+        if not isinstance(num, float):
+            raise errors.InternalError("function needs input type is float")
+
+        data = cls.float_to_bytedouble(num, little)
+        cls.put_data_memview(buf_view, data)
+        return buf_view[8:]
 
     @classmethod
     def put_int(self, num, buf_view: memoryview, little=False):
