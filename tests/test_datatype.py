@@ -45,7 +45,6 @@ class TestsCursor(DataTypes):
         self.conn = Connect(**config)
         self.drop_tables(self.conn)
 
-    
     def test_numeric_int(self):
         tb_name = self.tables['int']
 
@@ -91,21 +90,24 @@ class TestsCursor(DataTypes):
         for x in data:
             cur.execute(insert, x)
 
-    @unittest.skip("debug decimal")
     def test_numeric_decimal(self):
         tb_name = self.tables['decimal']
 
         cur = self.conn.cursor()
-        cur.execute("DROP TABLE IF EXISTS {0}".format(tb_name))
+
         columns = [
             'decimal_signed',
             'decimal_unsigned',
         ]
+
+        sql = ("CREATE TABLE {table} ("
+               "decimal_signed DECIMAL(17,5) SIGNED,"
+               "decimal_unsigned DECIMAL(8,7) UNSIGNED )"
+               ).format(table=tb_name)
+
+        print(sql)
         cur.execute(
-            ("CREATE TABLE {table} ("
-             "decimal_signed DECIMAL(17,5) SIGNED,"
-             "decimal_unsigned DECIMAL(8,7) UNSIGNED )"
-             ).format(table=tb_name)
+            sql
         )
 
         insert = _insert_query(tb_name, columns)
@@ -114,13 +116,13 @@ class TestsCursor(DataTypes):
             (Decimal(
                 '-9999999999.99999'),
              Decimal(
-                 '+999.9999')),
+                 '+9.9999')),
             (Decimal('-1234567.1234'),
-             Decimal('+125.126')),
+             Decimal('+0.126452')),
             (Decimal(
-                '-125.190'),
+                '-1587.190'),
              Decimal(
-                 '+1245.190')),
+                 '+1.190')),
         ]
 
         for x in data:

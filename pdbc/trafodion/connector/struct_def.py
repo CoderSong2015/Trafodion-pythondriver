@@ -1144,7 +1144,7 @@ class SQL_DataValue_def:
                 _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:],is_data=True)
 
                 # byte -80 : 0xFFFFFFB0
-                _ = Convert.put_bytes(b'0xB0', buf_view[noNullValue:], nolen=True, is_data=True)
+                _ = Convert.put_bytes(b'\xB0', buf_view[noNullValue:], nolen=True, is_data=True)
             else:
                 _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
 

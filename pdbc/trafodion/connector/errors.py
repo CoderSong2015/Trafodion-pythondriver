@@ -3,30 +3,6 @@ from .catch23 import PY2
 def get_client_error(error, language='eng'):
 
     pass
-    """
-    try:
-        tmp = __import__('mysql.connector.locales.{0}'.format(language),
-                         globals(), locals(), ['client_error'])
-    except ImportError:
-        raise ImportError("No localization support for language '{0}'".format(
-            language))
-    client_error = tmp.client_error
-
-    if isinstance(error, int):
-        errno = error
-        for key, value in errorcode.__dict__.items():
-            if value == errno:
-                error = key
-                break
-
-    if isinstance(error, (str)):
-        try:
-            return getattr(client_error, error)
-        except AttributeError:
-            return None
-
-    raise ValueError("error argument needs to be either an integer or string")
-    """
 
     return "Unknown Trafodion error"
 
