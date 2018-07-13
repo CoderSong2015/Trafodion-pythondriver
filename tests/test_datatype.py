@@ -12,6 +12,7 @@ def _insert_query(tb_name, cols):
     )
     return insert
 
+
 class DataTypes(unittest.TestCase):
 
     tables = {
