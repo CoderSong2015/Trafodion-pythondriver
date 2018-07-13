@@ -5,10 +5,10 @@ import random
 import time
 from sys import maxsize
 
-import rsa
-from OpenSSL import crypto
-from OpenSSL.crypto import dump_publickey
-from pyasn1.type import useful
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 from . import errors
 
@@ -143,12 +143,15 @@ class Security:
             raise errors.InternalError
 
     def get_cer_exp_date(self):
-        timestamp = self.cert.get_not_after()
 
-        #  remove last 'z'
-        timestamp = timestamp[2:-1]
-        tt = useful.UTCTime(timestamp)
-        return tt.asNumbers()
+        #  YYYY-mm-dd HH:MM:SS
+        timestamp = str(self.cert.get_not_after())
+        timestamp = timestamp.replace('-', '')
+        timestamp = timestamp.replace(' ', '')
+        timestamp = timestamp.replace(':', '')
+        timestamp = tuple(timestamp[2:].encode())
+        # TODO timestamp
+        return timestamp
 
     def encrypt_pwd(self, pwd:str, rolename:str, proc_info:bytes):
 
@@ -184,7 +187,7 @@ class Security:
             to_encrypt = self.pwdkey.data.session_key + self.pwdkey.data.nonce + pwd.encode()
 
             # # Encrypt the data
-            cipher_text = self.encrypt(to_encrypt, self.keyobj.public_key)
+            cipher_text = self.encrypt(to_encrypt, self.cert.get_pubkey())
 
             # # Copy cipherText to pwdkey
             s = SecdefsCommon.PWDKEY_SIZE_LESS_LOGINDATA
@@ -215,8 +218,9 @@ class Security:
 
     @staticmethod
     def encrypt(to_encrypt: bytearray, p_key):
-        rsa_pk = rsa.PublicKey.load_pkcs1_openssl_pem(p_key)
-        encrypt_text = rsa.encrypt(to_encrypt, rsa_pk)
+        #rsa_pk = rsa.PublicKey.load_pkcs1_openssl_pem(p_key)
+        #encrypt_text = rsa.encrypt(to_encrypt, rsa_pk)
+        encrypt_text = p_key.encrypt(bytes(to_encrypt), PKCS1v15())
         return encrypt_text
 
     def generate_session_key(self):
@@ -245,10 +249,12 @@ class Key:
     def get_pubkey_from_file(self, file):
         pass
 
-    def import_pub_key(self, key:crypto.PKey):
+    def import_pub_key(self, key):
         self.key = key
-        self._key_len = 256 if self.key.bits() / 8 > 128 else 128
-        self._pub_key = dump_publickey(crypto.FILETYPE_PEM, self.key)
+        #self._key_len = 256 if self.key.bits() / 8 > 128 else 128
+        self._key_len = key.key_size
+        self._pub_key = key.public_bytes(encoding=serialization.Encoding.PEM,
+                                         format=serialization.PublicFormat.SubjectPublicKeyInfo)
 
     @property
     def key_len(self):
@@ -264,17 +270,17 @@ class Certificate:
         self.cer_obj = None
 
     def import_cert(self, cer: str):
-        self.cer_obj = crypto.load_certificate(crypto.FILETYPE_PEM, cer.encode("utf-8"))
+        self.cer_obj = x509.load_pem_x509_certificate(cer.encode(), default_backend())
 
     def import_cert_file(self, cer_file):
         # TODO
         return None
 
     def get_not_after(self):
-        return self.cer_obj.get_notAfter()
+        return self.cer_obj.not_valid_after
 
     def get_pubkey(self):
-        return self.cer_obj.get_pubkey()
+        return self.cer_obj.public_key()
 
 
 class SecdefsCommon:

@@ -280,7 +280,7 @@ class Transport:
     # end class TRANSPORT
 
 
-class convert:
+class Convert:
 
     @classmethod
     def convert_buf(cls, values):
@@ -352,14 +352,14 @@ class convert:
                 mem[index] = byte
 
     @classmethod
-    def put_string(self, string, buf_view: memoryview, little=False, charset="utf-8"):
+    def put_string(cls, string, buf_view: memoryview, little=False, charset="utf-8"):
         if not isinstance(string, str):
             raise errors.InternalError("function needs input type is string")
 
         tmp_len = len(string) + 1  # server need to handle the '\0'
-        buf_view = self.put_int(tmp_len, buf_view, little)  #
+        buf_view = cls.put_int(tmp_len, buf_view, little)  #
         if tmp_len is not 0:
-            self.put_data_memview(buf_view, string.encode(charset))  # string
+            cls.put_data_memview(buf_view, string.encode(charset))  # string
             buf_view = buf_view[tmp_len:]
         return buf_view
 
@@ -500,21 +500,21 @@ class convert:
             to_bytes = buf_view[0:length].tobytes()
             return (to_bytes, buf_view[length:])
         else:
-            length, buf_view = convert.get_int(buf_view, little=little)
+            length, buf_view = Convert.get_int(buf_view, little=little)
             to_bytes = buf_view[0:length].tobytes()
             return (to_bytes, buf_view[length:])
 
     @classmethod
-    def get_char(self, buf_view: memoryview):
+    def get_char(cls, buf_view: memoryview):
         return (struct.unpack('!c', buf_view[0:1])[0], buf_view[1:])
 
     @classmethod
-    def get_timestamp(self, buf_view: memoryview):
+    def get_timestamp(cls, buf_view: memoryview):
         time = buf_view[0:8].tobytes()
         return (time, buf_view[8:])
 
     @staticmethod
-    def turple_to_bytes(tur:tuple)-> bytes:
+    def turple_to_bytes(tur: tuple)-> bytes:
         s = ''
         for x in tur:
             s = s + chr(x)

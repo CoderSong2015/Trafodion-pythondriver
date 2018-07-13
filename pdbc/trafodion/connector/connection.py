@@ -9,7 +9,7 @@ from .struct_def import (
     ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def,
     VERSION_def, Header, InitializeDialogueReply
 )
-from .transport import Transport, convert
+from .transport import Transport, Convert
 
 
 class TrafConnection(TrafConnectionAbstract):
@@ -124,7 +124,7 @@ class TrafConnection(TrafConnectionAbstract):
         if self.property.fetch_ahead:
             option_flags1 |= self.INCONTEXT_OPT1_FETCHAHEAD
 
-        self._in_context.connectOptions = ''.encode("utf-8") if download_cert else convert.turple_to_bytes(self.secpwd.get_cer_exp_date())
+        self._in_context.connectOptions = ''.encode("utf-8") if download_cert else Convert.turple_to_bytes(self.secpwd.get_cer_exp_date())
         wbuffer = self._marshal_initdialog(self._user_desc,
                                            self._in_context,
                                            self._dialogue_id,
@@ -169,12 +169,12 @@ class TrafConnection(TrafConnectionAbstract):
             client_user = getpass.getuser()
             try:
                 wlength += (_in_context.sizeOf()
-                        + _user_desc.sizeOf()
-                        + Transport.size_int  # dialogueId
-                        + Transport.size_int  # option_flags_1
-                        + Transport.size_int  # option_flags_2
-                        + Transport.size_bytes(session_name.encode("utf-8")) #sessionBytes
-                        + Transport.size_bytes(client_user.encode("utf-8")))
+                            + _user_desc.sizeOf()
+                            + Transport.size_int  # dialogueId
+                            + Transport.size_int  # option_flags_1
+                            + Transport.size_int  # option_flags_2
+                            + Transport.size_bytes(session_name.encode("utf-8"))  # sessionBytes
+                            + Transport.size_bytes(client_user.encode("utf-8")))
             except:
                 raise errors.InternalError("sizeOf error")
 
@@ -190,14 +190,14 @@ class TrafConnection(TrafConnectionAbstract):
             buf_view = _user_desc.insertIntoByteArray(buf_view, little=True)
             buf_view = _in_context.insertIntoByteArray(buf_view, little=True)
 
-            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
-            buf_view = convert.put_int(option_flags1, buf_view, little=True)
-            buf_view = convert.put_int(option_flags2, buf_view, little=True)
+            buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = Convert.put_int(option_flags1, buf_view, little=True)
+            buf_view = Convert.put_int(option_flags2, buf_view, little=True)
 
             if (option_flags1 & self.INCONTEXT_OPT1_SESSIONNAME) is not 0:
-                buf_view = convert.put_string(session_name, buf_view, little=True)
+                buf_view = Convert.put_string(session_name, buf_view, little=True)
             if (option_flags1 & self.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
-                buf_view = convert.put_string(client_user, buf_view, little=True)
+                buf_view = Convert.put_string(client_user, buf_view, little=True)
             return buf
         except:
             raise errors.InternalError("marshal init dialog error")
@@ -294,14 +294,14 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = in_context.insertIntoByteArray(buf_view)
         buf_view = user_desc.insertIntoByteArray(buf_view)
 
-        buf_view = convert.put_int(srvr_type, buf_view)
-        buf_view = convert.put_short(retry_count, buf_view)
-        buf_view = convert.put_int(option_flags_1, buf_view)
-        buf_view = convert.put_int(option_flags_2, buf_view)
-        buf_view = convert.put_string(vproc, buf_view)
+        buf_view = Convert.put_int(srvr_type, buf_view)
+        buf_view = Convert.put_short(retry_count, buf_view)
+        buf_view = Convert.put_int(option_flags_1, buf_view)
+        buf_view = Convert.put_int(option_flags_2, buf_view)
+        buf_view = Convert.put_string(vproc, buf_view)
 
         # TODO: restructure all the flags and this new param
-        buf_view = convert.put_string(clientUser, buf_view)
+        buf_view = Convert.put_string(clientUser, buf_view)
 
         return buf
 

@@ -1,7 +1,7 @@
 from . import errors
 from .struct_def import (SQL_DataValue_def, SQLValueList_def, Header, ExecuteReply, FetchReply, PrepareReply)
 from .transport import Transport
-from .transport import convert
+from .transport import Convert
 
 
 class Statement:
@@ -121,17 +121,17 @@ class Statement:
             buf_view = memoryview(buf)
             buf_view = buf_view[Header.sizeOf():]
 
-            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
-            buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
-            buf_view = convert.put_int(query_timeout, buf_view, little=True)
-            buf_view = convert.put_int(stmt_handle, buf_view, little=True)
-            buf_view = convert.put_string(stmt_label, buf_view, little=True)
-            buf_view = convert.put_int(stmt_label_charset, buf_view, little=True)
-            buf_view = convert.put_longlong(max_row_count, buf_view, little=True)
-            buf_view = convert.put_longlong(max_row_len, buf_view, little=True)
-            buf_view = convert.put_string(cursor_name, buf_view, little=True)
-            buf_view = convert.put_int(cursor_name_charset, buf_view, little=True)
-            buf_view = convert.put_string(stmt_options, buf_view, little=True)
+            buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = Convert.put_int(sql_async_enable, buf_view, little=True)
+            buf_view = Convert.put_int(query_timeout, buf_view, little=True)
+            buf_view = Convert.put_int(stmt_handle, buf_view, little=True)
+            buf_view = Convert.put_string(stmt_label, buf_view, little=True)
+            buf_view = Convert.put_int(stmt_label_charset, buf_view, little=True)
+            buf_view = Convert.put_longlong(max_row_count, buf_view, little=True)
+            buf_view = Convert.put_longlong(max_row_len, buf_view, little=True)
+            buf_view = Convert.put_string(cursor_name, buf_view, little=True)
+            buf_view = Convert.put_int(cursor_name_charset, buf_view, little=True)
+            buf_view = Convert.put_string(stmt_options, buf_view, little=True)
         except:
             raise errors.InternalError("fetch data marshalling error")
         return buf
@@ -249,31 +249,31 @@ class Statement:
             buf_view = memoryview(buf)
             buf_view = buf_view[Header.sizeOf():]
 
-            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
-            buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
-            buf_view = convert.put_int(query_timeout, buf_view, little=True)
-            buf_view = convert.put_int(input_row_count, buf_view, little=True)
-            buf_view = convert.put_int(max_rowset_size, buf_view, little=True)
-            buf_view = convert.put_int(sql_stmt_type, buf_view, little=True)
-            buf_view = convert.put_int(stmt_handle, buf_view, little=True)
-            buf_view = convert.put_int(stmt_type, buf_view, little=True)
+            buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = Convert.put_int(sql_async_enable, buf_view, little=True)
+            buf_view = Convert.put_int(query_timeout, buf_view, little=True)
+            buf_view = Convert.put_int(input_row_count, buf_view, little=True)
+            buf_view = Convert.put_int(max_rowset_size, buf_view, little=True)
+            buf_view = Convert.put_int(sql_stmt_type, buf_view, little=True)
+            buf_view = Convert.put_int(stmt_handle, buf_view, little=True)
+            buf_view = Convert.put_int(stmt_type, buf_view, little=True)
 
-            buf_view = convert.put_bytes(sqlstring, buf_view, little=True)
-            buf_view = convert.put_int(sqlstring_charset, buf_view, little=True)
-            buf_view = convert.put_string(cursor_name, buf_view, little=True)
-            buf_view = convert.put_int(cursor_name_charset, buf_view, little=True)
-            buf_view = convert.put_string(stmt_label, buf_view, little=True)
-            buf_view = convert.put_int(stmt_label_charset, buf_view, little=True)
+            buf_view = Convert.put_bytes(sqlstring, buf_view, little=True)
+            buf_view = Convert.put_int(sqlstring_charset, buf_view, little=True)
+            buf_view = Convert.put_string(cursor_name, buf_view, little=True)
+            buf_view = Convert.put_int(cursor_name_charset, buf_view, little=True)
+            buf_view = Convert.put_string(stmt_label, buf_view, little=True)
+            buf_view = Convert.put_int(stmt_label_charset, buf_view, little=True)
 
-            buf_view = convert.put_string(stmtExplainLabel, buf_view, little=True)
+            buf_view = Convert.put_string(stmtExplainLabel, buf_view, little=True)
 
             if user_buffer:
                 pass
             else:
                 buf_view = input_data_value.insertIntoByteArray(buf_view, little=True)
-                buf_view = convert.put_int(4 + 1, buf_view, little=True)
-                buf_view = convert.put_int(tx_id, buf_view, little=True)
-                buf_view = convert.put_bytes(b'\x00', buf_view, nolen=True)
+                buf_view = Convert.put_int(4 + 1, buf_view, little=True)
+                buf_view = Convert.put_int(tx_id, buf_view, little=True)
+                buf_view = Convert.put_bytes(b'\x00', buf_view, nolen=True)
         except:
             raise errors.InternalError("marshal error")
         return buf
@@ -447,25 +447,25 @@ class PreparedStatement(Statement):
             buf_view = memoryview(buf)
             buf_view = buf_view[Header.sizeOf():]
 
-            buf_view = convert.put_int(dialogue_id, buf_view, little=True)
-            buf_view = convert.put_int(sql_async_enable, buf_view, little=True)
-            buf_view = convert.put_int(query_timeout, buf_view, little=True)
-            buf_view = convert.put_short(stmt_type, buf_view, little=True)
-            buf_view = convert.put_int(sql_stmt_type, buf_view, little=True)
-            buf_view = convert.put_string(stmt_label, buf_view, little=True)
-            buf_view = convert.put_int(stmt_label_charset, buf_view, little=True)
-            buf_view = convert.put_string(cursor_name, buf_view, little=True)
-            buf_view = convert.put_int(cursor_name_charset, buf_view, little=True)
-            buf_view = convert.put_string(module_name, buf_view, little=True)
-            buf_view = convert.put_int(module_name_charset, buf_view, little=True)
+            buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+            buf_view = Convert.put_int(sql_async_enable, buf_view, little=True)
+            buf_view = Convert.put_int(query_timeout, buf_view, little=True)
+            buf_view = Convert.put_short(stmt_type, buf_view, little=True)
+            buf_view = Convert.put_int(sql_stmt_type, buf_view, little=True)
+            buf_view = Convert.put_string(stmt_label, buf_view, little=True)
+            buf_view = Convert.put_int(stmt_label_charset, buf_view, little=True)
+            buf_view = Convert.put_string(cursor_name, buf_view, little=True)
+            buf_view = Convert.put_int(cursor_name_charset, buf_view, little=True)
+            buf_view = Convert.put_string(module_name, buf_view, little=True)
+            buf_view = Convert.put_int(module_name_charset, buf_view, little=True)
             #if len(module_name) > 0:
-            buf_view = convert.put_longlong(module_timestamp, buf_view, little=True)
-            buf_view = convert.put_bytes(sql_string, buf_view, little=True)
-            buf_view = convert.put_int(sql_string_charset, buf_view, little=True)
-            buf_view = convert.put_string(stmt_options, buf_view, little=True)
-            buf_view = convert.put_string(stmt_explain_label, buf_view, little=True)
-            buf_view = convert.put_int(max_rowset_size, buf_view, little=True)
-            buf_view = convert.put_int(tx_id, buf_view, little=True)
+            buf_view = Convert.put_longlong(module_timestamp, buf_view, little=True)
+            buf_view = Convert.put_bytes(sql_string, buf_view, little=True)
+            buf_view = Convert.put_int(sql_string_charset, buf_view, little=True)
+            buf_view = Convert.put_string(stmt_options, buf_view, little=True)
+            buf_view = Convert.put_string(stmt_explain_label, buf_view, little=True)
+            buf_view = Convert.put_int(max_rowset_size, buf_view, little=True)
+            buf_view = Convert.put_int(tx_id, buf_view, little=True)
         except:
             raise errors.InternalError("marshal error")
         return buf
