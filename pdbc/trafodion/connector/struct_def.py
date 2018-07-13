@@ -3,7 +3,9 @@ import time
 from decimal import Decimal
 
 from . import errors
+
 from .transport import Transport, Convert
+
 
 
 class CONNECTION_CONTEXT_def:

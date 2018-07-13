@@ -9,7 +9,9 @@ from .struct_def import (
     ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def,
     VERSION_def, Header, InitializeDialogueReply
 )
+
 from .transport import Transport, Convert
+
 
 
 class TrafConnection(TrafConnectionAbstract):
