@@ -648,12 +648,14 @@ class InitializeDialogueReply:
             buf_view = self.out_context.extractFromByteArray(buf_view)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
-            try:
-                buf_view = self.SQLError.extractFromByteArray(buf_view)
-                if (self.exception_detail == self.SQL_PASSWORD_EXPIRING or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
-                    self.out_context.extractFromByteArray(buf_view)
-            except:
-                raise errors.InternalError("extract error")
+            buf_view = self.SQLError.extractFromByteArray(buf_view)
+            if (self.exception_detail == self.SQL_PASSWORD_EXPIRING or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
+                self.out_context.extractFromByteArray(buf_view)
+
+            error_info = ''
+            for error_desc in self.SQLError.list:
+                error_info += error_desc.errorText
+            raise errors.DatabaseError(error_info)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
             buf_view = self.SQLError.extractFromByteArray(buf_view)
@@ -661,10 +663,10 @@ class InitializeDialogueReply:
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
             self.param_error, buf_view = convert.get_string(buf_view, little=True)
-            raise errors.NotSupportedError
+            raise errors.ProgrammingError(self.param_error)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
-            raise errors.NotSupportedError
+            raise errors.InternalError("invalid connection")
 
         else:
             self.client_error_text = "unknow error"
