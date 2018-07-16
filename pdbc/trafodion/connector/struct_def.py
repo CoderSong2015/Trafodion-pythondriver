@@ -7,8 +7,7 @@ from . import errors
 from .transport import Transport, Convert
 
 
-
-class CONNECTION_CONTEXT_def:
+class ConnectionContextDef:
     def __init__(self, conn):
         self.datasource = ""  # string
         self.catalog = ""  # string
@@ -98,7 +97,7 @@ class CONNECTION_CONTEXT_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view, little=False):
+    def insert_into_bytearray(self, buf_view, little=False):
         buf_view = Convert.put_string(self.datasource, buf_view, little)
         buf_view = Convert.put_string(self.catalog, buf_view, little) # string
         buf_view = Convert.put_string(self.schema, buf_view, little)  # string
@@ -130,7 +129,7 @@ class CONNECTION_CONTEXT_def:
 
         buf_view = Convert.put_string(self.connectOptions.decode("utf-8"), buf_view, little)  # string
 
-        buf_view = self.clientVersionList.insertIntoByteArray(buf_view, little)
+        buf_view = self.clientVersionList.insert_into_bytearray(buf_view, little)
         return buf_view
 
     def _init_context(self, conn):
@@ -141,8 +140,8 @@ class CONNECTION_CONTEXT_def:
         self.cpuToUse = conn.property.cpuToUse
         self.cpuToUseEnd = -1 # for future use by DBTransporter
 
-        self.accessMode = 1 if conn._isReadOnly else 0
-        self.autoCommit = 1 if conn._autoCommit else 0
+        self.accessMode = 1 if conn._is_read_only else 0
+        self.autoCommit = 1 if conn._auto_commit else 0
 
         self.queryTimeoutSec = conn.property.query_timeout
         self.idleTimeoutSec = conn.property.idleTimeout
@@ -166,7 +165,7 @@ class CONNECTION_CONTEXT_def:
         self.ctxCtrlInferNXHAR = -1
         self.clientVersionList.list = conn.get_version(self.processId)
 
-class VERSION_def:
+class VersionDef:
 
     def __init__(self):
         self.componentId = 0  # short
@@ -178,14 +177,14 @@ class VERSION_def:
     def sizeOf(self):
         return Transport.size_int + Transport.size_short * 3
 
-    def insertIntoByteArray(self, buf_view, little=False):
+    def insert_into_bytearray(self, buf_view, little=False):
         buf_view = Convert.put_short(self.componentId, buf_view, little)
         buf_view = Convert.put_short(self.majorVersion, buf_view, little)
         buf_view = Convert.put_short(self.minorVersion, buf_view, little)
         buf_view = Convert.put_int(self.buildId, buf_view, little)
         return buf_view
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
         self.componentId, buf_view = Convert.get_short(buf_view, little=True)
         self.majorVersion, buf_view = Convert.get_short(buf_view, little=True)
         self.minorVersion, buf_view = Convert.get_short(buf_view, little=True)
@@ -196,22 +195,22 @@ class VERSION_def:
 class VERSION_LIST_def:
     list = []
 
-    def insertIntoByteArray(self, buf_view, little=False):
+    def insert_into_bytearray(self, buf_view, little=False):
         buf_view = Convert.put_int(len(self.list), buf_view, little)
         for item in self.list:
-            buf_view = item.insertIntoByteArray(buf_view, little)
+            buf_view = item.insert_into_bytearray(buf_view, little)
         return buf_view
 
     def sizeOf(self):
-        return VERSION_def.sizeOf() * self.list.__len__() + Transport.size_int
+        return VersionDef.sizeOf() * self.list.__len__() + Transport.size_int
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
 
         length, buf_view = Convert.get_int(buf_view, little=True)
 
         for i in range(length):
-            version_def = VERSION_def()
-            buf_view = version_def.extractFromByteArray(buf_view)
+            version_def = VersionDef()
+            buf_view = version_def.extract_from_bytearray(buf_view)
             self.list.append(version_def)
 
         return buf_view
@@ -308,7 +307,7 @@ class Header:
     def sizeOf(self):
         return 40
 
-    def insertIntoByteArray(self, buf_view):
+    def insert_into_bytearray(self, buf_view):
         buf_view = Convert.put_short(self.operation_id_, buf_view)  # short                  0,1
         buf_view = Convert.put_short(0, buf_view)  # + 2 filler                              2,3
         buf_view = Convert.put_int(self.dialogueId_, buf_view)  # int                        4-7
@@ -329,7 +328,7 @@ class Header:
         return buf_view
 
 
-    def extractFromByteArray(self, buf, little=False):
+    def extract_from_bytearray(self, buf, little=False):
         buf_view = memoryview(buf)
         self.operation_id_, buf_view = Convert.get_short(buf_view, little)
         __, buf_view = Convert.get_short(buf_view, little)  # +2 fillter
@@ -352,7 +351,8 @@ class Header:
         self.error_, buf_view = Convert.get_short(buf_view, little)
         self.error_detail_, buf_view = Convert.get_short(buf_view, little)
 
-class USER_DESC_def:
+
+class UserDescDef:
 
     def __init__(self):
         self.userDescType = 0
@@ -374,7 +374,7 @@ class USER_DESC_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view, little=False):
+    def insert_into_bytearray(self, buf_view, little=False):
         buf_view = Convert.put_int(self.userDescType, buf_view, little)
 
         buf_view = Convert.put_string(self.userSid, buf_view, little)
@@ -521,12 +521,13 @@ class TrafProperty:
     def DelayedErrorMode(self, bool):
         self._DelayedErrorMode = bool
 
+
 class GetPbjRefHdlExc:
 
     exception_nr = 0
     exception_detail = 0
     error_text = ''
-    def extractFromByteArray(self,buf_view):
+    def extract_from_bytearray(self,buf_view):
         self.exception_nr, buf_view = Convert.get_int(buf_view, little=True)
         self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
         self.error_text, buf_view = Convert.get_string(buf_view)
@@ -541,14 +542,14 @@ class ConnectReply:
         pass
     def init_reply(self, buf_view, conn):
         self.buf_exception = GetPbjRefHdlExc()
-        buf_view = self.buf_exception.extractFromByteArray(buf_view)
+        buf_view = self.buf_exception.extract_from_bytearray(buf_view)
 
         # TODO handle error
         self.dialogue_id, buf_view = Convert.get_int(buf_view, little=True)
         self.data_source, buf_view = Convert.get_string(buf_view, little=True)
         self.user_sid, buf_view = Convert.get_string(buf_view, little=True, byteoffset=True)
         self.version_list = VERSION_LIST_def()
-        buf_view = self.version_list.extractFromByteArray(buf_view)
+        buf_view = self.version_list.extract_from_bytearray(buf_view)
         __, buf_view = Convert.get_int(buf_view, little=True)  # old iso mapping
         self.isoMapping = 15 #utf-8
         self.server_host_name, buf_view = Convert.get_string(buf_view, little=True)
@@ -565,7 +566,7 @@ class ConnectReply:
         else:
             self.security_enabled = False
 
-class OUT_CONNECTION_CONTEXT_def:
+class OutConnectionContextDef:
     OUTCONTEXT_OPT1_ENFORCE_ISO88591 = 1  #   (2^0)
     OUTCONTEXT_OPT1_IGNORE_SQLCANCEL = 1073741824  #   (2^30)
     OUTCONTEXT_OPT1_EXTRA_OPTIONS = 2147483648  #   (2^31)
@@ -587,10 +588,10 @@ class OUT_CONNECTION_CONTEXT_def:
 
         self.certificate = b''
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
 
         self.version_list = VERSION_LIST_def()
-        buf_view = self.version_list.extractFromByteArray(buf_view)
+        buf_view = self.version_list.extract_from_bytearray(buf_view)
 
         self.node_id, buf_view = Convert.get_short(buf_view, little=True)
         self.process_id, buf_view = Convert.get_int(buf_view, little=True)
@@ -636,32 +637,28 @@ class InitializeDialogueReply:
         self.exception_nr = 0
         self.exception_detail = 0
         self.param_error = ''
-        self.SQLError = ERROR_DESC_LIST_def()
-        self.InvalidUser = ERROR_DESC_LIST_def()
+        self.SQLError = ErrorDescListDef()
+        self.InvalidUser = ErrorDescListDef()
         self.client_error_text = ''
 
-        self.out_context = OUT_CONNECTION_CONTEXT_def()
+        self.out_context = OutConnectionContextDef()
 
     def init_reply(self, buf_view, conn):
         self.exception_nr, buf_view = Convert.get_int(buf_view, little=True)
         self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
 
         if self.exception_nr == Transport.CEE_SUCCESS:
-            buf_view = self.out_context.extractFromByteArray(buf_view)
+            buf_view = self.out_context.extract_from_bytearray(buf_view)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
-            buf_view = self.SQLError.extractFromByteArray(buf_view)
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
             if (self.exception_detail == self.SQL_PASSWORD_EXPIRING or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
-                self.out_context.extractFromByteArray(buf_view)
-
-            error_info = ''
-            for error_desc in self.SQLError.list:
-                error_info += error_desc.errorText
-            raise errors.DatabaseError(error_info)
+                self.out_context.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
-            buf_view = self.SQLError.extractFromByteArray(buf_view)
-            buf_view = self.out_context.extractFromByteArray(buf_view)
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            buf_view = self.out_context.extract_from_bytearray(buf_view)
 
         elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
             self.param_error, buf_view = Convert.get_string(buf_view, little=True)
@@ -674,30 +671,36 @@ class InitializeDialogueReply:
             self.client_error_text = "unknow error"
 
 
-class ERROR_DESC_LIST_def:
+class ErrorDescListDef:
 
     def __init__(self):
         self.length = 0
         self.list = []
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
 
         length, buf_view = Convert.get_int(buf_view, little=True)
 
         for i in range(length):
-            error_desc = ERROR_DESC_Def()
-            buf_view = error_desc.extractFromByteArray(buf_view)
+            error_desc = ErrorDescDef()
+            buf_view = error_desc.extract_from_bytearray(buf_view)
             self.list.append(error_desc)
 
         return buf_view
 
+    def get_error_info(self):
+        error_info = ''
+        for error_desc in self.list:
+            error_info += error_desc.errorText
+        return error_info
 
-class ERROR_DESC_Def:
 
-    def __int__(self):
+class ErrorDescDef:
+
+    def __init__(self):
         self.rowId = 0
         self.errorDiagnosticId = 0
-        self.sqlcode  = 0
+        self.sqlcode = 0
         self.sqlstate = ''
         self.errorText = ''
         self.operationAbortId = 0
@@ -710,7 +713,7 @@ class ERROR_DESC_Def:
         self.Param6 = ''
         self.Param7 = ''
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
         self.rowId, buf_view= Convert.get_int(buf_view, little=True)
         self.errorDiagnosticId, buf_view = Convert.get_int(buf_view, little=True)
         self.sqlcode, buf_view = Convert.get_int(buf_view, little=True)
@@ -730,7 +733,7 @@ class ERROR_DESC_Def:
         return buf_view
 
 
-class SQL_DataValue_def:
+class SQLDataValueDef:
 
     def __init__(self):
         self.buffer = None
@@ -739,7 +742,7 @@ class SQL_DataValue_def:
     def sizeof(self):
         return Transport.size_int if self.buffer is None else Transport.size_int + len(self.buffer) + 1
 
-    def insertIntoByteArray(self, buf_view, little=False):
+    def insert_into_bytearray(self, buf_view, little=False):
         try:
             if self.buffer is not None:
                 if isinstance(self.buffer, str):
@@ -759,13 +762,13 @@ class SQL_DataValue_def:
     def set_user_buffer(self, buffer:str):
         self.user_buffer = buffer
 
-    def extractFromByteArray(self, buf_view: memoryview)->memoryview:
+    def extract_from_bytearray(self, buf_view: memoryview)->memoryview:
         self.buffer, buf_view = Convert.get_string(buf_view, little=True)
         return buf_view
 
     @classmethod
     def fill_in_sql_values(cls, describer, param_rowcount, param_values):
-        data_value = SQL_DataValue_def()
+        data_value = SQLDataValueDef()
 
         #TODO handle param_values
         if (param_rowcount == 0 and param_values is not None and  len(param_values) > 0):
@@ -1185,34 +1188,34 @@ class SQL_DataValue_def:
             raise errors.NotSupportedError
 
 
-class SQLValue_def:
+class SQLValueDef:
 
     def __init__(self):
         self.data_type = 0                      #  int
         self.data_ind = 0                       #  short
-        self.data_value = SQL_DataValue_def()
+        self.data_value = SQLDataValueDef()
         self.data_charset = 0                   #  int
 
     def sizeof(self):
         return Transport.size_int * 2 + Transport.size_short + self.data_value.sizeof()
 
-    def insertIntoByteArray(self, buf_view, little=True):
+    def insert_into_bytearray(self, buf_view, little=True):
         buf_view = Convert.put_int(self.data_type, buf_view, little=little)
         buf_view = Convert.put_short(self.data_ind, buf_view, little=little)
-        buf_view = self.data_value.insertIntoByteArray(buf_view, little=little)
+        buf_view = self.data_value.insert_into_bytearray(buf_view, little=little)
         buf_view = Convert.put_int(self.data_charset, buf_view, little=little)
 
         return buf_view
 
-    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
+    def extract_from_bytearray(self, buf_view:memoryview)->memoryview:
         self.data_type, buf_view = Convert.get_int(buf_view, little=True)
         self.data_ind, buf_view = Convert.get_short(buf_view, little=True)
-        buf_view = self.data_value.extractFromByteArray(buf_view)
+        buf_view = self.data_value.extract_from_bytearray(buf_view)
         self.data_charset, buf_view = Convert.get_int(buf_view, little=True)
         return buf_view
 
 
-class SQLValueList_def:
+class SQLValueListDef:
 
     def __init__(self):
         self.value_list = []
@@ -1225,22 +1228,22 @@ class SQLValueList_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view, little=True):
+    def insert_into_bytearray(self, buf_view, little=True):
         count = len(self.value_list)
         if count is not 0:
             Convert.put_int(count, buf_view,little)
             for x in self.value_list:
-                x.insertIntoByteArray(buf_view)
+                x.insert_into_bytearray(buf_view)
         else:
             Convert.put_int(0, buf_view, little)
         return buf_view
 
-    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
+    def extract_from_bytearray(self, buf_view:memoryview)->memoryview:
         count, buf_view = Convert.get_int(buf_view, little=True)
 
         for x in range(count):
-            temp_sql_value = SQLValue_def()
-            buf_view = temp_sql_value.extractFromByteArray(buf_view)
+            temp_sql_value = SQLValueDef()
+            buf_view = temp_sql_value.extract_from_bytearray(buf_view)
             self.value_list.append(buf_view)
 
         return buf_view
@@ -1268,7 +1271,7 @@ class ExecuteReply:
             error_count, buf_view = Convert.get_int(buf_view, little=True)
             for x in range(error_count):
                 t = SQLWarningOrError()
-                buf_view = t.extractFromByteArray(buf_view)
+                buf_view = t.extract_from_bytearray(buf_view)
                 self.errorlist.append(t)
             error_info = ''
             for item in self.errorlist:
@@ -1286,7 +1289,7 @@ class ExecuteReply:
             output_number_params, buf_view = Convert.get_int(buf_view, little=True)
             for x in range(output_number_params):
                 t = Descriptor()
-                buf_view = t.extractFromByteArray(buf_view)
+                buf_view = t.extract_from_bytearray(buf_view)
                 t.set_row_length(output_param_length)
                 self.output_desc_list.append(t)
 
@@ -1318,7 +1321,7 @@ class ExecuteReply:
 
                     for y in range(output_number_params):
                         t = Descriptor()
-                        t.extractFromByteArray(buf_view)
+                        t.extract_from_bytearray(buf_view)
                         t.set_row_length(output_param_length)
                         temp_descriptor_list.append(t)
 
@@ -1332,7 +1335,6 @@ class ExecuteReply:
             self.proxy_syntax_list.append(single_syntax)
 
 
-
 class SQLWarningOrError:
 
     def __init__(self,row_id=None, sql_code=None, text=None, sql_state=None):
@@ -1341,7 +1343,7 @@ class SQLWarningOrError:
         self.text = text
         self.sql_state = sql_state
 
-    def extractFromByteArray(self, buf_view: memoryview) -> memoryview:
+    def extract_from_bytearray(self, buf_view: memoryview) -> memoryview:
         self.row_id, buf_view = Convert.get_int(buf_view, little=True)
         self.sql_code, buf_view = Convert.get_int(buf_view, little=True)
         self.text, buf_view = Convert.get_string(buf_view, little=True)
@@ -1379,7 +1381,7 @@ class Descriptor:
     def set_row_length(self, num):
         self.row_length = num
 
-    def extractFromByteArray(self, buf_view: memoryview) -> memoryview:
+    def extract_from_bytearray(self, buf_view: memoryview) -> memoryview:
         self.noNullValue_, buf_view = Convert.get_int(buf_view, little=True)
         self.nullValue_, buf_view = Convert.get_int(buf_view, little=True)
         self.version_, buf_view = Convert.get_int(buf_view, little=True)
@@ -1493,7 +1495,7 @@ class FetchReply:
                 error_count, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(error_count):
                     t = SQLWarningOrError()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
 
                 error_info = ''
@@ -1656,7 +1658,7 @@ class PrepareReply:
                     error_count, buf_view = Convert.get_int(buf_view, little=True)
                     for x in error_count:
                         t = SQLWarningOrError()
-                        buf_view = t.extractFromByteArray(buf_view)
+                        buf_view = t.extract_from_bytearray(buf_view)
                         self.errorlist.append(t)
                     error_info = ''
                     for item in self.errorlist:
@@ -1672,7 +1674,7 @@ class PrepareReply:
                 input_number_params, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(input_number_params):
                     t = Descriptor()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     t.set_row_length(input_param_length)
                     self.input_desc_list.append(t)
 
@@ -1682,7 +1684,7 @@ class PrepareReply:
                 output_number_params, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(output_number_params):
                     t = Descriptor()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     t.set_row_length(output_param_length)
                     self.output_desc_list.append(t)
 
@@ -1692,7 +1694,7 @@ class PrepareReply:
                 error_count, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(error_count):
                     t = SQLWarningOrError()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
                 error_info = ''
                 for item in self.errorlist:
@@ -1708,7 +1710,7 @@ class TerminateReply:
     def __init__(self):
         self.return_code = 0
         self.exception_detail = 0
-        self.SQLError = ERROR_DESC_LIST_def()
+        self.SQLError = ErrorDescListDef()
         self.error_text = ''
 
     def init_reply(self, buf_view: memoryview):
@@ -1719,10 +1721,41 @@ class TerminateReply:
         if self.return_code == self.odbc_SQLSvc_TerminateDialogue_SQLError_exn_:
             if self.exception_detail == 25000:
                 raise errors.DatabaseError("ids_25_000")
-            buf_view = self.SQLError.extractFromByteArray(buf_view)
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
         if self.return_code == self.odbc_SQLSvc_TerminateDialogue_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
             raise errors.DatabaseError(self.error_text)
         if self.return_code == self.odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_:
             raise errors.DatabaseError("ids_08_s01")
         raise errors.DatabaseError("ids_unknown_reply_error")
+
+
+class SetConnectionOptionReply:
+    odbc_SQLSvc_SetConnectionOption_ParamError_exn_ = 1
+    odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_ = 2
+    odbc_SQLSvc_SetConnectionOption_SQLError_exn_ = 3
+    odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_ = 4
+
+    def __init__(self):
+        self.return_code = 0
+        self.exception_detail = 0
+        self.SQLError = ErrorDescListDef()
+        self.error_text = ''
+
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        if self.return_code == Transport.SQL_SUCCESS:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            return None
+        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_SQLError_exn_:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
+        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_ParamError_exn_:
+            self.error_text, buf_view = Convert.get_string(buf_view)
+            raise errors.DatabaseError(self.error_text)
+        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_:
+            raise errors.DatabaseError("Invalid connection:" + "ids_program_error")
+        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_:
+            raise errors.DatabaseError("autocommit_txn_in_progress")

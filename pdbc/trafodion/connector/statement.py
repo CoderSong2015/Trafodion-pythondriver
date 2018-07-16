@@ -1,9 +1,8 @@
 from . import errors
-from .struct_def import (SQL_DataValue_def, SQLValueList_def, Header, ExecuteReply, FetchReply, PrepareReply)
+from .struct_def import (SQLDataValueDef, SQLValueListDef, Header, ExecuteReply, FetchReply, PrepareReply)
 from .transport import Transport
 
 from .transport import Convert
-
 
 
 class Statement:
@@ -54,7 +53,7 @@ class Statement:
             txId = stmt.connection_.transactionToJoin;
         """
 
-        input_value_list = SQLValueList_def()
+        input_value_list = SQLValueListDef()
 
         if (execute_api == Transport.SRVR_API_SQLEXECDIRECT):
             self.sql_stmt_type_ = self._get_statement_type(sqlstring)
@@ -63,7 +62,7 @@ class Statement:
 
     #if (.usingRawRowset_):
     #else:
-        input_data_value = SQL_DataValue_def.fill_in_sql_values(self._descriptor, input_row_count, params)
+        input_data_value = SQLDataValueDef.fill_in_sql_values(self._descriptor, input_row_count, params)
 
         self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count,
                                          max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
@@ -272,7 +271,7 @@ class Statement:
             if user_buffer:
                 pass
             else:
-                buf_view = input_data_value.insertIntoByteArray(buf_view, little=True)
+                buf_view = input_data_value.insert_into_bytearray(buf_view, little=True)
                 buf_view = Convert.put_int(4 + 1, buf_view, little=True)
                 buf_view = Convert.put_int(tx_id, buf_view, little=True)
                 buf_view = Convert.put_bytes(b'\x00', buf_view, nolen=True)
@@ -282,9 +281,9 @@ class Statement:
 
     def set_transaction_status(self, conn, sql):
         tran_status = self.get_transaction_status(sql)
-        if (tran_status == Transport.TYPE_BEGIN_TRANSACTION):
+        if tran_status == Transport.TYPE_BEGIN_TRANSACTION:
             conn.setBeginTransaction(True)
-        elif (tran_status == Transport.TYPE_END_TRANSACTION):
+        elif tran_status == Transport.TYPE_END_TRANSACTION:
             conn.setBeginTransaction(False)
 
     def get_transaction_status(self, sql):

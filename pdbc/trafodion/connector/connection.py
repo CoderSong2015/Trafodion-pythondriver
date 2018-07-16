@@ -6,8 +6,8 @@ from . import errors
 from .abstracts import TrafConnectionAbstract
 from .cursor import CursorBase, TrafCursor
 from .struct_def import (
-    ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def,
-    VERSION_def, Header, InitializeDialogueReply, TerminateReply
+    ConnectReply, UserDescDef, ConnectionContextDef,
+    VersionDef, Header, InitializeDialogueReply, TerminateReply
 )
 
 from .transport import Transport, Convert
@@ -25,8 +25,8 @@ class TrafConnection(TrafConnectionAbstract):
         self._force_ipv6 = False
         self._unix_socket = None
         self._sessionToken = None
-        self._isReadOnly = False
-        self._autoCommit = True
+        self._is_read_only = False
+        self._auto_commit = True
         self._ignoreCancel = False
         self._connection_timeout = 60
         self._dialogue_id = 0
@@ -183,8 +183,8 @@ class TrafConnection(TrafConnectionAbstract):
             buf_view = memoryview(buf)
             buf_view = buf_view[Header.sizeOf():]
             # construct bytebuffer
-            buf_view = _user_desc.insertIntoByteArray(buf_view, little=True)
-            buf_view = _in_context.insertIntoByteArray(buf_view, little=True)
+            buf_view = _user_desc.insert_into_bytearray(buf_view, little=True)
+            buf_view = _in_context.insert_into_bytearray(buf_view, little=True)
 
             buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
             buf_view = Convert.put_int(option_flags1, buf_view, little=True)
@@ -287,8 +287,8 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = memoryview(buf)
         buf_view = buf_view[Header.sizeOf():]
         # construct bytebuffer
-        buf_view = in_context.insertIntoByteArray(buf_view)
-        buf_view = user_desc.insertIntoByteArray(buf_view)
+        buf_view = in_context.insert_into_bytearray(buf_view)
+        buf_view = user_desc.insert_into_bytearray(buf_view)
 
         buf_view = Convert.put_int(srvr_type, buf_view)
         buf_view = Convert.put_short(retry_count, buf_view)
@@ -302,11 +302,11 @@ class TrafConnection(TrafConnectionAbstract):
         return buf
 
     def _get_context(self):
-        in_context = CONNECTION_CONTEXT_def(self)
+        in_context = ConnectionContextDef(self)
         return in_context
 
     def _get_user_desc(self):
-        user_desc = USER_DESC_def()
+        user_desc = UserDescDef()
         user_desc.userName = self._username
         user_desc.userDescType = \
             Transport.UNAUTHENTICATED_USER_TYPE if self._sessionToken == '' else Transport.PASSWORD_ENCRYPTED_USER_TYPE
@@ -322,7 +322,7 @@ class TrafConnection(TrafConnectionAbstract):
         minorVersion = 0
         buildId = 0
 
-        version = [VERSION_def(), VERSION_def()]
+        version = [VersionDef(), VersionDef()]
 
         # Entry[0] is the Driver Version information
         version[0].componentId = 20
@@ -348,7 +348,7 @@ class TrafConnection(TrafConnectionAbstract):
     def _tcp_io_write(self, header, buffer, conn):
         if header.hdr_type_ == Header.WRITE_REQUEST_FIRST:
             buf_view = memoryview(buffer)
-            header.insertIntoByteArray(buf_view)
+            header.insert_into_bytearray(buf_view)
             conn.send(buffer)
         elif header.hdr_type_ == Header.WRITE_REQUEST_NEXT:
             conn.send(buffer)
@@ -466,5 +466,47 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = buf_view[Header.sizeOf():]
 
         buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+
+        return buf
+
+    def _set_connection_attr(self, connection_option, value_num, value_num_str: str):
+
+        wbuffer = self._marshal_set_connection_attr(self._dialogue_id, connection_option, value_num, value_num_str)
+        data = self._get_from_server(Transport.SRVR_API_SQLSETCONNECTATTR, wbuffer, self._mxosrvr_conn)
+
+        buf_view = memoryview(data)
+        c = TerminateReply()
+        c.init_reply(buf_view)
+
+        # 3196 - NDCS transaction for SPJ
+        if connection_option == self.SQL_ATTR_JOIN_UDR_TRANSACTION:
+            transId_ = int(value_num_str)
+            suspendRequest_ = True
+        elif connection_option == self.SQL_ATTR_SUSPEND_UDR_TRANSACTION:
+            transId_ = int(value_num_str)
+            suspendRequest_ = True
+
+    def _marshal_set_connection_attr(self, dialogue_id, connection_option,
+                                     option_value_num, option_value_str: str):
+        wlength = Header.sizeOf()
+
+        wlength += Transport.size_int  # dialogue_id
+        wlength += Transport.size_short  # connection_option
+        wlength += Transport.size_int  # option_value_num
+        wlength += Transport.size_bytes(option_value_str.encode())  # option_value_str
+
+        buf = bytearray(b'')
+
+        buf.extend(bytearray(wlength))
+
+        # use memoryview to avoid mem copy
+        # remain space for header
+        buf_view = memoryview(buf)
+        buf_view = buf_view[Header.sizeOf():]
+
+        buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+        buf_view = Convert.put_short(connection_option, buf_view, little=True)
+        buf_view = Convert.put_int(option_value_num, buf_view, little=True)
+        buf_view = Convert.put_string(option_value_str, buf_view, little=True)
 
         return buf
