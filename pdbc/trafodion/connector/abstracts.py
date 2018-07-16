@@ -188,7 +188,15 @@ class TrafConnectionAbstract(object):
         """
         pass
 
-
+    @abstractmethod
+    def set_auto_commit(self, auto_commit=True):
+        """
+            if auto commit is false , user could use connection.commit() to 
+            commit any pending transaction to the database.
+        :param auto_commit: boolean
+        :return: None
+        """
+        pass
 
 @make_abc(ABCMeta)
 class TrafCursorAbstract(object):

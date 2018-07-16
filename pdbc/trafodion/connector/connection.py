@@ -238,6 +238,7 @@ class TrafConnection(TrafConnectionAbstract):
                          Header.PC,
                          Header.TCPIP,
                          Header.NO)
+
         self._tcp_io_write(wheader, wbuffer, conn)
 
         #  master return header with Big-Endian while other is Little-Endian
@@ -360,6 +361,11 @@ class TrafConnection(TrafConnectionAbstract):
         if not self.is_connected():
             raise errors.DatabaseError("Connection not available.")
 
+        if self._auto_commit:
+            raise errors.DatabaseError("auto commit has opened")
+
+        raise errors.NotSupportedError()
+
     def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
                dictionary=None, named_tuple=None):
         """Instantiates and returns a cursor
@@ -411,7 +417,6 @@ class TrafConnection(TrafConnectionAbstract):
                              ', '.join([args[i] for i in range(5)
                                         if cursor_type & (1 << i) != 0]))
         pass
-
 
     def is_connected(self):
         """Reports whether the connection to mxosrvr Server is available
@@ -478,13 +483,15 @@ class TrafConnection(TrafConnectionAbstract):
         c = TerminateReply()
         c.init_reply(buf_view)
 
-        # 3196 - NDCS transaction for SPJ
+        # TODO 3196 - NDCS transaction for SPJ
         if connection_option == self.SQL_ATTR_JOIN_UDR_TRANSACTION:
             transId_ = int(value_num_str)
             suspendRequest_ = True
         elif connection_option == self.SQL_ATTR_SUSPEND_UDR_TRANSACTION:
             transId_ = int(value_num_str)
             suspendRequest_ = True
+
+        return c.return_code
 
     def _marshal_set_connection_attr(self, dialogue_id, connection_option,
                                      option_value_num, option_value_str: str):
@@ -510,3 +517,21 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = Convert.put_string(option_value_str, buf_view, little=True)
 
         return buf
+
+    def set_auto_commit(self, auto_commit=True):
+
+        if not self.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
+        save_commit = self._auto_commit
+        self._auto_commit = auto_commit
+
+        self._in_context.autoCommit = 1 if auto_commit else 0
+        try:
+            self._set_connection_attr(self.SQL_ATTR_AUTOCOMMIT, self._in_context.autoCommit,
+                                      str(self._in_context.autoCommit))
+        except Exception:
+            self._auto_commit = save_commit
+            return False
+
+        return False

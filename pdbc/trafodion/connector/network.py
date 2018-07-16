@@ -1,7 +1,7 @@
 import socket
 
 from .struct_def import Header
-
+from . import errors
 
 class BaseTrafSocket(object):
     """Base class for Trafodion socket communication
@@ -32,9 +32,8 @@ class BaseTrafSocket(object):
     def _send_all(self, buf):
         try:
             self.sock.sendall(buf)
-        except IOError as err:
-            raise
-
+        except:
+            raise errors.InternalError("sock error")
 
     def _send_compressed(self, buf):
         """
