@@ -170,6 +170,9 @@ class TrafCursor(CursorBase):
         if not self._connection:
             raise errors.ProgrammingError("Cursor is not connected")
 
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
         #self._connection.handle_unread_result()
 
         #self._reset_result()
@@ -218,6 +221,9 @@ class TrafCursor(CursorBase):
 
     def fetchone(self):
 
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
         if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
             raise errors.InternalError("No result set available.")
         # if no data found, do not fetch again
@@ -240,6 +246,9 @@ class TrafCursor(CursorBase):
         return self._result_set[self._next_row - 1]
 
     def fetchmany(self, size=1):
+
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
 
         if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
             raise errors.InternalError("No result set available.")

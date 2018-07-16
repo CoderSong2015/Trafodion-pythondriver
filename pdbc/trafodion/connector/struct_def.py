@@ -1698,3 +1698,31 @@ class PrepareReply:
                 for item in self.errorlist:
                     error_info += item.text + '\n'
                 raise errors.ProgrammingError(error_info)
+
+
+class TerminateReply:
+    odbc_SQLSvc_TerminateDialogue_ParamError_exn_ = 1
+    odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_ = 2
+    odbc_SQLSvc_TerminateDialogue_SQLError_exn_ = 3
+
+    def __init__(self):
+        self.return_code = 0
+        self.exception_detail = 0
+        self.SQLError = ERROR_DESC_LIST_def()
+        self.error_text = ''
+
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        if self.return_code == Transport.SQL_SUCCESS:
+            return True
+        if self.return_code == self.odbc_SQLSvc_TerminateDialogue_SQLError_exn_:
+            if self.exception_detail == 25000:
+                raise errors.DatabaseError("ids_25_000")
+            buf_view = self.SQLError.extractFromByteArray(buf_view)
+        if self.return_code == self.odbc_SQLSvc_TerminateDialogue_ParamError_exn_:
+            self.error_text, buf_view = Convert.get_string(buf_view)
+            raise errors.DatabaseError(self.error_text)
+        if self.return_code == self.odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_:
+            raise errors.DatabaseError("ids_08_s01")
+        raise errors.DatabaseError("ids_unknown_reply_error")

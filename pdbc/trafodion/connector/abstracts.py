@@ -106,7 +106,7 @@ class TrafConnectionAbstract(object):
         pass
 
     @abstractmethod
-    def disconnect(self):
+    def close(self):
         pass
 
     def connect(self, **kwargs):

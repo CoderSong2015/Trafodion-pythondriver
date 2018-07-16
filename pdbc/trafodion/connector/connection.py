@@ -7,7 +7,7 @@ from .abstracts import TrafConnectionAbstract
 from .cursor import CursorBase, TrafCursor
 from .struct_def import (
     ConnectReply, USER_DESC_def, CONNECTION_CONTEXT_def,
-    VERSION_def, Header, InitializeDialogueReply
+    VERSION_def, Header, InitializeDialogueReply, TerminateReply
 )
 
 from .transport import Transport, Convert
@@ -36,6 +36,8 @@ class TrafConnection(TrafConnectionAbstract):
         self._stmt_name_lock = threading.Lock()
         self._buffered = None
         self._raw = None
+        self._connecte_status = 0
+
         super(TrafConnection, self).__init__(**kwargs)
 
         if kwargs:
@@ -51,7 +53,9 @@ class TrafConnection(TrafConnectionAbstract):
         self._dialogue_id = self.mxosrvr_info.dialogue_id
         
         if self.mxosrvr_info.security_enabled:
-            self.secure_login()
+            return_code = self.secure_login()
+            if return_code == Transport.SQL_SUCCESS:
+                self._connecte_status = 1
         else:
             self.old_encrypt_password()
             self.init_diag(True , False)
@@ -79,7 +83,7 @@ class TrafConnection(TrafConnectionAbstract):
         except:
             raise errors.DataError("encrypt error")
         init_reply = self.init_diag(True, False)
-        return init_reply
+        return init_reply.exception_nr
 
     def create_proc_info(self, server_process_id,
                          server_node_id,
@@ -111,7 +115,7 @@ class TrafConnection(TrafConnectionAbstract):
     def old_encrypt_password(self):
         pass
 
-    def init_diag(self, set_timestamp, download_cert:bool):
+    def init_diag(self, set_timestamp, download_cert: bool):
 
         #  get connection
 
@@ -353,20 +357,19 @@ class TrafConnection(TrafConnectionAbstract):
         pass
 
     def commit(self):
-        pass
+        if not self.is_connected():
+            raise errors.DatabaseError("Connection not available.")
 
     def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
                dictionary=None, named_tuple=None):
         """Instantiates and returns a cursor
-
-                By default, TrafCursor is returned. 
-
-                Returns a cursor-object
-                """
-        #self.handle_unread_result()
+           By default, TrafCursor is returned. 
+           Returns a cursor-object
+        """
 
         if not self.is_connected():
-            raise errors.OperationalError("MySQL Connection not available.")
+            raise errors.DatabaseError("Connection not available.")
+
         if cursor_class is not None:
             if not issubclass(cursor_class, CursorBase):
                 raise errors.ProgrammingError(
@@ -409,8 +412,6 @@ class TrafConnection(TrafConnectionAbstract):
                                         if cursor_type & (1 << i) != 0]))
         pass
 
-    def disconnect(self):
-        pass
 
     def is_connected(self):
         """Reports whether the connection to mxosrvr Server is available
@@ -418,17 +419,52 @@ class TrafConnection(TrafConnectionAbstract):
            Returns True or False.
         """
         # TODO it is not enough only using connection, ping is needed
-        self.ping()
-        return True if self._mxosrvr_conn is not None else False
+        #self.ping()
+
+        if self._connecte_status == 1:
+            return True
+        return False
 
     def ping(self, reconnect=False, attempts=1, delay=0):
         pass
 
     def rollback(self):
-        pass
+        return 3
 
     def get_seq(self):
         self._stmt_name_lock.acquire()
         self._seq_num = self._seq_num + 1
         self._stmt_name_lock.release()
         return self._seq_num
+
+    def close(self):
+        if not self.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
+        wbuffer = self._marshal_close(self._dialogue_id)
+
+        data = self._get_from_server(Transport.SRVR_API_SQLDISCONNECT, wbuffer, self._mxosrvr_conn)
+
+        buf_view = memoryview(data)
+        c = TerminateReply()
+        c.init_reply(buf_view)
+        if c.return_code == Transport.SQL_SUCCESS:
+            self._mxosrvr_conn.close_connection()
+            self._connecte_status = 0
+
+    def _marshal_close(self, dialogue_id):
+        wlength = Header.sizeOf()
+        wlength += Transport.size_int  # option_flags_1
+
+        buf = bytearray(b'')
+
+        buf.extend(bytearray(wlength))
+
+        # use memoryview to avoid mem copy
+        # remain space for header
+        buf_view = memoryview(buf)
+        buf_view = buf_view[Header.sizeOf():]
+
+        buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+
+        return buf
