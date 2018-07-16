@@ -1169,7 +1169,7 @@ class SQL_DataValue_def:
             if param_values > Transport.max_double:
                 raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_float(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
         if dataType == FetchReply.SQLTYPECODE_NUMERIC or \
                         dataType == FetchReply.SQLTYPECODE_NUMERIC_UNSIGNED:
