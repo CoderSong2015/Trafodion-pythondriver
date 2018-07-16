@@ -459,7 +459,7 @@ class TrafConnection(TrafConnectionAbstract):
 
     def _marshal_close(self, dialogue_id):
         wlength = Header.sizeOf()
-        wlength += Transport.size_int  # option_flags_1
+        wlength += Transport.size_int  # dialogue_id
 
         buf = bytearray(b'')
 
