@@ -1,22 +1,13 @@
-
-#
-#
 #
 # out context
 #
-#
-
 OUTCONTEXT_OPT1_ENFORCE_ISO88591 = 1  # (2^0)
 OUTCONTEXT_OPT1_IGNORE_SQLCANCEL = 1073741824  # (2^30)
 OUTCONTEXT_OPT1_EXTRA_OPTIONS = 2147483648  # (2^31)
 OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE = 536870912  # (2^29)
 
-
-#
-#
 #
 # InitializeDialogue
-#
 #
 odbc_SQLSvc_InitializeDialogue_ParamError_exn_ = 1
 odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_ = 2
@@ -28,15 +19,9 @@ odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_ = 6
 SQL_PASSWORD_EXPIRING = 8857
 SQL_PASSWORD_GRACEPERIOD = 8837
 
-
-#
-#
 #
 # FETCH_REPLY
 #
-#
-
-
 SQLTYPECODE_CHAR = 1
 # NUMERIC * /
 SQLTYPECODE_NUMERIC = 2
@@ -104,36 +89,23 @@ SQLDTCODE_TIMESTAMP = 3
 SQLDTCODE_MPDATETIME = 4
 
 
-
-
-#
-#
 #
 # TerminateReply
 #
-#
-
 odbc_SQLSvc_TerminateDialogue_ParamError_exn_ = 1
 odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_ = 2
 odbc_SQLSvc_TerminateDialogue_SQLError_exn_ = 3
 
 #
-#
-#
 # SetConnectionOption
-#
 #
 odbc_SQLSvc_SetConnectionOption_ParamError_exn_ = 1
 odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_ = 2
 odbc_SQLSvc_SetConnectionOption_SQLError_exn_ = 3
 odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_ = 4
 
-
-#
-#
 #
 # EndTransactionReply
-#
 #
 odbc_SQLSvc_EndTransaction_ParamError_exn_ = 1
 odbc_SQLSvc_EndTransaction_InvalidConnection_exn_ = 2
