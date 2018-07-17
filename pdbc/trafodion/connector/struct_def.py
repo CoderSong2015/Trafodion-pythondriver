@@ -1759,3 +1759,35 @@ class SetConnectionOptionReply:
             raise errors.DatabaseError("Invalid connection:" + "ids_program_error")
         if self.return_code == self.odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_:
             raise errors.DatabaseError("autocommit_txn_in_progress")
+
+
+class EndTransactionReply:
+
+    odbc_SQLSvc_EndTransaction_ParamError_exn_ = 1
+    odbc_SQLSvc_EndTransaction_InvalidConnection_exn_ = 2
+    odbc_SQLSvc_EndTransaction_SQLError_exn_ = 3
+    odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_ = 4
+    odbc_SQLSvc_EndTransaction_TransactionError_exn_ = 5
+    def __init__(self):
+        self.return_code = 0
+        self.exception_detail = 0
+        self.SQLError = ErrorDescListDef()
+        self.error_text = ''
+
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        if self.return_code == Transport.SQL_SUCCESS:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            return None
+        if self.return_code == self.odbc_SQLSvc_EndTransaction_SQLError_exn_:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
+        if self.return_code == self.odbc_SQLSvc_EndTransaction_ParamError_exn_:
+            self.error_text, buf_view = Convert.get_string(buf_view)
+            raise errors.DatabaseError(self.error_text)
+        if self.return_code == self.odbc_SQLSvc_EndTransaction_InvalidConnection_exn_:
+            raise errors.DatabaseError("Invalid connection:" + "ids_transaction_error")
+        if self.return_code == self.odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_:
+            raise errors.DatabaseError("autocommit_txn_in_progress")
+        raise errors.DatabaseError("ids_unknown_reply_error")

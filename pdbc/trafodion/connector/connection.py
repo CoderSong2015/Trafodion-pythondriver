@@ -7,7 +7,7 @@ from .abstracts import TrafConnectionAbstract
 from .cursor import CursorBase, TrafCursor
 from .struct_def import (
     ConnectReply, UserDescDef, ConnectionContextDef,
-    VersionDef, Header, InitializeDialogueReply, TerminateReply
+    VersionDef, Header, InitializeDialogueReply, TerminateReply, EndTransactionReply
 )
 
 from .transport import Transport, Convert
@@ -254,7 +254,7 @@ class TrafConnection(TrafConnectionAbstract):
             c = ConnectReply()
             c.init_reply(buf_view, self)
         except:
-            raise errors.DataError(2345)
+            raise errors.DataError("extract_master_data")
         return c
 
     def _marshal_getobjref(self,
@@ -364,7 +364,9 @@ class TrafConnection(TrafConnectionAbstract):
         if self._auto_commit:
             raise errors.DatabaseError("auto commit has opened")
 
-        raise errors.NotSupportedError()
+        # SQL_COMMIT    0
+        # SQL_ROLLBACK  1
+        self._end_transaction(0)
 
     def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
                dictionary=None, named_tuple=None):
@@ -535,3 +537,31 @@ class TrafConnection(TrafConnectionAbstract):
             return False
 
         return False
+
+    def _end_transaction(self, transaction_opt):
+        wbuffer = self._marshal_end_transaction(self._dialogue_id, transaction_opt)
+        data = self._get_from_server(Transport.SRVR_API_SQLENDTRAN, wbuffer, self._mxosrvr_conn)
+
+        buf_view = memoryview(data)
+        c = EndTransactionReply()
+        c.init_reply(buf_view)
+
+    def _marshal_end_transaction(self, dialogue_id, transaction_opt):
+        wlength = Header.sizeOf()
+
+        wlength += Transport.size_int  # dialogue_id
+        wlength += Transport.size_short  # connection_option
+
+        buf = bytearray(b'')
+
+        buf.extend(bytearray(wlength))
+
+        # use memoryview to avoid mem copy
+        # remain space for header
+        buf_view = memoryview(buf)
+        buf_view = buf_view[Header.sizeOf():]
+
+        buf_view = Convert.put_int(dialogue_id, buf_view, little=True)
+        buf_view = Convert.put_short(transaction_opt, buf_view, little=True)
+
+        return buf
