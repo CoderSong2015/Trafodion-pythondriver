@@ -11,36 +11,6 @@ class TrafConnectionAbstract(object):
 
     def __init__(self, **kwargs):
 
-        # from odbc_common.h and sql.h
-        self.SQL_TXN_READ_UNCOMMITTED = 1
-        self.SQL_TXN_READ_COMMITTED = 2
-        self.SQL_TXN_REPEATABLE_READ = 4
-        self.SQL_TXN_SERIALIZABLE = 8
-        self.SQL_ATTR_CURRENT_CATALOG = 109
-        self.SQL_ATTR_ACCESS_MODE = 101
-        self.SQL_ATTR_AUTOCOMMIT = 102
-        self.SQL_TXN_ISOLATION = 108
-
-        # spj proxy syntax support
-        self.SPJ_ENABLE_PROXY = 1040
-        self.PASSWORD_SECURITY = 0x4000000  # (2 ^ 26)
-        self.ROWWISE_ROWSET = 0x8000000  # (2 ^ 27)
-
-        self.CHARSET = 0x10000000  # (2 ^ 28)
-
-        self.STREAMING_DELAYEDERROR_MODE = 0x20000000  # 2 ^ 29
-        # Zbig
-        self.JDBC_ATTR_CONN_IDLE_TIMEOUT = 3000
-        self.RESET_IDLE_TIMER = 1070
-
-        self.INCONTEXT_OPT1_SESSIONNAME = 0x80000000  # (2 ^ 31)
-
-        self.INCONTEXT_OPT1_FETCHAHEAD = 0x40000000  # (2 ^ 30)
-
-        self.INCONTEXT_OPT1_CERTIFICATE_TIMESTAMP = 0x20000000  # (2 ^ 29)
-
-        self.INCONTEXT_OPT1_CLIENT_USERNAME = 0x10000000  # (2 ^ 28)
-
         self.user = 0
         self.property = {}
         self._init_property()

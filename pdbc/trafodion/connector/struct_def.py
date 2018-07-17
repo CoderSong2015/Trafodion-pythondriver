@@ -5,7 +5,7 @@ from decimal import Decimal
 from . import errors
 
 from .transport import Transport, Convert
-
+from .constants import CONNECTION, STRUCTDEF
 
 class ConnectionContextDef:
     def __init__(self, conn):
@@ -146,7 +146,7 @@ class ConnectionContextDef:
         self.queryTimeoutSec = conn.property.query_timeout
         self.idleTimeoutSec = conn.property.idleTimeout
         self.loginTimeoutSec = conn.property.login_timeout
-        self.txnIsolationLevel = conn.SQL_TXN_READ_COMMITTED
+        self.txnIsolationLevel = CONNECTION.SQL_TXN_READ_COMMITTED
         self.rowSetSize = conn.property.fetchbuffersize
         self.diagnosticFlag = 0
         self.processId = time.time() and 0xFFF
@@ -540,6 +540,7 @@ class GetPbjRefHdlExc:
 class ConnectReply:
     def __init__(self):
         pass
+
     def init_reply(self, buf_view, conn):
         self.buf_exception = GetPbjRefHdlExc()
         buf_view = self.buf_exception.extract_from_bytearray(buf_view)
@@ -559,18 +560,15 @@ class ConnectReply:
         self.server_ip_address, buf_view = Convert.get_string(buf_view, little=True)
         self.server_port, buf_view = Convert.get_int(buf_view, little=True)
 
-        if (self.version_list.list[0].buildId and conn.PASSWORD_SECURITY > 0):
+        if (self.version_list.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0):
             self.security_enabled = True
             self.timestamp, buf_view = Convert.get_timestamp(buf_view)
             self.cluster_name, buf_view = Convert.get_string(buf_view, little=True)
         else:
             self.security_enabled = False
 
+
 class OutConnectionContextDef:
-    OUTCONTEXT_OPT1_ENFORCE_ISO88591 = 1  #   (2^0)
-    OUTCONTEXT_OPT1_IGNORE_SQLCANCEL = 1073741824  #   (2^30)
-    OUTCONTEXT_OPT1_EXTRA_OPTIONS = 2147483648  #   (2^31)
-    OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE = 536870912  #  (2^29)
 
     def __init__(self):
         self.version_list = VERSION_LIST_def()
@@ -600,12 +598,12 @@ class OutConnectionContextDef:
         self.schema, buf_view = Convert.get_string(buf_view, little=True)
         self.option_flags1, buf_view = Convert.get_int(buf_view, little=True)
         self.option_flags2, buf_view = Convert.get_int(buf_view, little=True)
-        self.enforce_iso = (self.option_flags1 and self.OUTCONTEXT_OPT1_ENFORCE_ISO88591) > 0
-        self.ignore_cancel = (self.option_flags1 and self.OUTCONTEXT_OPT1_IGNORE_SQLCANCEL) > 0
+        self.enforce_iso = (self.option_flags1 and STRUCTDEF.OUTCONTEXT_OPT1_ENFORCE_ISO88591) > 0
+        self.ignore_cancel = (self.option_flags1 and STRUCTDEF.OUTCONTEXT_OPT1_IGNORE_SQLCANCEL) > 0
 
-        if self.option_flags1 & self.OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE > 0:
+        if self.option_flags1 & STRUCTDEF.OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE > 0:
             self.certificate, buf_view = Convert.get_string(buf_view, little=True)
-        elif self.option_flags1 & self.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
+        elif self.option_flags1 & STRUCTDEF.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
             try:
                 buf, buf_view = Convert.get_string(buf_view, little=True)
                 self.decodeExtraOptions(buf)
@@ -623,15 +621,6 @@ class OutConnectionContextDef:
 
 
 class InitializeDialogueReply:
-    odbc_SQLSvc_InitializeDialogue_ParamError_exn_ = 1
-    odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_ = 2
-    odbc_SQLSvc_InitializeDialogue_SQLError_exn_ = 3
-    odbc_SQLSvc_InitializeDialogue_SQLInvalidHandle_exn_ = 4
-    odbc_SQLSvc_InitializeDialogue_SQLNeedData_exn_ = 5
-    odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_ = 6
-
-    SQL_PASSWORD_EXPIRING = 8857
-    SQL_PASSWORD_GRACEPERIOD = 8837
 
     def __init__(self):
         self.exception_nr = 0
@@ -650,21 +639,22 @@ class InitializeDialogueReply:
         if self.exception_nr == Transport.CEE_SUCCESS:
             buf_view = self.out_context.extract_from_bytearray(buf_view)
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
-            if (self.exception_detail == self.SQL_PASSWORD_EXPIRING or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
+            if self.exception_detail == STRUCTDEF.SQL_PASSWORD_EXPIRING or \
+                self.exception_detail == STRUCTDEF.SQL_PASSWORD_GRACEPERIOD:
                 self.out_context.extract_from_bytearray(buf_view)
             raise errors.DatabaseError(self.SQLError.get_error_info())
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
             buf_view = self.out_context.extract_from_bytearray(buf_view)
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
             self.param_error, buf_view = Convert.get_string(buf_view, little=True)
             raise errors.ProgrammingError(self.param_error)
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
             raise errors.InternalError("invalid connection")
 
         else:
@@ -826,7 +816,7 @@ class SQLDataValueDef:
         dataOffset = 2
         shortLength = False
 
-        if dataType == FetchReply.SQLTYPECODE_VARCHAR_WITH_LENGTH:
+        if dataType == STRUCTDEF.SQLTYPECODE_VARCHAR_WITH_LENGTH:
             shortLength = precision < 2**15
             dataOffset = 2 if shortLength else 4
             dataLength += dataOffset
@@ -834,7 +824,7 @@ class SQLDataValueDef:
             if dataLength % 2 != 0:
                 dataLength = dataLength + 1
 
-        elif dataType == FetchReply.SQLTYPECODE_BLOB or dataType == FetchReply.SQLTYPECODE_CLOB:
+        elif dataType == STRUCTDEF.SQLTYPECODE_BLOB or dataType == STRUCTDEF.SQLTYPECODE_CLOB:
             shortLength = False
             dataOffset = 4
             dataLength += dataOffset
@@ -853,7 +843,7 @@ class SQLDataValueDef:
             _ = Convert.put_short(-1, buf_view[nullValue:], True)
             return buf_view
 
-        if dataType == FetchReply.SQLTYPECODE_CHAR:
+        if dataType == STRUCTDEF.SQLTYPECODE_CHAR:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
@@ -905,7 +895,7 @@ class SQLDataValueDef:
                         "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
 
             return None
-        if dataType == FetchReply.SQLTYPECODE_VARCHAR:
+        if dataType == STRUCTDEF.SQLTYPECODE_VARCHAR:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
@@ -941,7 +931,7 @@ class SQLDataValueDef:
                     "invalid_string_parameter input data is longer than the length for column: {0}".format(
                         param_count))
             return None
-        if dataType == FetchReply.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FetchReply.SQLTYPECODE_VARCHAR_LONG:
+        if dataType == STRUCTDEF.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == STRUCTDEF.SQLTYPECODE_VARCHAR_LONG:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
@@ -981,7 +971,7 @@ class SQLDataValueDef:
                     "invalid_string_parameter input data is longer than the length for column: {0}".format(
                         param_count))
             return None
-        if dataType == FetchReply.SQLTYPECODE_INTEGER:
+        if dataType == STRUCTDEF.SQLTYPECODE_INTEGER:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1001,7 +991,7 @@ class SQLDataValueDef:
             _ = Convert.put_int(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_INTEGER_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_INTEGER_UNSIGNED:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1020,7 +1010,7 @@ class SQLDataValueDef:
 
             _ = Convert.put_uint(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FetchReply.SQLTYPECODE_TINYINT:
+        if dataType == STRUCTDEF.SQLTYPECODE_TINYINT:
             # TODO have not finished
             """
                         if not isinstance(param_values,(int, float)):
@@ -1036,10 +1026,10 @@ class SQLDataValueDef:
                         """
             raise errors.NotSupportedError("not support tinyint")
 
-        if dataType == FetchReply.SQLTYPECODE_TINYINT_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_TINYINT_UNSIGNED:
             raise errors.NotSupportedError("not support utinyint")
 
-        if dataType == FetchReply.SQLTYPECODE_SMALLINT:
+        if dataType == STRUCTDEF.SQLTYPECODE_SMALLINT:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1059,7 +1049,7 @@ class SQLDataValueDef:
             _ = Convert.put_short(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_SMALLINT_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_SMALLINT_UNSIGNED:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1079,7 +1069,7 @@ class SQLDataValueDef:
             _ = Convert.put_ushort(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_LARGEINT:
+        if dataType == STRUCTDEF.SQLTYPECODE_LARGEINT:
             if not isinstance(param_values, (int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1098,7 +1088,7 @@ class SQLDataValueDef:
 
             _ = Convert.put_longlong(param_values, buf_view[noNullValue:], little=True)
             return None
-        if dataType == FetchReply.SQLTYPECODE_LARGEINT_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_LARGEINT_UNSIGNED:
             if not isinstance(param_values, (int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1118,8 +1108,8 @@ class SQLDataValueDef:
             _ = Convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_DECIMAL or \
-                        dataType == FetchReply.SQLTYPECODE_DECIMAL_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_DECIMAL or \
+                        dataType == STRUCTDEF.SQLTYPECODE_DECIMAL_UNSIGNED:
 
             if not isinstance(param_values, (int, str, Decimal)):
                 raise errors.DataError(
@@ -1153,7 +1143,7 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
 
             return buf_view
-        if dataType == FetchReply.SQLTYPECODE_REAL:
+        if dataType == STRUCTDEF.SQLTYPECODE_REAL:
 
             if not isinstance(param_values, float):
                 raise errors.DataError(
@@ -1164,7 +1154,7 @@ class SQLDataValueDef:
 
             _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FetchReply.SQLTYPECODE_FLOAT or dataType == FetchReply.SQLTYPECODE_DOUBLE:
+        if dataType == STRUCTDEF.SQLTYPECODE_FLOAT or dataType == STRUCTDEF.SQLTYPECODE_DOUBLE:
             if not isinstance(param_values, float):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either float for column: {0}".format(
@@ -1174,17 +1164,17 @@ class SQLDataValueDef:
 
             _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FetchReply.SQLTYPECODE_NUMERIC or \
-                        dataType == FetchReply.SQLTYPECODE_NUMERIC_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_NUMERIC or \
+                        dataType == STRUCTDEF.SQLTYPECODE_NUMERIC_UNSIGNED:
             pass
 
-        if dataType == FetchReply.SQLTYPECODE_BOOLEAN:
+        if dataType == STRUCTDEF.SQLTYPECODE_BOOLEAN:
             raise errors.NotSupportedError
-        if dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE or \
-                        dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
-                        dataType == FetchReply.SQLTYPECODE_BIT or \
-                        dataType == FetchReply.SQLTYPECODE_BITVAR or \
-                        dataType == FetchReply.SQLTYPECODE_BPINT_UNSIGNED:
+        if dataType == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE or \
+                        dataType == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
+                        dataType == STRUCTDEF.SQLTYPECODE_BIT or \
+                        dataType == STRUCTDEF.SQLTYPECODE_BITVAR or \
+                        dataType == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
             raise errors.NotSupportedError
 
 
@@ -1409,74 +1399,6 @@ class Descriptor:
 
 class FetchReply:
 
-    SQLTYPECODE_CHAR = 1
-    # NUMERIC * /
-    SQLTYPECODE_NUMERIC = 2
-    SQLTYPECODE_NUMERIC_UNSIGNED = -201
-    # DECIMAL * /
-    SQLTYPECODE_DECIMAL = 3
-    SQLTYPECODE_DECIMAL_UNSIGNED = -301
-    SQLTYPECODE_DECIMAL_LARGE = -302
-    SQLTYPECODE_DECIMAL_LARGE_UNSIGNED = -303
-    # INTEGER / INT * /
-    SQLTYPECODE_INTEGER = 4
-    SQLTYPECODE_INTEGER_UNSIGNED = -401
-    SQLTYPECODE_LARGEINT = -402
-    SQLTYPECODE_LARGEINT_UNSIGNED = -405
-    # SMALLINT
-    SQLTYPECODE_SMALLINT = 5
-    SQLTYPECODE_SMALLINT_UNSIGNED = -502
-    SQLTYPECODE_BPINT_UNSIGNED = -503
-
-        # TINYINT */
-    SQLTYPECODE_TINYINT                = -403
-    SQLTYPECODE_TINYINT_UNSIGNED       = -404
-
-    # DOUBLE depending on precision
-    SQLTYPECODE_FLOAT = 6
-    SQLTYPECODE_REAL = 7
-    SQLTYPECODE_DOUBLE = 8
-
-    # DATE,TIME,TIMESTAMP */
-    SQLTYPECODE_DATETIME = 9
-
-    # TIMESTAMP */
-    SQLTYPECODE_INTERVAL = 10
-
-    # no ANSI value 11 */
-
-	# VARCHAR/CHARACTER VARYING */
-    SQLTYPECODE_VARCHAR = 12
-
-    # SQL/MP stype VARCHAR with length prefix:
-
-    SQLTYPECODE_VARCHAR_WITH_LENGTH = -601
-    SQLTYPECODE_BLOB = -602
-    SQLTYPECODE_CLOB = -603
-    # LONG VARCHAR/ODBC CHARACTER VARYING */
-    SQLTYPECODE_VARCHAR_LONG = -1 # ## NEGATIVE??? */
-
-    # no ANSI value 13 */
-
-	# BIT */
-    SQLTYPECODE_BIT = 14 # not supported */
-
-    # BIT VARYING */
-    SQLTYPECODE_BITVAR = 15 # not supported */
-
-    # NCHAR -- CHAR(n) CHARACTER SET s -- where s uses two bytes per char */
-    SQLTYPECODE_CHAR_DBLBYTE = 16
-    # NCHAR VARYING -- VARCHAR(n) CHARACTER SET s -- s uses 2 bytes per char */
-    SQLTYPECODE_VARCHAR_DBLBYTE = 17
-    # BOOLEAN TYPE */
-    SQLTYPECODE_BOOLEAN = -701
-
-    # Date/Time/TimeStamp related constants */
-    SQLDTCODE_DATE = 1
-    SQLDTCODE_TIME = 2
-    SQLDTCODE_TIMESTAMP = 3
-    SQLDTCODE_MPDATETIME = 4
-
     def __init__(self):
         self.return_code = 0
         self.errorlist = []
@@ -1568,15 +1490,15 @@ class FetchReply:
         ret_obj = None
         buf_view = memoryview(self.out_values)
         sql_data_type = column_desc.dataType_
-        if sql_data_type == self.SQLTYPECODE_CHAR:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_CHAR:
             length = column_desc.maxLen_
             ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
 
-        if sql_data_type == self.SQLTYPECODE_VARCHAR or \
-                        sql_data_type == self.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
-                        sql_data_type == self.SQLTYPECODE_VARCHAR_LONG or \
-                        sql_data_type == self.SQLTYPECODE_BLOB or \
-                        sql_data_type == self.SQLTYPECODE_CLOB:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_VARCHAR or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_VARCHAR_LONG or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_BLOB or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_CLOB:
 
             short_length = 2 if column_desc.precision_ < 2**15 else 4
             data_offset = nonull_value_offset + short_length
@@ -1593,44 +1515,44 @@ class FetchReply:
 
             ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
 
-        if sql_data_type == self.SQLTYPECODE_INTERVAL:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTERVAL:
             pass
 
-        if sql_data_type == self.SQLTYPECODE_INTEGER:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER:
             ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
 
-        if sql_data_type == self.SQLTYPECODE_TINYINT_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_TINYINT_UNSIGNED:
             pass
-        if sql_data_type == self.SQLTYPECODE_TINYINT:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_TINYINT:
             pass
-        if sql_data_type == self.SQLTYPECODE_SMALLINT:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_SMALLINT:
             pass
-        if sql_data_type == self.SQLTYPECODE_SMALLINT_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_SMALLINT_UNSIGNED:
             pass
-        if sql_data_type == self.SQLTYPECODE_INTEGER:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER:
             pass
-        if sql_data_type == self.SQLTYPECODE_INTEGER_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER_UNSIGNED:
             pass
-        if sql_data_type == self.SQLTYPECODE_LARGEINT:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_LARGEINT:
             pass
-        if sql_data_type == self.SQLTYPECODE_LARGEINT_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_LARGEINT_UNSIGNED:
             pass
-        if sql_data_type == self.SQLTYPECODE_NUMERIC or \
-            sql_data_type == self.SQLTYPECODE_NUMERIC_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_NUMERIC or \
+            sql_data_type == STRUCTDEF.SQLTYPECODE_NUMERIC_UNSIGNED:
             pass
-        if sql_data_type == self.SQLTYPECODE_DECIMAL or \
-                        sql_data_type == self.SQLTYPECODE_DECIMAL_UNSIGNED or \
-                        sql_data_type == self.SQLTYPECODE_DECIMAL_LARGE or \
-                        sql_data_type == self.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_UNSIGNED or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
             pass
-        if sql_data_type == self.SQLTYPECODE_REAL:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_REAL:
             pass
-        if sql_data_type == self.SQLTYPECODE_DOUBLE or sql_data_type == self.SQLTYPECODE_FLOAT:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_DOUBLE or sql_data_type == STRUCTDEF.SQLTYPECODE_FLOAT:
             pass
-        if sql_data_type == self.SQLTYPECODE_BIT or \
-                        sql_data_type == self.SQLTYPECODE_BITVAR or \
-                        sql_data_type == self.SQLTYPECODE_BPINT_UNSIGNED:
+        if sql_data_type == STRUCTDEF.SQLTYPECODE_BIT or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_BITVAR or \
+                        sql_data_type == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
             pass
         return ret_obj
 
@@ -1703,9 +1625,7 @@ class PrepareReply:
 
 
 class TerminateReply:
-    odbc_SQLSvc_TerminateDialogue_ParamError_exn_ = 1
-    odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_ = 2
-    odbc_SQLSvc_TerminateDialogue_SQLError_exn_ = 3
+
 
     def __init__(self):
         self.return_code = 0
@@ -1718,24 +1638,20 @@ class TerminateReply:
         self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
         if self.return_code == Transport.SQL_SUCCESS:
             return True
-        if self.return_code == self.odbc_SQLSvc_TerminateDialogue_SQLError_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_SQLError_exn_:
             if self.exception_detail == 25000:
                 raise errors.DatabaseError("ids_25_000")
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
             raise errors.DatabaseError(self.SQLError.get_error_info())
-        if self.return_code == self.odbc_SQLSvc_TerminateDialogue_ParamError_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
             raise errors.DatabaseError(self.error_text)
-        if self.return_code == self.odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_:
             raise errors.DatabaseError("ids_08_s01")
         raise errors.DatabaseError("ids_unknown_reply_error")
 
 
 class SetConnectionOptionReply:
-    odbc_SQLSvc_SetConnectionOption_ParamError_exn_ = 1
-    odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_ = 2
-    odbc_SQLSvc_SetConnectionOption_SQLError_exn_ = 3
-    odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_ = 4
 
     def __init__(self):
         self.return_code = 0
@@ -1749,25 +1665,20 @@ class SetConnectionOptionReply:
         if self.return_code == Transport.SQL_SUCCESS:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
             return None
-        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_SQLError_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_SQLError_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
             raise errors.DatabaseError(self.SQLError.get_error_info())
-        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_ParamError_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
             raise errors.DatabaseError(self.error_text)
-        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_:
             raise errors.DatabaseError("Invalid connection:" + "ids_program_error")
-        if self.return_code == self.odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_:
             raise errors.DatabaseError("autocommit_txn_in_progress")
 
 
 class EndTransactionReply:
 
-    odbc_SQLSvc_EndTransaction_ParamError_exn_ = 1
-    odbc_SQLSvc_EndTransaction_InvalidConnection_exn_ = 2
-    odbc_SQLSvc_EndTransaction_SQLError_exn_ = 3
-    odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_ = 4
-    odbc_SQLSvc_EndTransaction_TransactionError_exn_ = 5
     def __init__(self):
         self.return_code = 0
         self.exception_detail = 0
@@ -1780,14 +1691,14 @@ class EndTransactionReply:
         if self.return_code == Transport.SQL_SUCCESS:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
             return None
-        if self.return_code == self.odbc_SQLSvc_EndTransaction_SQLError_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_SQLError_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
             raise errors.DatabaseError(self.SQLError.get_error_info())
-        if self.return_code == self.odbc_SQLSvc_EndTransaction_ParamError_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
             raise errors.DatabaseError(self.error_text)
-        if self.return_code == self.odbc_SQLSvc_EndTransaction_InvalidConnection_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_InvalidConnection_exn_:
             raise errors.DatabaseError("Invalid connection:" + "ids_transaction_error")
-        if self.return_code == self.odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_:
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_:
             raise errors.DatabaseError("autocommit_txn_in_progress")
         raise errors.DatabaseError("ids_unknown_reply_error")

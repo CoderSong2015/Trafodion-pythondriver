@@ -3,6 +3,7 @@ import threading
 
 from . import authentication
 from . import errors
+from .constants import CONNECTION
 from .abstracts import TrafConnectionAbstract
 from .cursor import CursorBase, TrafCursor
 from .struct_def import (
@@ -119,10 +120,10 @@ class TrafConnection(TrafConnectionAbstract):
 
         #  get connection
 
-        option_flags1 = self.INCONTEXT_OPT1_CLIENT_USERNAME
+        option_flags1 = CONNECTION.INCONTEXT_OPT1_CLIENT_USERNAME
         option_flags2 = 0
         if set_timestamp:
-            option_flags1 |= self.INCONTEXT_OPT1_CERTIFICATE_TIMESTAMP
+            option_flags1 |= CONNECTION.INCONTEXT_OPT1_CERTIFICATE_TIMESTAMP
 
         if self._session_name is not None and len(self._session_name) > 0:
             option_flags1 |= self.INCONTEXT_OPT1_SESSIONNAME
@@ -190,9 +191,9 @@ class TrafConnection(TrafConnectionAbstract):
             buf_view = Convert.put_int(option_flags1, buf_view, little=True)
             buf_view = Convert.put_int(option_flags2, buf_view, little=True)
 
-            if (option_flags1 & self.INCONTEXT_OPT1_SESSIONNAME) is not 0:
+            if (option_flags1 & CONNECTION.INCONTEXT_OPT1_SESSIONNAME) is not 0:
                 buf_view = Convert.put_string(session_name, buf_view, little=True)
-            if (option_flags1 & self.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
+            if (option_flags1 & CONNECTION.INCONTEXT_OPT1_CLIENT_USERNAME) is not 0:
                 buf_view = Convert.put_string(client_user, buf_view, little=True)
             return buf
         except:
@@ -329,10 +330,10 @@ class TrafConnection(TrafConnectionAbstract):
         version[0].componentId = 20
         version[0].majorVersion = majorVersion
         version[0].minorVersion = minorVersion
-        version[0].buildId = buildId | self.ROWWISE_ROWSET | self.CHARSET | self.PASSWORD_SECURITY
+        version[0].buildId = buildId | CONNECTION.ROWWISE_ROWSET | CONNECTION.CHARSET | CONNECTION.PASSWORD_SECURITY
 
         if (self.property.DelayedErrorMode):
-            version[0].buildId |= self.STREAMING_DELAYEDERROR_MODE
+            version[0].buildId |= CONNECTION.STREAMING_DELAYEDERROR_MODE
 
     # Entry[1] is the Application Version information
         version[1].componentId = 8
@@ -364,9 +365,7 @@ class TrafConnection(TrafConnectionAbstract):
         if self._auto_commit:
             raise errors.DatabaseError("auto commit has opened")
 
-        # SQL_COMMIT    0
-        # SQL_ROLLBACK  1
-        self._end_transaction(0)
+        self._end_transaction(CONNECTION.SQL_COMMIT)
 
     def cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None,
                dictionary=None, named_tuple=None):
@@ -486,10 +485,10 @@ class TrafConnection(TrafConnectionAbstract):
         c.init_reply(buf_view)
 
         # TODO 3196 - NDCS transaction for SPJ
-        if connection_option == self.SQL_ATTR_JOIN_UDR_TRANSACTION:
+        if connection_option == CONNECTION.SQL_ATTR_JOIN_UDR_TRANSACTION:
             transId_ = int(value_num_str)
             suspendRequest_ = True
-        elif connection_option == self.SQL_ATTR_SUSPEND_UDR_TRANSACTION:
+        elif connection_option == CONNECTION.SQL_ATTR_SUSPEND_UDR_TRANSACTION:
             transId_ = int(value_num_str)
             suspendRequest_ = True
 
@@ -530,7 +529,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         self._in_context.autoCommit = 1 if auto_commit else 0
         try:
-            self._set_connection_attr(self.SQL_ATTR_AUTOCOMMIT, self._in_context.autoCommit,
+            self._set_connection_attr(CONNECTION.SQL_ATTR_AUTOCOMMIT, self._in_context.autoCommit,
                                       str(self._in_context.autoCommit))
         except Exception:
             self._auto_commit = save_commit
