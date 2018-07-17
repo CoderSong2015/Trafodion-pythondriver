@@ -490,16 +490,44 @@ class Convert:
     @staticmethod
     def get_short(buf_view: memoryview, little=False):
         if not little:
-            return (struct.unpack('!h', buf_view[0:2])[0], buf_view[2:])
+            return struct.unpack('!h', buf_view[0:2])[0], buf_view[2:]
         else:
-            return (struct.unpack('<h', buf_view[0:2])[0], buf_view[2:])
+            return struct.unpack('<h', buf_view[0:2])[0], buf_view[2:]
+
+    @staticmethod
+    def get_ushort(buf_view: memoryview, little=False):
+        if not little:
+            return struct.unpack('!H', buf_view[0:2])[0], buf_view[2:]
+        else:
+            return struct.unpack('<H', buf_view[0:2])[0], buf_view[2:]
 
     @staticmethod
     def get_int(buf_view: memoryview, little=False):
         if not little:
-            return (struct.unpack('!i', buf_view[0:4])[0], buf_view[4:])
+            return struct.unpack('!i', buf_view[0:4])[0], buf_view[4:]
         else:
-            return (struct.unpack('<i', buf_view[0:4])[0], buf_view[4:])
+            return struct.unpack('<i', buf_view[0:4])[0], buf_view[4:]
+
+    @staticmethod
+    def get_uint(buf_view: memoryview, little=False):
+        if not little:
+            return struct.unpack('!I', buf_view[0:4])[0], buf_view[4:]
+        else:
+            return struct.unpack('<I', buf_view[0:4])[0], buf_view[4:]
+
+    @staticmethod
+    def get_longlong(buf_view: memoryview, little=False):
+        if not little:
+            return struct.unpack('!q', buf_view[0:8])[0], buf_view[8:]
+        else:
+            return struct.unpack('<q', buf_view[0:8])[0], buf_view[8:]
+
+    @staticmethod
+    def get_ulonglong(buf_view: memoryview, little=False):
+        if not little:
+            return struct.unpack('!Q', buf_view[0:8])[0], buf_view[8:]
+        else:
+            return struct.unpack('<Q', buf_view[0:8])[0], buf_view[8:]
 
     @classmethod
     def get_string(cls, buf_view: memoryview, little=False, byteoffset=False):
@@ -510,29 +538,29 @@ class Convert:
         offset = 1 if not byteoffset else 0
         if length is not 0:
             to_bytes = buf_view[0:length - offset].tobytes()
-            return (to_bytes.decode("utf-8"), buf_view[length + (1 - offset):])
+            return to_bytes.decode("utf-8"), buf_view[length + (1 - offset):]
         else:
-            return ('', buf_view)
+            return '', buf_view
 
     @staticmethod
     def get_bytes(buf_view: memoryview, length=0, little=True):
 
         if length is not 0:
             to_bytes = buf_view[0:length].tobytes()
-            return (to_bytes, buf_view[length:])
+            return to_bytes, buf_view[length:]
         else:
             length, buf_view = Convert.get_int(buf_view, little=little)
             to_bytes = buf_view[0:length].tobytes()
-            return (to_bytes, buf_view[length:])
+            return to_bytes, buf_view[length:]
 
     @classmethod
     def get_char(cls, buf_view: memoryview):
-        return (struct.unpack('!c', buf_view[0:1])[0], buf_view[1:])
+        return struct.unpack('!c', buf_view[0:1])[0], buf_view[1:]
 
     @classmethod
     def get_timestamp(cls, buf_view: memoryview):
         time = buf_view[0:8].tobytes()
-        return (time, buf_view[8:])
+        return time, buf_view[8:]
 
     @staticmethod
     def turple_to_bytes(tur: tuple)-> bytes:

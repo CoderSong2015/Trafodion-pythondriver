@@ -14,7 +14,6 @@ from .struct_def import (
 from .transport import Transport, Convert
 
 
-
 class TrafConnection(TrafConnectionAbstract):
     """
         Connection to a mxosrvr

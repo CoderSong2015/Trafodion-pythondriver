@@ -343,7 +343,7 @@ class Statement:
         else:
             first_word = query.split(" ")[0].upper()
 
-        return type_dict[first_word]
+        return type_dict.setdefault(first_word, Transport.TYPE_UNKNOWN)
 
     def execute_all(self, operation, execute_type, params):
         # make for prepared statement

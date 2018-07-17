@@ -1099,12 +1099,6 @@ class SQLDataValueDef:
             if param_values > Transport.max_ulong or param_values < Transport.min_ulong:
                 raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
             _ = Convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
             return None
 
@@ -1471,7 +1465,7 @@ class FetchReply:
                     column_value = None
                 else:
                     column_value = self._get_execute_to_fetch_string(nonull_value_offset, out_desc_list[column_x])
-                    if not column_value:
+                    if column_value is None:
                         raise errors.InternalError("column value is null")
 
                 column_result_list.append(column_value)
@@ -1518,41 +1512,39 @@ class FetchReply:
         if sql_data_type == STRUCTDEF.SQLTYPECODE_INTERVAL:
             pass
 
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER:
-            ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
-            # TODO scale of big decimal
-
         if sql_data_type == STRUCTDEF.SQLTYPECODE_TINYINT_UNSIGNED:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_TINYINT:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_SMALLINT:
-            pass
+            ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == STRUCTDEF.SQLTYPECODE_SMALLINT_UNSIGNED:
-            pass
+            ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER:
-            pass
+            ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
+            # TODO scale of big decimal
         if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER_UNSIGNED:
-            pass
+            ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
+            # TODO scale of big decimal
         if sql_data_type == STRUCTDEF.SQLTYPECODE_LARGEINT:
-            pass
+            ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == STRUCTDEF.SQLTYPECODE_LARGEINT_UNSIGNED:
-            pass
+            ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == STRUCTDEF.SQLTYPECODE_NUMERIC or \
             sql_data_type == STRUCTDEF.SQLTYPECODE_NUMERIC_UNSIGNED:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_UNSIGNED or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+            sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_UNSIGNED or \
+            sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE or \
+            sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_REAL:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_DOUBLE or sql_data_type == STRUCTDEF.SQLTYPECODE_FLOAT:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_BIT or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_BITVAR or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
+            sql_data_type == STRUCTDEF.SQLTYPECODE_BITVAR or \
+            sql_data_type == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
             pass
         return ret_obj
 
@@ -1625,7 +1617,6 @@ class PrepareReply:
 
 
 class TerminateReply:
-
 
     def __init__(self):
         self.return_code = 0
