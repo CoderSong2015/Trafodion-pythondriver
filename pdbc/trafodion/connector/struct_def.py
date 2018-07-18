@@ -5,7 +5,7 @@ from decimal import Decimal
 from . import errors
 
 from .transport import Transport, Convert
-from .constants import CONNECTION, STRUCTDEF
+from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
 
 class ConnectionContextDef:
     def __init__(self, conn):
@@ -816,7 +816,7 @@ class SQLDataValueDef:
         dataOffset = 2
         shortLength = False
 
-        if dataType == STRUCTDEF.SQLTYPECODE_VARCHAR_WITH_LENGTH:
+        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH:
             shortLength = precision < 2**15
             dataOffset = 2 if shortLength else 4
             dataLength += dataOffset
@@ -824,7 +824,7 @@ class SQLDataValueDef:
             if dataLength % 2 != 0:
                 dataLength = dataLength + 1
 
-        elif dataType == STRUCTDEF.SQLTYPECODE_BLOB or dataType == STRUCTDEF.SQLTYPECODE_CLOB:
+        elif dataType == FIELD_TYPE.SQLTYPECODE_BLOB or dataType == FIELD_TYPE.SQLTYPECODE_CLOB:
             shortLength = False
             dataOffset = 4
             dataLength += dataOffset
@@ -843,7 +843,7 @@ class SQLDataValueDef:
             _ = Convert.put_short(-1, buf_view[nullValue:], True)
             return buf_view
 
-        if dataType == STRUCTDEF.SQLTYPECODE_CHAR:
+        if dataType == FIELD_TYPE.SQLTYPECODE_CHAR:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
@@ -895,7 +895,7 @@ class SQLDataValueDef:
                         "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
 
             return None
-        if dataType == STRUCTDEF.SQLTYPECODE_VARCHAR:
+        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
@@ -931,7 +931,7 @@ class SQLDataValueDef:
                     "invalid_string_parameter input data is longer than the length for column: {0}".format(
                         param_count))
             return None
-        if dataType == STRUCTDEF.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == STRUCTDEF.SQLTYPECODE_VARCHAR_LONG:
+        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
@@ -971,7 +971,7 @@ class SQLDataValueDef:
                     "invalid_string_parameter input data is longer than the length for column: {0}".format(
                         param_count))
             return None
-        if dataType == STRUCTDEF.SQLTYPECODE_INTEGER:
+        if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -991,7 +991,7 @@ class SQLDataValueDef:
             _ = Convert.put_int(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == STRUCTDEF.SQLTYPECODE_INTEGER_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1010,7 +1010,7 @@ class SQLDataValueDef:
 
             _ = Convert.put_uint(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == STRUCTDEF.SQLTYPECODE_TINYINT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT:
             # TODO have not finished
             """
                         if not isinstance(param_values,(int, float)):
@@ -1026,10 +1026,10 @@ class SQLDataValueDef:
                         """
             raise errors.NotSupportedError("not support tinyint")
 
-        if dataType == STRUCTDEF.SQLTYPECODE_TINYINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
             raise errors.NotSupportedError("not support utinyint")
 
-        if dataType == STRUCTDEF.SQLTYPECODE_SMALLINT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_SMALLINT:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1049,7 +1049,7 @@ class SQLDataValueDef:
             _ = Convert.put_short(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == STRUCTDEF.SQLTYPECODE_SMALLINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1069,7 +1069,7 @@ class SQLDataValueDef:
             _ = Convert.put_ushort(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == STRUCTDEF.SQLTYPECODE_LARGEINT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_LARGEINT:
             if not isinstance(param_values, (int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1088,7 +1088,7 @@ class SQLDataValueDef:
 
             _ = Convert.put_longlong(param_values, buf_view[noNullValue:], little=True)
             return None
-        if dataType == STRUCTDEF.SQLTYPECODE_LARGEINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
             if not isinstance(param_values, (int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1102,8 +1102,8 @@ class SQLDataValueDef:
             _ = Convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == STRUCTDEF.SQLTYPECODE_DECIMAL or \
-                        dataType == STRUCTDEF.SQLTYPECODE_DECIMAL_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL or \
+                        dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED:
 
             if not isinstance(param_values, (int, str, Decimal)):
                 raise errors.DataError(
@@ -1137,7 +1137,7 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
 
             return buf_view
-        if dataType == STRUCTDEF.SQLTYPECODE_REAL:
+        if dataType == FIELD_TYPE.SQLTYPECODE_REAL:
 
             if not isinstance(param_values, float):
                 raise errors.DataError(
@@ -1148,7 +1148,7 @@ class SQLDataValueDef:
 
             _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == STRUCTDEF.SQLTYPECODE_FLOAT or dataType == STRUCTDEF.SQLTYPECODE_DOUBLE:
+        if dataType == FIELD_TYPE.SQLTYPECODE_FLOAT or dataType == FIELD_TYPE.SQLTYPECODE_DOUBLE:
             if not isinstance(param_values, float):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either float for column: {0}".format(
@@ -1158,17 +1158,17 @@ class SQLDataValueDef:
 
             _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == STRUCTDEF.SQLTYPECODE_NUMERIC or \
-                        dataType == STRUCTDEF.SQLTYPECODE_NUMERIC_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
+                        dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
             pass
 
-        if dataType == STRUCTDEF.SQLTYPECODE_BOOLEAN:
+        if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
             raise errors.NotSupportedError
-        if dataType == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE or \
-                        dataType == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
-                        dataType == STRUCTDEF.SQLTYPECODE_BIT or \
-                        dataType == STRUCTDEF.SQLTYPECODE_BITVAR or \
-                        dataType == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE or \
+                        dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
+                        dataType == FIELD_TYPE.SQLTYPECODE_BIT or \
+                        dataType == FIELD_TYPE.SQLTYPECODE_BITVAR or \
+                        dataType == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
             raise errors.NotSupportedError
 
 
@@ -1484,15 +1484,15 @@ class FetchReply:
         ret_obj = None
         buf_view = memoryview(self.out_values)
         sql_data_type = column_desc.dataType_
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_CHAR:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_CHAR:
             length = column_desc.maxLen_
             ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
 
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_VARCHAR or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_VARCHAR_LONG or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_BLOB or \
-                        sql_data_type == STRUCTDEF.SQLTYPECODE_CLOB:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR or \
+                        sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
+                        sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG or \
+                        sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB or \
+                        sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
 
             short_length = 2 if column_desc.precision_ < 2**15 else 4
             data_offset = nonull_value_offset + short_length
@@ -1509,42 +1509,42 @@ class FetchReply:
 
             ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
 
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTERVAL:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTERVAL:
             pass
 
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_TINYINT_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
             pass
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_TINYINT:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT:
             pass
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_SMALLINT:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT:
             ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_SMALLINT_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
             ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER:
             ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_INTEGER_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
             ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_LARGEINT:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT:
             ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_LARGEINT_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
             ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_NUMERIC or \
-            sql_data_type == STRUCTDEF.SQLTYPECODE_NUMERIC_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
+            sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
             pass
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL or \
-            sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_UNSIGNED or \
-            sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE or \
-            sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL or \
+            sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED or \
+            sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE or \
+            sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
             pass
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_REAL:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_REAL:
             ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_DOUBLE or sql_data_type == STRUCTDEF.SQLTYPECODE_FLOAT:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DOUBLE or sql_data_type == FIELD_TYPE.SQLTYPECODE_FLOAT:
             ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
-        if sql_data_type == STRUCTDEF.SQLTYPECODE_BIT or \
-            sql_data_type == STRUCTDEF.SQLTYPECODE_BITVAR or \
-            sql_data_type == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT or \
+            sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR or \
+            sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
             pass
         return ret_obj
 
