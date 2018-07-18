@@ -310,9 +310,9 @@ class Convert:
     @classmethod
     def float_to_bytedouble(cls, num, little=False):
         if not little:
-            return struct.pack('!f', num)
+            return struct.pack('!d', num)
         else:
-            return struct.pack('<f', num)
+            return struct.pack('<d', num)
 
     @classmethod
     def int_to_byteint(cls, num, little=False):
@@ -490,44 +490,58 @@ class Convert:
     @staticmethod
     def get_short(buf_view: memoryview, little=False):
         if not little:
-            return struct.unpack('!h', buf_view[0:2])[0], buf_view[2:]
+            return struct.unpack('!h', buf_view[0:2].tobytes())[0], buf_view[2:]
         else:
-            return struct.unpack('<h', buf_view[0:2])[0], buf_view[2:]
+            return struct.unpack('<h', buf_view[0:2].tobytes())[0], buf_view[2:]
 
     @staticmethod
     def get_ushort(buf_view: memoryview, little=False):
         if not little:
-            return struct.unpack('!H', buf_view[0:2])[0], buf_view[2:]
+            return struct.unpack('!H', buf_view[0:2].tobytes())[0], buf_view[2:]
         else:
-            return struct.unpack('<H', buf_view[0:2])[0], buf_view[2:]
+            return struct.unpack('<H', buf_view[0:2].tobytes())[0], buf_view[2:]
 
     @staticmethod
     def get_int(buf_view: memoryview, little=False):
         if not little:
-            return struct.unpack('!i', buf_view[0:4])[0], buf_view[4:]
+            return struct.unpack('!i', buf_view[0:4].tobytes())[0], buf_view[4:]
         else:
-            return struct.unpack('<i', buf_view[0:4])[0], buf_view[4:]
+            return struct.unpack('<i', buf_view[0:4].tobytes())[0], buf_view[4:]
 
     @staticmethod
     def get_uint(buf_view: memoryview, little=False):
         if not little:
-            return struct.unpack('!I', buf_view[0:4])[0], buf_view[4:]
+            return struct.unpack('!I', buf_view[0:4].tobytes())[0], buf_view[4:]
         else:
-            return struct.unpack('<I', buf_view[0:4])[0], buf_view[4:]
+            return struct.unpack('<I', buf_view[0:4].tobytes())[0], buf_view[4:]
 
     @staticmethod
     def get_longlong(buf_view: memoryview, little=False):
         if not little:
-            return struct.unpack('!q', buf_view[0:8])[0], buf_view[8:]
+            return struct.unpack('!q', buf_view[0:8].tobytes())[0], buf_view[8:]
         else:
-            return struct.unpack('<q', buf_view[0:8])[0], buf_view[8:]
+            return struct.unpack('<q', buf_view[0:8].tobytes())[0], buf_view[8:]
 
     @staticmethod
     def get_ulonglong(buf_view: memoryview, little=False):
         if not little:
-            return struct.unpack('!Q', buf_view[0:8])[0], buf_view[8:]
+            return struct.unpack('!Q', buf_view[0:8].tobytes())[0], buf_view[8:]
         else:
-            return struct.unpack('<Q', buf_view[0:8])[0], buf_view[8:]
+            return struct.unpack('<Q', buf_view[0:8].tobytes())[0], buf_view[8:]
+
+    @staticmethod
+    def get_float(buf_view: memoryview, little=False):
+        if not little:
+            return struct.unpack('!f', buf_view[0:4].tobytes())[0], buf_view[4:]
+        else:
+            return struct.unpack('<f', buf_view[0:4].tobytes())[0], buf_view[4:]
+
+    @staticmethod
+    def get_double(buf_view: memoryview, little=False):
+        if not little:
+            return struct.unpack('!d', buf_view[0:8].tobytes())[0], buf_view[8:]
+        else:
+            return struct.unpack('<d', buf_view[0:8].tobytes())[0], buf_view[8:]
 
     @classmethod
     def get_string(cls, buf_view: memoryview, little=False, byteoffset=False):
@@ -555,7 +569,7 @@ class Convert:
 
     @classmethod
     def get_char(cls, buf_view: memoryview):
-        return struct.unpack('!c', buf_view[0:1])[0], buf_view[1:]
+        return struct.unpack('!c', buf_view[0:1].tobytes())[0], buf_view[1:]
 
     @classmethod
     def get_timestamp(cls, buf_view: memoryview):

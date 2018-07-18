@@ -1539,9 +1539,9 @@ class FetchReply:
             sql_data_type == STRUCTDEF.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
             pass
         if sql_data_type == STRUCTDEF.SQLTYPECODE_REAL:
-            pass
+            ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == STRUCTDEF.SQLTYPECODE_DOUBLE or sql_data_type == STRUCTDEF.SQLTYPECODE_FLOAT:
-            pass
+            ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == STRUCTDEF.SQLTYPECODE_BIT or \
             sql_data_type == STRUCTDEF.SQLTYPECODE_BITVAR or \
             sql_data_type == STRUCTDEF.SQLTYPECODE_BPINT_UNSIGNED:
