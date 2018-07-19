@@ -1,6 +1,6 @@
 import struct
 from . import errors
-
+from decimal import Decimal
 
 class Transport:
     size_long = 8
@@ -487,6 +487,17 @@ class Convert:
         self.put_data_memview(buf_view, data)
         return buf_view[1:]
 
+    @classmethod
+    def put_numeric(cls, num, buf_view: memoryview, scale, max_len, little=False):
+
+        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale)
+
+        save_buf_view = buf_view
+        for x in data_lits:
+            buf_view = cls.put_ushort(x, buf_view, little=True)
+
+        return sign
+
     @staticmethod
     def get_short(buf_view: memoryview, little=False):
         if not little:
@@ -576,6 +587,12 @@ class Convert:
         time = buf_view[0:8].tobytes()
         return time, buf_view[8:]
 
+    @classmethod
+    def get_numeric(cls, buf_view: memoryview, max_len, scale):
+        numeric_bytes = buf_view[0:max_len].tobytes()
+        data = cls.convert_sqlbignum_to_bigdecimal(numeric_bytes, scale)
+        return data
+
     @staticmethod
     def turple_to_bytes(tur: tuple)-> bytes:
         s = ''
@@ -583,3 +600,90 @@ class Convert:
             s = s + chr(x)
         return s.encode("utf-8")
 
+    @classmethod
+    def convert_sqlbignum_to_bigdecimal(cls, numeric_bytes, scale, is_unsigned=False):
+        result = 0
+        dataInShorts = []
+        dataInShorts_len = len(numeric_bytes) // 2
+        buf_view = memoryview(numeric_bytes)
+        for i in range(dataInShorts_len):
+            # copy data
+            data, _= cls.get_ushort(buf_view[i*2:], little=True)
+            dataInShorts.append(data)
+        negative = False
+        if not is_unsigned:
+            negative = (dataInShorts[dataInShorts_len - 1] & 0x8000) > 0
+            dataInShorts[dataInShorts_len - 1] &= 0x0FFF  # force sign to 0, continue normally
+
+        curPos = dataInShorts_len - 1  # start at the end
+        while curPos >= 0 and dataInShorts[curPos] == 0:
+            curPos -= 1
+        remainder = 0
+        digit = 0
+        while curPos >= 0 or dataInShorts[0] >= 10000:
+
+            for j in range(curPos, -1, -1):
+
+                temp = remainder & 0xFFFF
+                temp = temp << 16
+                temp += dataInShorts[j]
+
+                dataInShorts[j] = temp // 10000
+                remainder = temp % 10000
+            #  if we are done with the current 16bits, move on
+            if dataInShorts[curPos] == 0:
+                curPos -= 1
+            # go through the remainder and add each digit to the final String
+
+            result += remainder * 10**digit
+            digit += len(str(remainder))
+            remainder = 0
+        remainder = dataInShorts[0]
+        result += remainder * 10 ** digit
+        if scale > 0:
+            result = result / scale
+
+        return result if not negative else -result
+
+    @classmethod
+    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, is_unsigned=False):
+
+        try:
+            param_values = Decimal(numeric_bytes)
+        except:
+            raise errors.DataError("decimal.ConversionSyntax")
+        if scale > 0:
+            param_values = param_values.fma(10 ** scale, 0)
+
+        sign = 1 if param_values.is_signed() else 0
+
+        param_values = param_values.__abs__()
+        param_values = param_values.to_integral_exact().to_eng_string()
+
+        # iterate through 4 bytes at a time
+        val_len = len(param_values)
+        i = 0
+        ar = []
+        target_list = [0] * 5
+        tar_pos = 1
+        while i < val_len:
+            str_num = param_values[i: i + 4]
+            power = len(str_num)
+            num = int(str_num)
+            i += 4
+
+            temp = target_list[0] * 10 ** power + num
+            target_list[0] = temp & 0xFFFF  # we save only up to 16bits -- the rest gets carried over
+
+            # we do the same thing for the rest of the digits now that we have # an upper bound
+            for x in range(1, 5, 1):
+                t = (temp & 0xFFFF0000) >> 16
+                temp = target_list[x] * 10 ** power + t
+                target_list[x] = temp & 0xFFFF
+
+            carry = (temp & 0xFFFF0000) >> 16
+            if carry > 0:
+                target_list[tar_pos] = carry
+                tar_pos += 1
+
+        return target_list, sign

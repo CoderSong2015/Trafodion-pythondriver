@@ -1132,7 +1132,8 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:],is_data=True)
 
                 # byte -80 : 0xFFFFFFB0
-                _ = Convert.put_bytes(b'\xB0', buf_view[noNullValue:], nolen=True, is_data=True)
+                num, _ = Convert.get_bytes(buf_view[noNullValue:], length=1)
+                _ = Convert.put_bytes(num | 0xB0, buf_view[noNullValue:], nolen=True, is_data=True)
             else:
                 _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
 
@@ -1160,7 +1161,17 @@ class SQLDataValueDef:
 
         if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
                         dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
-            pass
+
+            if not isinstance(param_values, (int, str, Decimal)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or str or decimal for value: {0}".format(
+                        param_values))
+
+            sign = Convert.put_numeric(param_values, buf_view[noNullValue:], scale, max_len)
+            if sign:
+                # byte -80 : 0xFFFFFFB0
+                num, _ = Convert.get_bytes(buf_view[noNullValue + max_len - 1:], length=1)
+                _ = Convert.put_bytes(num | 0x80, buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
 
         if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
             raise errors.NotSupportedError
@@ -1291,7 +1302,7 @@ class ExecuteReply:
 
             self.output_desc_list = []
             for x in range(self.num_resultsets):
-                _, buf_view = Convert.get_int(buf_view, little=True) # stmt handle
+                _, buf_view = Convert.get_int(buf_view, little=True)  # stmt handle
                 stmt_lable, buf_view = Convert.get_string(buf_view, little=True)
                 self.stmt_labels_list.append(stmt_lable)
                 _, buf_view = Convert.get_int(buf_view, little=True)  # long stmt_label_charset
@@ -1344,7 +1355,7 @@ class Descriptor:
         self.version_ = 0
         self.dataType_ = 0   # sql_data_type
         self.datetimeCode_ = 0
-        self.maxLen_ = 0
+        self.maxLen_ = 0    # sqlOctetLength_
         self.precision_ = 0
         self.scale_ = 0
         self.nullInfo_ = 0
@@ -1513,9 +1524,9 @@ class FetchReply:
             pass
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
-            pass
+            ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT:
-            pass
+            ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT:
             ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
@@ -1532,7 +1543,7 @@ class FetchReply:
             ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
-            pass
+            ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.maxLen_, column_desc.scale_)
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE or \
