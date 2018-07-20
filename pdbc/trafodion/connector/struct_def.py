@@ -1129,13 +1129,16 @@ class SQLDataValueDef:
             _ = Convert.put_bytes(padding, buf_view[noNullValue:], nolen=True)
 
             if sign:
-                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:],is_data=True)
+                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], nolen=True, is_data=True)
 
                 # byte -80 : 0xFFFFFFB0
                 num, _ = Convert.get_bytes(buf_view[noNullValue:], length=1)
-                _ = Convert.put_bytes(num | 0xB0, buf_view[noNullValue:], nolen=True, is_data=True)
+
+                _ = Convert.put_bytes(bytes([int(num) | 0xB0]), buf_view[noNullValue:], nolen=True, is_data=True)
+                # _ = Convert.put_bytes(num | 0xB0, buf_view[noNullValue:], nolen=True, is_data=True)
             else:
-                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
+                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], nolen=True,
+                                      is_data=True)
 
             return buf_view
         if dataType == FIELD_TYPE.SQLTYPECODE_REAL:
@@ -1525,34 +1528,54 @@ class FetchReply:
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
             ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT:
             ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT:
             ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
             ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER:
             ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
             ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT:
             ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
             ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
             ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.maxLen_, column_desc.scale_)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
-            pass
+            first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
+            int_first_byte = int.from_bytes(first_byte, byteorder='little')
+            if int_first_byte & 0x80:
+                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.maxLen_,
+                                               little=True)
+                ret_obj = '-' + (bytes([ret_obj[0] & 0x7F]) + ret_obj[1:]).decode()
+                ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale_)
+            else:
+                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.maxLen_, little=True)
+                ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale_)
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_REAL:
             ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_DOUBLE or sql_data_type == FIELD_TYPE.SQLTYPECODE_FLOAT:
             ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
+
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR or \
             sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:

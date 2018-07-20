@@ -434,7 +434,10 @@ class TrafConnection(TrafConnectionAbstract):
         pass
 
     def rollback(self):
-        return 3
+        if not self.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
+        self._end_transaction(CONNECTION.SQL_ROLLBACK)
 
     def get_seq(self):
         self._stmt_name_lock.acquire()

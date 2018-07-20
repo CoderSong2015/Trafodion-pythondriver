@@ -603,42 +603,42 @@ class Convert:
     @classmethod
     def convert_sqlbignum_to_bigdecimal(cls, numeric_bytes, scale, is_unsigned=False):
         result = 0
-        dataInShorts = []
-        dataInShorts_len = len(numeric_bytes) // 2
+        data_shorts = []
+        data_shorts_len = len(numeric_bytes) // 2
         buf_view = memoryview(numeric_bytes)
-        for i in range(dataInShorts_len):
+        for i in range(data_shorts_len):
             # copy data
             data, _= cls.get_ushort(buf_view[i*2:], little=True)
-            dataInShorts.append(data)
+            data_shorts.append(data)
         negative = False
         if not is_unsigned:
-            negative = (dataInShorts[dataInShorts_len - 1] & 0x8000) > 0
-            dataInShorts[dataInShorts_len - 1] &= 0x0FFF  # force sign to 0, continue normally
+            negative = (data_shorts[data_shorts_len - 1] & 0x8000) > 0
+            data_shorts[data_shorts_len - 1] &= 0x0FFF  # force sign to 0, continue normally
 
-        curPos = dataInShorts_len - 1  # start at the end
-        while curPos >= 0 and dataInShorts[curPos] == 0:
-            curPos -= 1
+        cur_pos = data_shorts_len - 1  # start at the end
+        while cur_pos >= 0 and data_shorts[cur_pos] == 0:
+            cur_pos -= 1
         remainder = 0
         digit = 0
-        while curPos >= 0 or dataInShorts[0] >= 10000:
+        while cur_pos >= 0 or data_shorts[0] >= 10000:
 
-            for j in range(curPos, -1, -1):
+            for j in range(cur_pos, -1, -1):
 
                 temp = remainder & 0xFFFF
                 temp = temp << 16
-                temp += dataInShorts[j]
+                temp += data_shorts[j]
 
-                dataInShorts[j] = temp // 10000
+                data_shorts[j] = temp // 10000
                 remainder = temp % 10000
             #  if we are done with the current 16bits, move on
-            if dataInShorts[curPos] == 0:
-                curPos -= 1
+            if data_shorts[cur_pos] == 0:
+                cur_pos -= 1
             # go through the remainder and add each digit to the final String
 
             result += remainder * 10**digit
             digit += len(str(remainder))
             remainder = 0
-        remainder = dataInShorts[0]
+        remainder = data_shorts[0]
         result += remainder * 10 ** digit
         if scale > 0:
             result = result / scale
