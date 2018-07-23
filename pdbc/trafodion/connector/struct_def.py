@@ -1494,6 +1494,7 @@ class FetchReply:
         self.out_values = None
         self.rows_fetched = len(self.result_set)
 
+
     def _get_execute_to_fetch_string(self, nonull_value_offset, column_desc: Descriptor):
         ret_obj = None
         buf_view = memoryview(self.out_values)

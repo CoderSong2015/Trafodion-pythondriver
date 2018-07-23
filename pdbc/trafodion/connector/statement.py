@@ -73,7 +73,7 @@ class Statement:
                                          input_value_list, tx_id,
                                          self._cursor._using_rawrowset)
 
-        return self._descriptor.rows_affected
+        return self._descriptor
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
 
@@ -364,7 +364,7 @@ class PreparedStatement(Statement):
 
         # second: execute
         self.execute(operation, execute_type, params)
-        pass
+        return self._descriptor
 
     def _prepare(self, operation):
 

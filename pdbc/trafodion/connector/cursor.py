@@ -200,9 +200,11 @@ class TrafCursor(CursorBase):
 
         try:
             if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
-                self._st.execute(_operation, self._execute_type)
+                descriptor = self._st.execute(_operation, self._execute_type)
             else:
-                self._st.execute_all(_operation, self._execute_type, params)
+                descriptor = self._st.execute_all(_operation, self._execute_type, params)
+
+            self._map_descriptor(descriptor)
         except errors.InterfaceError:
             #TODO
             # if self._connection._have_next_result:
@@ -213,6 +215,26 @@ class TrafCursor(CursorBase):
         # reset end_data when execute called successfully, which is needed by self.fetchone()
         self._end_data = False
         return None
+
+    def _map_descriptor(self, descriptor):
+        out_desc_list = descriptor.output_desc_list
+
+        if len(out_desc_list) > 0:
+            self._description = []
+            for x in out_desc_list:
+                temp_list = []
+                temp_list.append(x.colHeadingNm_)  # name
+                temp_list.append(x.dataType_)       #  type_code
+                temp_list.append(x.maxLen_)        #  display_size
+                temp_list.append(x.row_length)     #  internal_size
+                temp_list.append(x.precision_)     #  precision
+                temp_list.append(x.scale_)         #  scale
+                temp_list.append(None)             #  null_ok
+
+                self._description.append(temp_list)
+
+        else:
+            self._description = None
 
     def _generate_stmtlabel(self):
 
