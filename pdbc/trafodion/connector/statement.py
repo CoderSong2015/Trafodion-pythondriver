@@ -32,11 +32,11 @@ class Statement:
         self.stmt_type = 0  # EXTERNAL_STMT
         pass
 
-    def execute(self, query: bytes, execute_api, params=None):
+    def execute(self, query: bytes, execute_api, params=None, is_executemany=False):
         # sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
         self._cursor_name = self._cursor._cursor_name
         sql_async_enable = self._sql_async_enable
-        input_row_count = self._handle_params(params)  #used for batch insert
+        input_row_count = self._handle_params(params, is_executemany)  #used for batch insert
         max_rowset_size = self._max_rowset_size
         sqlstring = query
         sqlstring_charset = 1
@@ -53,16 +53,19 @@ class Statement:
             txId = stmt.connection_.transactionToJoin;
         """
 
+
         input_value_list = SQLValueListDef()
 
-        if (execute_api == Transport.SRVR_API_SQLEXECDIRECT):
-            self.sql_stmt_type_ = self._get_statement_type(sqlstring)
+        self.sql_stmt_type_ = self._get_statement_type(sqlstring, params)
+        if execute_api == Transport.SRVR_API_SQLEXECDIRECT:
+
             # self.set_transaction_status(stmt.connection_, sql)
             self._outputDesc_ = None  # clear the output descriptors
 
     #if (.usingRawRowset_):
     #else:
-        input_data_value = SQLDataValueDef.fill_in_sql_values(self._descriptor, input_row_count, params)
+        input_data_value = SQLDataValueDef.fill_in_sql_values(self._descriptor, input_row_count, params,
+                                                              is_executemany=is_executemany)
 
         self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count,
                                          max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
@@ -77,11 +80,19 @@ class Statement:
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
 
-    def _handle_params(self, params):
-        if params:
-            return 1
-        else:
+    def _handle_params(self, params, is_executemany):
+        if not params:
             return 0
+        if not isinstance(params, (list, tuple)):
+            raise errors.DataError("Parameters should be list or tuple")
+        if is_executemany:
+            for x in params:
+                if not isinstance(x, tuple):
+                    raise errors.DataError("Parameters contained in params of executemany should be tuple")
+            return len(params)
+        else:
+            # TODO check parameters
+            return 1
 
     def fetch(self, row_count=None):
 
@@ -241,7 +252,7 @@ class Statement:
 
             if not user_buffer:
                 wlength += input_data_value.sizeof()
-                wlength += Transport.size_int + Transport.size_int + 1 # transId
+                wlength += Transport.size_int + Transport.size_int + 1  # transId
 
             buf = bytearray(b'')
 
@@ -291,7 +302,7 @@ class Statement:
         pass
 
     @staticmethod
-    def _get_statement_type(query):
+    def _get_statement_type(query, params):
 
         # TODO There are different mode in trafodion
         # MODE_SQL\MODE_WMS\MODE_CMD
@@ -343,9 +354,13 @@ class Statement:
         else:
             first_word = query.split(" ")[0].upper()
 
-        return type_dict.setdefault(first_word, Transport.TYPE_UNKNOWN)
+        ans = type_dict.setdefault(first_word, Transport.TYPE_UNKNOWN)
+        if ans == Transport.TYPE_INSERT and params:
+            return Transport.TYPE_INSERT_PARAM
+        else:
+            return ans
 
-    def execute_all(self, operation, execute_type, params):
+    def execute_all(self, operation, execute_type, params, is_executemany=False):
         # make for prepared statement
         pass
 
@@ -357,13 +372,13 @@ class PreparedStatement(Statement):
         self._descriptor = None
         pass
 
-    def execute_all(self, operation, execute_type, params):
+    def execute_all(self, operation, execute_type, params, is_executemany=False):
 
         # first: prepare
         self._prepare(operation)
 
         # second: execute
-        self.execute(operation, execute_type, params)
+        self.execute(operation, execute_type, params, is_executemany=is_executemany)
         return self._descriptor
 
     def _prepare(self, operation):

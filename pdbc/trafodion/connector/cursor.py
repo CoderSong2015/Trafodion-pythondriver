@@ -114,6 +114,12 @@ class CursorBase(TrafCursorAbstract):
         """
         return self._last_insert_id
 
+    def setinputsizes(self, sizes: int):
+        pass
+
+    def setoutputsize(self, size_column: list):
+        pass
+
 
 class TrafCursor(CursorBase):
     def __init__(self, connection=None):
@@ -198,14 +204,11 @@ class TrafCursor(CursorBase):
             self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
             self._st = Statement(self._connection, self)
 
-        if multi:
-            pass
-
         try:
             if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
                 descriptor = self._st.execute(_operation, self._execute_type)
             else:
-                descriptor = self._st.execute_all(_operation, self._execute_type, params)
+                descriptor = self._st.execute_all(_operation, self._execute_type, params, is_executemany=multi)
 
             self._map_descriptor_and_rowcount(descriptor)
         except errors.InterfaceError:
@@ -219,7 +222,9 @@ class TrafCursor(CursorBase):
         self._end_data = False
         return None
 
-    def _map_descriptor(self, descriptor):
+    def executemany(self, operation, seq_params):
+        self.execute(operation, seq_params, multi=True)
+    def _map_descriptor_and_rowcount(self, descriptor):
         out_desc_list = descriptor.output_desc_list
 
         if len(out_desc_list) > 0:

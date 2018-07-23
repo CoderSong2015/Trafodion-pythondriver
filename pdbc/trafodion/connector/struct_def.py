@@ -757,17 +757,18 @@ class SQLDataValueDef:
         return buf_view
 
     @classmethod
-    def fill_in_sql_values(cls, describer, param_rowcount, param_values):
+    def fill_in_sql_values(cls, describer, param_rowcount, param_values, is_executemany=False):
         data_value = SQLDataValueDef()
 
         #TODO handle param_values
-        if (param_rowcount == 0 and param_values is not None and  len(param_values) > 0):
-            param_rowcount = 1 # fake a single row if we are doing inputParams
+        if param_rowcount == 0 and param_values is not None and len(param_values) > 0:
+            param_rowcount = 1  # fake a single row if we are doing inputParams
         # for an SPJ
 
         param_count = 0
         if param_values is not None:
-            param_count = len(param_values)
+            param_count = len(param_values[0]) if is_executemany else len(param_values)
+
         # TODO: we should really figure out WHY this could happen
 
         row_len = 0
@@ -785,10 +786,10 @@ class SQLDataValueDef:
                 data_value.buffer = bytearray(buf_len)
                 buf_view = memoryview(data_value.buffer)
                 for row in range(param_rowcount):
+                    row_value = param_values[row] if is_executemany else param_values
                     for col in range(param_count):
                         _ = cls.Convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
-                                                              param_values[col],
-                                                              row, buf_view)
+                                                      row_value[col], row, buf_view)
 
         data_value.length = row_len * param_rowcount
 
