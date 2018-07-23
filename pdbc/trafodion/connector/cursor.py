@@ -102,6 +102,9 @@ class CursorBase(TrafCursorAbstract):
     def rowcount(self):
         """Returns the number of rows produced or affected
         Returns an integer.
+        
+        PS: In Trafodion you could not get the number of rows you select before you fetch
+            So here rowcount only represent the rows affected.
         """
         return self._rowcount
 
@@ -204,7 +207,7 @@ class TrafCursor(CursorBase):
             else:
                 descriptor = self._st.execute_all(_operation, self._execute_type, params)
 
-            self._map_descriptor(descriptor)
+            self._map_descriptor_and_rowcount(descriptor)
         except errors.InterfaceError:
             #TODO
             # if self._connection._have_next_result:
@@ -235,6 +238,8 @@ class TrafCursor(CursorBase):
 
         else:
             self._description = None
+
+        self._rowcount = descriptor.rows_affected
 
     def _generate_stmtlabel(self):
 
