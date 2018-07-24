@@ -4,12 +4,12 @@ import os
 import sys
 
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 
 except:
     from distutils.core import setup
 
-version = '0.0.1'
+version = '0.0.2'
 
 setup(
 
@@ -23,7 +23,7 @@ setup(
     url="https://github.com/CoderSong2015/Trafodion-pythondriver",
     author='Haolin Song',
     author_email='haolin.song@outlook.com',
-    packages=['pdbc', ],
+    packages=find_packages(exclude=['tests*']),
     install_requires=[
         "cryptography",
     ],
