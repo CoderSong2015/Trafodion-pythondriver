@@ -16,3 +16,4 @@ config.py
 mytest.py
 connecttest.py
 venv
+PyTrafodion.egg-info
