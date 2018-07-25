@@ -1,5 +1,5 @@
 
-import os
+import io
 
 import sys
 
@@ -8,6 +8,9 @@ try:
 
 except:
     from distutils.core import setup
+
+with io.open('./README.rst', encoding='utf-8') as f:
+    readme = f.read()
 
 version = '0.0.2'
 
@@ -19,7 +22,7 @@ setup(
 
     description='Pure Python Trafodion Driver',
 
-    long_description="TODO",
+    long_description=readme,
     url="https://github.com/CoderSong2015/Trafodion-pythondriver",
     author='Haolin Song',
     author_email='haolin.song@outlook.com',
