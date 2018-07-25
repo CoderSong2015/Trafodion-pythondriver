@@ -90,7 +90,7 @@ class TestModuleInterface(unittest.TestCase):
         self.assertTrue(hasattr(connector, 'InternalError'))
 
     def test_exception_ProgramingError(self):
-        self.assertTrue(hasattr(connector, 'ProgramingError'))
+        self.assertTrue(hasattr(connector, 'ProgrammingError'))
 
     def test_exception_NotSupportedError(self):
         self.assertTrue(hasattr(connector, 'NotSupportedError'))
