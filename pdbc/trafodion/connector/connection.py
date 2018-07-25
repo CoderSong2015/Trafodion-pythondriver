@@ -51,22 +51,22 @@ class TrafConnection(TrafConnectionAbstract):
         self._dialogue_id = self.mxosrvr_info.dialogue_id
         
         if self.mxosrvr_info.security_enabled:
-            return_code = self.secure_login()
+            return_code = self._secure_login()
             if return_code == Transport.SQL_SUCCESS:
                 self._connecte_status = 1
         else:
-            self.old_encrypt_password()
+            self._old_encrypt_password()
             self.init_diag(True , False)
         #TODO self._get_connection() get connection from mxosrvr
 
         #TODO
 
-    def secure_login(self):
+    def _secure_login(self):
         #  if there is no certificate in local system, downloading
         #  if from mxosrvr first.
         #  now download certificate every time
 
-        proc_info = self.create_proc_info(self.mxosrvr_info.server_process_id,
+        proc_info = self._create_proc_info(self.mxosrvr_info.server_process_id,
                                          self.mxosrvr_info.server_node_id,
                                          self.mxosrvr_info.timestamp)
 
@@ -74,16 +74,16 @@ class TrafConnection(TrafConnectionAbstract):
 
         # TODO init directory and filename in property
         self.secpwd = authentication.SecPwd('', '', False, self.mxosrvr_info.cluster_name, proc_info)
-        init_reply = self.download_cer()
+        init_reply = self._download_cer()
         #  TODO save certificate into file
         try:
-            self._user_desc.password = self.encrypt_password(init_reply)
+            self._user_desc.password = self._encrypt_password(init_reply)
         except:
             raise errors.DataError("encrypt error")
-        init_reply = self.init_diag(True, False)
+        init_reply = self._init_diag(True, False)
         return init_reply.exception_nr
 
-    def create_proc_info(self, server_process_id,
+    def _create_proc_info(self, server_process_id,
                          server_node_id,
                          timestamp: bytes,
                          )-> bytes:
@@ -93,7 +93,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         return proc
 
-    def encrypt_password(self, init_reply):
+    def _encrypt_password(self, init_reply):
 
         self.secpwd.open_certificate(certificate=init_reply.out_context.certificate)
         #out_context = init_reply.out_context
@@ -104,16 +104,16 @@ class TrafConnection(TrafConnectionAbstract):
         except:
             raise errors.DataError
 
-    def download_cer(self):
+    def _download_cer(self):
         # attempt download
         self._in_context.connectOptions = ''
-        init_reply = self.init_diag(True, True)
+        init_reply = self._init_diag(True, True)
         return init_reply
 
-    def old_encrypt_password(self):
+    def _old_encrypt_password(self):
         pass
 
-    def init_diag(self, set_timestamp, download_cert: bool):
+    def _init_diag(self, set_timestamp, download_cert: bool):
 
         #  get connection
 
@@ -138,7 +138,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         if self._mxosrvr_conn is None:
             self._mxosrvr_conn = self._get_connection(self.mxosrvr_info.server_ip_address, self.mxosrvr_info.server_port)
-        data = self._get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, self._mxosrvr_conn)
+        data = self.get_from_server(Transport.SRVR_API_SQLCONNECT, wbuffer, self._mxosrvr_conn)
 
         init_reply = self._extract_mxosrvr_data(data)
         # TODO init connection information to property
@@ -211,14 +211,14 @@ class TrafConnection(TrafConnectionAbstract):
                                           0x10000000
                                           )
         master_conn = self._get_connection(master_host, master_port)
-        data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
+        data = self.get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
         connect_reply = self._extract_master_data(data)
         if not master_conn:
             #error handle
             pass
         return connect_reply
 
-    def _get_from_server(self, operation_id, wbuffer, conn):
+    def get_from_server(self, operation_id, wbuffer, conn):
 
         # TODO need compress
         # ...
@@ -316,7 +316,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         return user_desc
 
-    def get_version(self,process_id):
+    def get_version(self, process_id):
         majorVersion = 3
         minorVersion = 0
         buildId = 0
@@ -329,7 +329,7 @@ class TrafConnection(TrafConnectionAbstract):
         version[0].minorVersion = minorVersion
         version[0].buildId = buildId | CONNECTION.ROWWISE_ROWSET | CONNECTION.CHARSET | CONNECTION.PASSWORD_SECURITY
 
-        if (self.property.DelayedErrorMode):
+        if self.property.DelayedErrorMode:
             version[0].buildId |= CONNECTION.STREAMING_DELAYEDERROR_MODE
 
     # Entry[1] is the Application Version information
@@ -449,7 +449,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         wbuffer = self._marshal_close(self._dialogue_id)
 
-        data = self._get_from_server(Transport.SRVR_API_SQLDISCONNECT, wbuffer, self._mxosrvr_conn)
+        data = self.get_from_server(Transport.SRVR_API_SQLDISCONNECT, wbuffer, self._mxosrvr_conn)
 
         buf_view = memoryview(data)
         c = TerminateReply()
@@ -478,7 +478,7 @@ class TrafConnection(TrafConnectionAbstract):
     def _set_connection_attr(self, connection_option, value_num, value_num_str: str):
 
         wbuffer = self._marshal_set_connection_attr(self._dialogue_id, connection_option, value_num, value_num_str)
-        data = self._get_from_server(Transport.SRVR_API_SQLSETCONNECTATTR, wbuffer, self._mxosrvr_conn)
+        data = self.get_from_server(Transport.SRVR_API_SQLSETCONNECTATTR, wbuffer, self._mxosrvr_conn)
 
         buf_view = memoryview(data)
         c = TerminateReply()
@@ -539,7 +539,7 @@ class TrafConnection(TrafConnectionAbstract):
 
     def _end_transaction(self, transaction_opt):
         wbuffer = self._marshal_end_transaction(self._dialogue_id, transaction_opt)
-        data = self._get_from_server(Transport.SRVR_API_SQLENDTRAN, wbuffer, self._mxosrvr_conn)
+        data = self.get_from_server(Transport.SRVR_API_SQLENDTRAN, wbuffer, self._mxosrvr_conn)
 
         buf_view = memoryview(data)
         c = EndTransactionReply()
@@ -564,3 +564,10 @@ class TrafConnection(TrafConnectionAbstract):
         buf_view = Convert.put_short(transaction_opt, buf_view, little=True)
 
         return buf
+
+    @property
+    def dialogue_id(self):
+        return self._dialogue_id
+
+    def set_charset(self, charset:str):
+        pass

@@ -2,6 +2,7 @@ import struct
 from . import errors
 from decimal import Decimal
 
+
 class Transport:
     size_long = 8
     size_int = 4

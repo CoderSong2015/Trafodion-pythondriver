@@ -98,12 +98,12 @@ class Statement:
 
         max_row_count = row_count if row_count else self._max_row_count
 
-        wbuffer = self._marshal_fetch(self._connection._dialogue_id, self._sql_async_enable,
+        wbuffer = self._marshal_fetch(self._connection.dialogue_id, self._sql_async_enable,
                                       self._connection.property.query_timeout,
                                       self._stmt_handle_, self.stmt_label, self._stmt_label_charset, max_row_count, 0,
                                       self._cursor_name, self._cursor_name_charset, self._stmt_options)
 
-        data = self._connection._get_from_server(Transport.SRVR_API_SQLFETCH, wbuffer, self._connection._mxosrvr_conn)
+        data = self._connection.get_from_server(Transport.SRVR_API_SQLFETCH, wbuffer, self._connection._mxosrvr_conn)
 
         buf_view = memoryview(data)
         t = FetchReply()
@@ -153,7 +153,7 @@ class Statement:
                  stmt_label, stmt_label_charset, input_data_value, input_value_list,
                  tx_id, user_buffer: bool):
 
-        wbuffer = self._marshal_statement(self._connection._dialogue_id, sql_async_enable,
+        wbuffer = self._marshal_statement(self._connection.dialogue_id, sql_async_enable,
                                           self._connection.property.query_timeout, input_row_count, max_rowset_size,
                                           sql_stmt_type,
                                           stmt_handle, 0, sqlstring, sqlstring_charset, cursor_name,
@@ -161,7 +161,7 @@ class Statement:
                                           stmt_label, stmt_label_charset, self.stmt_explain_label, input_data_value,
                                           input_value_list, tx_id, user_buffer)
 
-        data = self._connection._get_from_server(execute_api, wbuffer, self._connection._mxosrvr_conn)
+        data = self._connection.get_from_server(execute_api, wbuffer, self._connection._mxosrvr_conn)
         buf_view = memoryview(data)
         c = ExecuteReply()
         c.init_reply(buf_view)
@@ -196,7 +196,7 @@ class Statement:
 
         batch_exception = False
 
-        if (delay_error_mode  and  self._last_count < 1):
+        if delay_error_mode  and  self._last_count < 1:
             for x in range(num_status):
                 self._batch_row_count.append(-2)  # fill with success
         elif (recv_reply.return_code == Transport.SQL_SUCCESS or
@@ -410,7 +410,7 @@ class PreparedStatement(Statement):
                          cursor_name, cursor_name_charset, module_name, module_name_charset, module_timestamp,
                          sql_string, sql_string_charset, stmt_options, max_rowset_size, tx_id):
 
-        wbuffer = self._marshal_prepare_statement(self._connection._dialogue_id, sql_async_enable,
+        wbuffer = self._marshal_prepare_statement(self._connection.dialogue_id, sql_async_enable,
                                                   self._connection.property.query_timeout,
                                                   stmt_type, sql_stmt_type,
                                                   stmt_label, stmt_label_charset,
@@ -419,7 +419,7 @@ class PreparedStatement(Statement):
                                                   sql_string, sql_string_charset, stmt_options, self.stmt_explain_label,
                                                   max_rowset_size,
                                                   tx_id)
-        data = self._connection._get_from_server(Transport.SRVR_API_SQLPREPARE, wbuffer, self._connection._mxosrvr_conn)
+        data = self._connection.get_from_server(Transport.SRVR_API_SQLPREPARE, wbuffer, self._connection._mxosrvr_conn)
         buf_view = memoryview(data)
         t = PrepareReply()
         t.init_reply(buf_view)
