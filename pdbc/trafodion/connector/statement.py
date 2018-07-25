@@ -191,7 +191,7 @@ class Statement:
         else:
             num_status = input_row_count
 
-        if (num_status < 1):
+        if num_status < 1:
             num_status = 1
 
         batch_exception = False
@@ -208,7 +208,7 @@ class Statement:
             if recv_reply.errorlist:
                 for item in recv_reply.errorlist:
                     row = item.row_id -1
-                    if (row >= 0 and row < len(self._batch_row_count)):
+                    if 0 <= row < len(self._batch_row_count):
                         self._batch_row_count[row] = -3
                         batch_exception = True
 
