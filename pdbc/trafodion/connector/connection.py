@@ -20,8 +20,6 @@ class TrafConnection(TrafConnectionAbstract):
     """
 
     def __init__(self, *args, **kwargs):
-        self._master_host = '127.0.0.1'
-        self._master_port = 23400
         self._force_ipv6 = False
         self._unix_socket = None
         self._sessionToken = None
@@ -201,8 +199,8 @@ class TrafConnection(TrafConnectionAbstract):
     def _get_objref(self):
         self._in_context = self._get_context()
         self._user_desc = self._get_user_desc()
-        self._master_host = self.property.master_host
-        self._master_port = self.property.master_port
+        master_host = self.property.master_host
+        master_port = self.property.master_port
         retry_count = self.property.retry_count
         srvr_type = self.property.srvr_type
 
@@ -212,7 +210,7 @@ class TrafConnection(TrafConnectionAbstract):
                                           retry_count,
                                           0x10000000
                                           )
-        master_conn = self._get_connection(self._master_host, self._master_port)
+        master_conn = self._get_connection(master_host, master_port)
         data = self._get_from_server(Transport.AS_API_GETOBJREF, wbuffer, master_conn)
         connect_reply = self._extract_master_data(data)
         if not master_conn:

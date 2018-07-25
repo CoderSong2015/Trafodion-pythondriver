@@ -560,7 +560,7 @@ class ConnectReply:
         self.server_ip_address, buf_view = Convert.get_string(buf_view, little=True)
         self.server_port, buf_view = Convert.get_int(buf_view, little=True)
 
-        if (self.version_list.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0):
+        if self.version_list.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0:
             self.security_enabled = True
             self.timestamp, buf_view = Convert.get_timestamp(buf_view)
             self.cluster_name, buf_view = Convert.get_string(buf_view, little=True)
@@ -606,13 +606,13 @@ class OutConnectionContextDef:
         elif self.option_flags1 & STRUCTDEF.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
             try:
                 buf, buf_view = Convert.get_string(buf_view, little=True)
-                self.decodeExtraOptions(buf)
+                self.decode_extra_options(buf)
             except:
                 pass
 
         return buf_view
 
-    def decodeExtraOptions(self, options):
+    def decode_extra_options(self, options):
         opts = options.split("")
         for x in opts:
             token, value = x.split("=")
@@ -641,8 +641,8 @@ class InitializeDialogueReply:
 
         elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
-            if self.exception_detail == STRUCTDEF.SQL_PASSWORD_EXPIRING or \
-                self.exception_detail == STRUCTDEF.SQL_PASSWORD_GRACEPERIOD:
+            if self.exception_detail == STRUCTDEF.SQL_PASSWORD_EXPIRING \
+                or self.exception_detail == STRUCTDEF.SQL_PASSWORD_GRACEPERIOD:
                 self.out_context.extract_from_bytearray(buf_view)
             raise errors.DatabaseError(self.SQLError.get_error_info())
 
@@ -679,10 +679,7 @@ class ErrorDescListDef:
         return buf_view
 
     def get_error_info(self):
-        error_info = ''
-        for error_desc in self.list:
-            error_info += error_desc.errorText
-        return error_info
+        return '\n'.join([error_desc.errorText for error_desc in self.list])
 
 
 class ErrorDescDef:
@@ -788,7 +785,7 @@ class SQLDataValueDef:
                 for row in range(param_rowcount):
                     row_value = param_values[row] if is_executemany else param_values
                     for col in range(param_count):
-                        _ = cls.Convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
+                        _ = cls.convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
                                                       row_value[col], row, buf_view)
 
         data_value.length = row_len * param_rowcount
@@ -796,7 +793,7 @@ class SQLDataValueDef:
         return data_value
 
     @classmethod
-    def Convert_object_to_sql(cls, input_desc_list, param_rowcount, param_count, param_values, row_num,
+    def convert_object_to_sql(cls, input_desc_list, param_rowcount, param_count, param_values, row_num,
                               buf_view: memoryview):
 
         desc = input_desc_list[param_count]
@@ -1013,18 +1010,7 @@ class SQLDataValueDef:
 
         if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT:
             # TODO have not finished
-            """
-                        if not isinstance(param_values,(int, float)):
-                            raise errors.ProgrammingError(
-                                "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                                    param_count))
-                        if scale > 0:
-                            raise errors.DataError("invalid_parameter_value: Cannot have scale for param {0}".format(param_values))
 
-                        if param_values > Transport.max_tinyint or param_values < Transport.min_tinyint:
-                            raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-                        """
             raise errors.NotSupportedError("not support tinyint")
 
         if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
@@ -1103,8 +1089,8 @@ class SQLDataValueDef:
             _ = Convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL or \
-                        dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL \
+                or dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED:
 
             if not isinstance(param_values, (int, str, Decimal)):
                 raise errors.DataError(
@@ -1163,8 +1149,8 @@ class SQLDataValueDef:
 
             _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
-                        dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC \
+                or dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
 
             if not isinstance(param_values, (int, str, Decimal)):
                 raise errors.DataError(
@@ -1179,11 +1165,11 @@ class SQLDataValueDef:
 
         if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
             raise errors.NotSupportedError
-        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE or \
-                        dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
-                        dataType == FIELD_TYPE.SQLTYPECODE_BIT or \
-                        dataType == FIELD_TYPE.SQLTYPECODE_BITVAR or \
-                        dataType == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
+                or dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED \
+                or dataType == FIELD_TYPE.SQLTYPECODE_BIT \
+                or dataType == FIELD_TYPE.SQLTYPECODE_BITVAR \
+                or dataType == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
             raise errors.NotSupportedError
 
 
@@ -1429,9 +1415,7 @@ class FetchReply:
                     buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
 
-                error_info = ''
-                for item in self.errorlist:
-                    error_info += item.text + '\n'
+                error_info = '\n'.join([item.text for item in self.errorlist])
                 raise errors.ProgrammingError(error_info)
 
         self.rows_affected, buf_view = Convert.get_int(buf_view, little=True)
@@ -1495,7 +1479,6 @@ class FetchReply:
         self.out_values = None
         self.rows_fetched = len(self.result_set)
 
-
     def _get_execute_to_fetch_string(self, nonull_value_offset, column_desc: Descriptor):
         ret_obj = None
         buf_view = memoryview(self.out_values)
@@ -1504,11 +1487,11 @@ class FetchReply:
             length = column_desc.maxLen_
             ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
 
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR or \
-                        sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
-                        sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG or \
-                        sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB or \
-                        sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
 
             short_length = 2 if column_desc.precision_ < 2**15 else 4
             data_offset = nonull_value_offset + short_length
@@ -1554,14 +1537,14 @@ class FetchReply:
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
             ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
 
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC or \
-            sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
             ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.maxLen_, column_desc.scale_)
 
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL or \
-            sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED or \
-            sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE or \
-            sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
             first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
             int_first_byte = int.from_bytes(first_byte, byteorder='little')
             if int_first_byte & 0x80:
@@ -1578,9 +1561,9 @@ class FetchReply:
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_DOUBLE or sql_data_type == FIELD_TYPE.SQLTYPECODE_FLOAT:
             ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
 
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT or \
-            sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR or \
-            sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
             pass
         return ret_obj
 
@@ -1610,9 +1593,7 @@ class PrepareReply:
                         t = SQLWarningOrError()
                         buf_view = t.extract_from_bytearray(buf_view)
                         self.errorlist.append(t)
-                    error_info = ''
-                    for item in self.errorlist:
-                        error_info += item.text + '\n'
+                    error_info = '\n'.join([item.text for item in self.errorlist])
                     raise errors.Warning(error_info)
             self.sql_query_type, buf_view = Convert.get_int(buf_view, little=True)
             self.stmt_handle, buf_view = Convert.get_int(buf_view, little=True)
@@ -1646,9 +1627,7 @@ class PrepareReply:
                     t = SQLWarningOrError()
                     buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
-                error_info = ''
-                for item in self.errorlist:
-                    error_info += item.text + '\n'
+                error_info = '\n'.join([item.text for item in self.errorlist])
                 raise errors.ProgrammingError(error_info)
 
 

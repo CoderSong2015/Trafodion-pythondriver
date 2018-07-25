@@ -5,6 +5,7 @@ from .struct_def import TrafProperty
 import os
 from .network import TrafTCPSocket
 
+
 @make_abc(ABCMeta)
 class TrafConnectionAbstract(object):
     """Abstract class for classes connecting to a Trafodion server"""
@@ -43,7 +44,7 @@ class TrafConnectionAbstract(object):
         except KeyError:
             pass  # Missing port argument is OK
 
-    def _get_connection(self, host = '127.0.0.1', port = 0):
+    def _get_connection(self, host='127.0.0.1', port=0):
 
         """
         :param host: 
