@@ -1,6 +1,8 @@
 .. image:: https://img.shields.io/badge/license-Apache2.0-blue.svg
     :target: https://github.com/CoderSong2015/Trafodion-pythondriver/blob/master/LICENSE
 
+.. image:: https://badge.fury.io/py/PyTrafodion.svg
+    :target: https://badge.fury.io/py/PyTrafodion
 
 
 Python Driver of Apache Trafodion
