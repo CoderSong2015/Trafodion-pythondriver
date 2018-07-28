@@ -7,6 +7,7 @@ from . import errors
 from .transport import Transport, Convert
 from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
 
+
 class ConnectionContextDef:
     def __init__(self, conn):
         self.datasource = ""  # string
@@ -164,6 +165,7 @@ class ConnectionContextDef:
         self.ctxACP = 1252
         self.ctxCtrlInferNXHAR = -1
         self.clientVersionList.list = conn.get_version(self.processId)
+
 
 class VersionDef:
 
@@ -327,7 +329,6 @@ class Header:
         buf_view = Convert.put_short(self.error_detail_, buf_view)  # short
         return buf_view
 
-
     def extract_from_bytearray(self, buf, little=False):
         buf_view = memoryview(buf)
         self.operation_id_, buf_view = Convert.get_short(buf_view, little)
@@ -383,6 +384,7 @@ class UserDescDef:
         buf_view = Convert.put_bytes(self.password, buf_view, little)
 
         return buf_view
+
 
 class TrafProperty:
     def __init__(self):
