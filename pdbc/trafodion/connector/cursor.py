@@ -224,20 +224,20 @@ class TrafCursor(CursorBase):
 
     def executemany(self, operation, seq_params):
         self.execute(operation, seq_params, multi=True)
+
     def _map_descriptor_and_rowcount(self, descriptor):
         out_desc_list = descriptor.output_desc_list
 
         if len(out_desc_list) > 0:
             self._description = []
             for x in out_desc_list:
-                temp_list = []
-                temp_list.append(x.colHeadingNm_)  # name
-                temp_list.append(x.dataType_)       #  type_code
-                temp_list.append(x.maxLen_)        #  display_size
-                temp_list.append(x.row_length)     #  internal_size
-                temp_list.append(x.precision_)     #  precision
-                temp_list.append(x.scale_)         #  scale
-                temp_list.append(None)             #  null_ok
+                temp_list = [x.col_heading_name,
+                             x.data_type,
+                             x.max_len,
+                             x.row_length,
+                             x.precision,
+                             x.scale,
+                             None]
 
                 self._description.append(temp_list)
 

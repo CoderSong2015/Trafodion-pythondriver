@@ -211,9 +211,9 @@ class VERSION_LIST_def:
         length, buf_view = Convert.get_int(buf_view, little=True)
 
         for i in range(length):
-            version_def = VersionDef()
-            buf_view = version_def.extract_from_bytearray(buf_view)
-            self.list.append(version_def)
+            versiondef = VersionDef()
+            buf_view = versiondef.extract_from_bytearray(buf_view)
+            self.list.append(versiondef)
 
         return buf_view
 
@@ -261,7 +261,7 @@ class Header:
       # + 2 filler  
       hdr_type_      # int
       signature_     # int
-      version_       # int
+      version       # int
       platform_      # char
       transport_     # char
       swap_          # char
@@ -290,7 +290,7 @@ class Header:
         self.compress_type_ = compress_type
         self.hdr_type_ = hdr_type
         self.signature_ = signature
-        self.version_ = version
+        self.version = version
         self.platform_ = platform
         self.transport_ = transport
         self.swap_ = swap
@@ -320,7 +320,7 @@ class Header:
         buf_view = Convert.put_short(0, buf_view)  # + 2 filler                              18,19
         buf_view = Convert.put_int(self.hdr_type_, buf_view)  # int                          20-23
         buf_view = Convert.put_int(self.signature_, buf_view)  # int                         24-27
-        buf_view = Convert.put_int(self.version_, buf_view)  # int
+        buf_view = Convert.put_int(self.version, buf_view)  # int
         buf_view = Convert.put_char(self.platform_.encode("utf-8"), buf_view)  # char
         buf_view = Convert.put_char(self.transport_.encode("utf-8"), buf_view)  # char
         buf_view = Convert.put_char(self.swap_.encode("utf-8"), buf_view)  # char
@@ -344,7 +344,7 @@ class Header:
 
         self.hdr_type_, buf_view = Convert.get_int(buf_view, little)
         self.signature_, buf_view = Convert.get_int(buf_view, little)
-        self.version_, buf_view = Convert.get_int(buf_view, little)
+        self.version, buf_view = Convert.get_int(buf_view, little)
         self.platform_, buf_view = Convert.get_char(buf_view)
         self.transport_, buf_view = Convert.get_char(buf_view)
         self.swap_, buf_view = Convert.get_char(buf_view)
@@ -551,8 +551,8 @@ class ConnectReply:
         self.dialogue_id, buf_view = Convert.get_int(buf_view, little=True)
         self.data_source, buf_view = Convert.get_string(buf_view, little=True)
         self.user_sid, buf_view = Convert.get_string(buf_view, little=True, byteoffset=True)
-        self.version_list = VERSION_LIST_def()
-        buf_view = self.version_list.extract_from_bytearray(buf_view)
+        self.versionlist = VERSION_LIST_def()
+        buf_view = self.versionlist.extract_from_bytearray(buf_view)
         __, buf_view = Convert.get_int(buf_view, little=True)  # old iso mapping
         self.isoMapping = 15 #utf-8
         self.server_host_name, buf_view = Convert.get_string(buf_view, little=True)
@@ -562,7 +562,7 @@ class ConnectReply:
         self.server_ip_address, buf_view = Convert.get_string(buf_view, little=True)
         self.server_port, buf_view = Convert.get_int(buf_view, little=True)
 
-        if self.version_list.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0:
+        if self.versionlist.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0:
             self.security_enabled = True
             self.timestamp, buf_view = Convert.get_timestamp(buf_view)
             self.cluster_name, buf_view = Convert.get_string(buf_view, little=True)
@@ -573,7 +573,7 @@ class ConnectReply:
 class OutConnectionContextDef:
 
     def __init__(self):
-        self.version_list = VERSION_LIST_def()
+        self.versionlist = VERSION_LIST_def()
         self.node_id = 0 # short
         self.process_id = 0 # int
 
@@ -590,8 +590,8 @@ class OutConnectionContextDef:
 
     def extract_from_bytearray(self, buf_view):
 
-        self.version_list = VERSION_LIST_def()
-        buf_view = self.version_list.extract_from_bytearray(buf_view)
+        self.versionlist = VERSION_LIST_def()
+        buf_view = self.versionlist.extract_from_bytearray(buf_view)
 
         self.node_id, buf_view = Convert.get_short(buf_view, little=True)
         self.process_id, buf_view = Convert.get_int(buf_view, little=True)
@@ -800,18 +800,18 @@ class SQLDataValueDef:
 
         desc = input_desc_list[param_count]
 
-        precision = desc.odbcPrecision_
-        scale = desc.scale_
-        sqlDatetimeCode = desc.datetimeCode_
-        FSDataType = desc.dataType_
-        OdbcDataType = desc.odbcDataType_
-        max_len = desc.maxLen_
-        dataType = desc.dataType_
-        dataCharSet = desc.sqlCharset_
+        precision = desc.odbc_precision
+        scale = desc.scale
+        sqlDatetimeCode = desc.datetime_code
+        FSDataType = desc.data_type
+        OdbcDataType = desc.odbc_data_type
+        max_len = desc.max_len
+        dataType = desc.data_type
+        dataCharSet = desc.sql_charset
         # setup the offsets
-        noNullValue = desc.noNullValue_
-        nullValue = desc.nullValue_
-        dataLength = desc.maxLen_
+        noNullValue = desc.no_null_value
+        nullValue = desc.null_value
+        dataLength = desc.max_len
 
         dataOffset = 2
         shortLength = False
@@ -1342,54 +1342,54 @@ class SQLWarningOrError:
 class Descriptor:
 
     def __init__(self):
-        self.noNullValue_ = 0
-        self.nullValue_ = 0
-        self.version_ = 0
-        self.dataType_ = 0   # sql_data_type
-        self.datetimeCode_ = 0
-        self.maxLen_ = 0    # sqlOctetLength_
-        self.precision_ = 0
-        self.scale_ = 0
-        self.nullInfo_ = 0
-        self.signed_ = 0
-        self.odbcDataType_ = 0  # odbc_data_type
-        self.odbcPrecision_ = 0
-        self.sqlCharset_ = 0
-        self.odbcCharset_ = 0
-        self.colHeadingNm_ = None
-        self.tableName_ = None
-        self.catalogName_ = None
-        self.schemaName_ = None
-        self.headingName_ = None
-        self.intLeadPrec_ = 0
-        self.paramMode_ = 0
+        self.no_null_value = 0
+        self.null_value = 0
+        self.version = 0
+        self.data_type = 0   # sql_data_type
+        self.datetime_code = 0
+        self.max_len = 0    # sqlOctetLength_
+        self.precision = 0
+        self.scale = 0
+        self.null_info = 0
+        self.signed = 0
+        self.odbc_data_type = 0  # odbc_data_type
+        self.odbc_precision = 0
+        self.sql_charset = 0
+        self.odbc_charset = 0
+        self.col_heading_name = None
+        self.table_name = None
+        self.catalog_name = None
+        self.schema_name = None
+        self.heading_name = None
+        self.int_lead_prec = 0
+        self.param_mode = 0
         self.row_length = 0
 
     def set_row_length(self, num):
         self.row_length = num
 
     def extract_from_bytearray(self, buf_view: memoryview) -> memoryview:
-        self.noNullValue_, buf_view = Convert.get_int(buf_view, little=True)
-        self.nullValue_, buf_view = Convert.get_int(buf_view, little=True)
-        self.version_, buf_view = Convert.get_int(buf_view, little=True)
-        self.dataType_, buf_view = Convert.get_int(buf_view, little=True)
-        self.datetimeCode_, buf_view = Convert.get_int(buf_view, little=True)
-        self.maxLen_, buf_view = Convert.get_int(buf_view, little=True)
-        self.precision_, buf_view = Convert.get_int(buf_view, little=True)
-        self.scale_, buf_view = Convert.get_int(buf_view, little=True)
-        self.nullInfo_, buf_view = Convert.get_int(buf_view, little=True)
-        self.signed_, buf_view = Convert.get_int(buf_view, little=True)
-        self.odbcDataType_, buf_view = Convert.get_int(buf_view, little=True)
-        self.odbcPrecision_, buf_view = Convert.get_int(buf_view, little=True)
-        self.sqlCharset_, buf_view = Convert.get_int(buf_view, little=True)
-        self.odbcCharset_, buf_view = Convert.get_int(buf_view, little=True)
-        self.colHeadingNm_, buf_view = Convert.get_string(buf_view, little=True)
-        self.tableName_, buf_view = Convert.get_string(buf_view, little=True)
-        self.catalogName_, buf_view = Convert.get_string(buf_view, little=True)
-        self.schemaName_, buf_view = Convert.get_string(buf_view, little=True)
-        self.headingName_, buf_view = Convert.get_string(buf_view, little=True)
-        self.intLeadPrec_, buf_view = Convert.get_int(buf_view, little=True)
-        self.paramMode_, buf_view = Convert.get_int(buf_view, little=True)
+        self.no_null_value, buf_view = Convert.get_int(buf_view, little=True)
+        self.null_value, buf_view = Convert.get_int(buf_view, little=True)
+        self.version, buf_view = Convert.get_int(buf_view, little=True)
+        self.data_type, buf_view = Convert.get_int(buf_view, little=True)
+        self.datetime_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.max_len, buf_view = Convert.get_int(buf_view, little=True)
+        self.precision, buf_view = Convert.get_int(buf_view, little=True)
+        self.scale, buf_view = Convert.get_int(buf_view, little=True)
+        self.null_info, buf_view = Convert.get_int(buf_view, little=True)
+        self.signed, buf_view = Convert.get_int(buf_view, little=True)
+        self.odbc_data_type, buf_view = Convert.get_int(buf_view, little=True)
+        self.odbc_precision, buf_view = Convert.get_int(buf_view, little=True)
+        self.sql_charset, buf_view = Convert.get_int(buf_view, little=True)
+        self.odbc_charset, buf_view = Convert.get_int(buf_view, little=True)
+        self.col_heading_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.table_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.catalog_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.schema_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.heading_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.int_lead_prec, buf_view = Convert.get_int(buf_view, little=True)
+        self.param_mode, buf_view = Convert.get_int(buf_view, little=True)
 
         return buf_view
 
@@ -1449,8 +1449,8 @@ class FetchReply:
 
             column_result_list = []
             for column_x in range(column_count):
-                nonull_value_offset = out_desc_list[column_x].noNullValue_
-                null_value_offset = out_desc_list[column_x].nullValue_
+                nonull_value_offset = out_desc_list[column_x].no_null_value
+                null_value_offset = out_desc_list[column_x].null_value
 
                 if null_value_offset != -1:
                     null_value_offset += row_offset
@@ -1484,9 +1484,9 @@ class FetchReply:
     def _get_execute_to_fetch_string(self, nonull_value_offset, column_desc: Descriptor):
         ret_obj = None
         buf_view = memoryview(self.out_values)
-        sql_data_type = column_desc.dataType_
+        sql_data_type = column_desc.data_type
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_CHAR:
-            length = column_desc.maxLen_
+            length = column_desc.max_len
             ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR \
@@ -1495,7 +1495,7 @@ class FetchReply:
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB \
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
 
-            short_length = 2 if column_desc.precision_ < 2**15 else 4
+            short_length = 2 if column_desc.precision < 2**15 else 4
             data_offset = nonull_value_offset + short_length
 
             data_len = 0
@@ -1541,7 +1541,7 @@ class FetchReply:
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC \
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
-            ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.maxLen_, column_desc.scale_)
+            ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.max_len, column_desc.scale)
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL \
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED \
@@ -1550,13 +1550,13 @@ class FetchReply:
             first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
             int_first_byte = int.from_bytes(first_byte, byteorder='little')
             if int_first_byte & 0x80:
-                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.maxLen_,
+                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len,
                                                little=True)
                 ret_obj = '-' + (bytes([ret_obj[0] & 0x7F]) + ret_obj[1:]).decode()
-                ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale_)
+                ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale)
             else:
-                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.maxLen_, little=True)
-                ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale_)
+                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len, little=True)
+                ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale)
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_REAL:
             ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
 
