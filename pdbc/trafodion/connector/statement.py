@@ -363,6 +363,9 @@ class Statement:
         # make for prepared statement
         pass
 
+    def set_max_row_count(self, size=100):
+        self._max_row_count = size
+
 
 class PreparedStatement(Statement):
 
@@ -484,3 +487,4 @@ class PreparedStatement(Statement):
         except:
             raise errors.InternalError("marshal error")
         return buf
+
