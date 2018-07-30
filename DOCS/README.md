@@ -14,10 +14,19 @@
 ## About driver
     
     Implements the Python Database API Specification v2.0 (PEP-249)
+    This is a Pure-Python Driver of Apache Trafodion
+    
 ## Requirement
-    // TODO
+    CPython: >= 3.4
+    PyPy: Not support(havn't try)
+    
 ## Build
     // TODO
+
+## Resources
+
+    DB-API 2.0: http://www.python.org/dev/peps/pep-0249
+    Apache Trafodion： https://trafodion.apache.org/
 
 ## Contract me
    email: haolin.song@esgyn.cn

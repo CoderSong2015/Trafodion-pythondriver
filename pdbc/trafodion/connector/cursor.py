@@ -1,9 +1,9 @@
 import weakref
 
-from .abstracts import TrafCursorAbstract
 from . import errors
-from .transport import Transport
+from .abstracts import TrafCursorAbstract
 from .statement import Statement, PreparedStatement
+from .transport import Transport
 
 
 class CursorBase(TrafCursorAbstract):
@@ -102,6 +102,9 @@ class CursorBase(TrafCursorAbstract):
     def rowcount(self):
         """Returns the number of rows produced or affected
         Returns an integer.
+        
+        PS: In Trafodion you could not get the number of rows you select before you fetch
+            So here rowcount only represent the rows affected.
         """
         return self._rowcount
 
@@ -110,6 +113,12 @@ class CursorBase(TrafCursorAbstract):
         """Returns the value generated for an AUTO_INCREMENT column
         """
         return self._last_insert_id
+
+    def setinputsizes(self, sizes: int):
+        pass
+
+    def setoutputsize(self, size_column: list):
+        pass
 
 
 class TrafCursor(CursorBase):
@@ -170,6 +179,9 @@ class TrafCursor(CursorBase):
         if not self._connection:
             raise errors.ProgrammingError("Cursor is not connected")
 
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
         #self._connection.handle_unread_result()
 
         #self._reset_result()
@@ -192,14 +204,13 @@ class TrafCursor(CursorBase):
             self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
             self._st = Statement(self._connection, self)
 
-        if multi:
-            pass
-
         try:
             if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
-                self._st.execute(_operation, self._execute_type)
+                descriptor = self._st.execute(_operation, self._execute_type)
             else:
-                self._st.execute_all(_operation, self._execute_type, params)
+                descriptor = self._st.execute_all(_operation, self._execute_type, params, is_executemany=multi)
+
+            self._map_descriptor_and_rowcount(descriptor)
         except errors.InterfaceError:
             #TODO
             # if self._connection._have_next_result:
@@ -211,12 +222,39 @@ class TrafCursor(CursorBase):
         self._end_data = False
         return None
 
+    def executemany(self, operation, seq_params):
+        self.execute(operation, seq_params, multi=True)
+    def _map_descriptor_and_rowcount(self, descriptor):
+        out_desc_list = descriptor.output_desc_list
+
+        if len(out_desc_list) > 0:
+            self._description = []
+            for x in out_desc_list:
+                temp_list = []
+                temp_list.append(x.colHeadingNm_)  # name
+                temp_list.append(x.dataType_)       #  type_code
+                temp_list.append(x.maxLen_)        #  display_size
+                temp_list.append(x.row_length)     #  internal_size
+                temp_list.append(x.precision_)     #  precision
+                temp_list.append(x.scale_)         #  scale
+                temp_list.append(None)             #  null_ok
+
+                self._description.append(temp_list)
+
+        else:
+            self._description = None
+
+        self._rowcount = descriptor.rows_affected
+
     def _generate_stmtlabel(self):
 
         cursor_id = self._connection.get_seq()
         return "SQL_CUR_" + str(cursor_id)
 
     def fetchone(self):
+
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
 
         if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
             raise errors.InternalError("No result set available.")
@@ -240,6 +278,9 @@ class TrafCursor(CursorBase):
         return self._result_set[self._next_row - 1]
 
     def fetchmany(self, size=1):
+
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
 
         if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
             raise errors.InternalError("No result set available.")

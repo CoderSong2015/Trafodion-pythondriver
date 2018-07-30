@@ -1,12 +1,13 @@
 import socket
 import time
-
-from .transport import Transport, convert
-from . import errors
 from decimal import Decimal
 
+from . import errors
 
-class CONNECTION_CONTEXT_def:
+from .transport import Transport, Convert
+from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
+
+class ConnectionContextDef:
     def __init__(self, conn):
         self.datasource = ""  # string
         self.catalog = ""  # string
@@ -96,39 +97,39 @@ class CONNECTION_CONTEXT_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view, little=False):
-        buf_view = convert.put_string(self.datasource, buf_view, little)
-        buf_view = convert.put_string(self.catalog, buf_view, little) # string
-        buf_view = convert.put_string(self.schema, buf_view, little)  # string
-        buf_view = convert.put_string(self.location, buf_view, little)# string
-        buf_view = convert.put_string(self.userRole, buf_view, little) # string
-        #buf_view = convert.put_string(self.tenantName, buf_view)# string
+    def insert_into_bytearray(self, buf_view, little=False):
+        buf_view = Convert.put_string(self.datasource, buf_view, little)
+        buf_view = Convert.put_string(self.catalog, buf_view, little) # string
+        buf_view = Convert.put_string(self.schema, buf_view, little)  # string
+        buf_view = Convert.put_string(self.location, buf_view, little)# string
+        buf_view = Convert.put_string(self.userRole, buf_view, little) # string
+        #buf_view = Convert.put_string(self.tenantName, buf_view)# string
 
-        buf_view = convert.put_short(self.accessMode, buf_view, little) # short
-        buf_view = convert.put_short(self.autoCommit, buf_view, little) # short
-        buf_view = convert.put_int(self.queryTimeoutSec, buf_view, little) # int
-        buf_view = convert.put_int(self.idleTimeoutSec, buf_view, little) # int
-        buf_view = convert.put_int(self.loginTimeoutSec, buf_view, little) # int
-        buf_view = convert.put_short(self.txnIsolationLevel, buf_view, little) # short
-        buf_view = convert.put_short(self.rowSetSize, buf_view, little) # short
+        buf_view = Convert.put_short(self.accessMode, buf_view, little) # short
+        buf_view = Convert.put_short(self.autoCommit, buf_view, little) # short
+        buf_view = Convert.put_int(self.queryTimeoutSec, buf_view, little) # int
+        buf_view = Convert.put_int(self.idleTimeoutSec, buf_view, little) # int
+        buf_view = Convert.put_int(self.loginTimeoutSec, buf_view, little) # int
+        buf_view = Convert.put_short(self.txnIsolationLevel, buf_view, little) # short
+        buf_view = Convert.put_short(self.rowSetSize, buf_view, little) # short
 
-        buf_view = convert.put_int(self.diagnosticFlag, buf_view, little) # int
-        buf_view = convert.put_int(self.processId, buf_view, little) # int
+        buf_view = Convert.put_int(self.diagnosticFlag, buf_view, little) # int
+        buf_view = Convert.put_int(self.processId, buf_view, little) # int
 
-        buf_view = convert.put_string(self.computerName, buf_view, little)# string
-        buf_view = convert.put_string(self.windowText, buf_view, little)  # string
+        buf_view = Convert.put_string(self.computerName, buf_view, little)# string
+        buf_view = Convert.put_string(self.windowText, buf_view, little)  # string
 
-        buf_view = convert.put_int(self.ctxACP, buf_view, little) # int
-        buf_view = convert.put_int(self.ctxDataLang, buf_view, little) # int
-        buf_view = convert.put_int(self.ctxErrorLang, buf_view, little) # int
-        buf_view = convert.put_short(self.ctxCtrlInferNXHAR, buf_view, little) # short
+        buf_view = Convert.put_int(self.ctxACP, buf_view, little) # int
+        buf_view = Convert.put_int(self.ctxDataLang, buf_view, little) # int
+        buf_view = Convert.put_int(self.ctxErrorLang, buf_view, little) # int
+        buf_view = Convert.put_short(self.ctxCtrlInferNXHAR, buf_view, little) # short
 
-        buf_view = convert.put_short(self.cpuToUse, buf_view, little) # short
-        buf_view = convert.put_short(self.cpuToUseEnd, buf_view, little)  # short for future use by DBTransporter
+        buf_view = Convert.put_short(self.cpuToUse, buf_view, little) # short
+        buf_view = Convert.put_short(self.cpuToUseEnd, buf_view, little)  # short for future use by DBTransporter
 
-        buf_view = convert.put_string(self.connectOptions.decode("utf-8"), buf_view, little)  # string
+        buf_view = Convert.put_string(self.connectOptions.decode("utf-8"), buf_view, little)  # string
 
-        buf_view = self.clientVersionList.insertIntoByteArray(buf_view, little)
+        buf_view = self.clientVersionList.insert_into_bytearray(buf_view, little)
         return buf_view
 
     def _init_context(self, conn):
@@ -139,13 +140,13 @@ class CONNECTION_CONTEXT_def:
         self.cpuToUse = conn.property.cpuToUse
         self.cpuToUseEnd = -1 # for future use by DBTransporter
 
-        self.accessMode = 1 if conn._isReadOnly else 0
-        self.autoCommit = 1 if conn._autoCommit else 0
+        self.accessMode = 1 if conn._is_read_only else 0
+        self.autoCommit = 1 if conn._auto_commit else 0
 
         self.queryTimeoutSec = conn.property.query_timeout
         self.idleTimeoutSec = conn.property.idleTimeout
         self.loginTimeoutSec = conn.property.login_timeout
-        self.txnIsolationLevel = conn.SQL_TXN_READ_COMMITTED
+        self.txnIsolationLevel = CONNECTION.SQL_TXN_READ_COMMITTED
         self.rowSetSize = conn.property.fetchbuffersize
         self.diagnosticFlag = 0
         self.processId = time.time() and 0xFFF
@@ -164,7 +165,7 @@ class CONNECTION_CONTEXT_def:
         self.ctxCtrlInferNXHAR = -1
         self.clientVersionList.list = conn.get_version(self.processId)
 
-class VERSION_def:
+class VersionDef:
 
     def __init__(self):
         self.componentId = 0  # short
@@ -176,40 +177,40 @@ class VERSION_def:
     def sizeOf(self):
         return Transport.size_int + Transport.size_short * 3
 
-    def insertIntoByteArray(self, buf_view, little=False):
-        buf_view = convert.put_short(self.componentId, buf_view, little)
-        buf_view = convert.put_short(self.majorVersion, buf_view, little)
-        buf_view = convert.put_short(self.minorVersion, buf_view, little)
-        buf_view = convert.put_int(self.buildId, buf_view, little)
+    def insert_into_bytearray(self, buf_view, little=False):
+        buf_view = Convert.put_short(self.componentId, buf_view, little)
+        buf_view = Convert.put_short(self.majorVersion, buf_view, little)
+        buf_view = Convert.put_short(self.minorVersion, buf_view, little)
+        buf_view = Convert.put_int(self.buildId, buf_view, little)
         return buf_view
 
-    def extractFromByteArray(self, buf_view):
-        self.componentId, buf_view = convert.get_short(buf_view, little=True)
-        self.majorVersion, buf_view = convert.get_short(buf_view, little=True)
-        self.minorVersion, buf_view = convert.get_short(buf_view, little=True)
-        self.buildId, buf_view = convert.get_int(buf_view, little=True)
+    def extract_from_bytearray(self, buf_view):
+        self.componentId, buf_view = Convert.get_short(buf_view, little=True)
+        self.majorVersion, buf_view = Convert.get_short(buf_view, little=True)
+        self.minorVersion, buf_view = Convert.get_short(buf_view, little=True)
+        self.buildId, buf_view = Convert.get_int(buf_view, little=True)
         return buf_view
 
 
 class VERSION_LIST_def:
     list = []
 
-    def insertIntoByteArray(self, buf_view, little=False):
-        buf_view = convert.put_int(len(self.list), buf_view, little)
+    def insert_into_bytearray(self, buf_view, little=False):
+        buf_view = Convert.put_int(len(self.list), buf_view, little)
         for item in self.list:
-            buf_view = item.insertIntoByteArray(buf_view, little)
+            buf_view = item.insert_into_bytearray(buf_view, little)
         return buf_view
 
     def sizeOf(self):
-        return VERSION_def.sizeOf() * self.list.__len__() + Transport.size_int
+        return VersionDef.sizeOf() * self.list.__len__() + Transport.size_int
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
 
-        length, buf_view = convert.get_int(buf_view, little=True)
+        length, buf_view = Convert.get_int(buf_view, little=True)
 
         for i in range(length):
-            version_def = VERSION_def()
-            buf_view = version_def.extractFromByteArray(buf_view)
+            version_def = VersionDef()
+            buf_view = version_def.extract_from_bytearray(buf_view)
             self.list.append(version_def)
 
         return buf_view
@@ -306,51 +307,52 @@ class Header:
     def sizeOf(self):
         return 40
 
-    def insertIntoByteArray(self, buf_view):
-        buf_view = convert.put_short(self.operation_id_, buf_view)  # short                  0,1
-        buf_view = convert.put_short(0, buf_view)  # + 2 filler                              2,3
-        buf_view = convert.put_int(self.dialogueId_, buf_view)  # int                        4-7
-        buf_view = convert.put_int(self.total_length_, buf_view)  # int                      8-11
-        buf_view = convert.put_int(self.cmp_length_, buf_view)  # int                        12-15
-        buf_view = convert.put_char(self.compress_ind_.encode("utf-8"), buf_view)  # char    16
-        buf_view = convert.put_char(self.compress_type_.encode("utf-8"), buf_view)  # char   17
-        buf_view = convert.put_short(0, buf_view)  # + 2 filler                              18,19
-        buf_view = convert.put_int(self.hdr_type_, buf_view)  # int                          20-23
-        buf_view = convert.put_int(self.signature_, buf_view)  # int                         24-27
-        buf_view = convert.put_int(self.version_, buf_view)  # int
-        buf_view = convert.put_char(self.platform_.encode("utf-8"), buf_view)  # char
-        buf_view = convert.put_char(self.transport_.encode("utf-8"), buf_view)  # char
-        buf_view = convert.put_char(self.swap_.encode("utf-8"), buf_view)  # char
-        buf_view = convert.put_char('0'.encode("utf-8"), buf_view)  # + 1 filler
-        buf_view = convert.put_short(self.error_, buf_view)  # short
-        buf_view = convert.put_short(self.error_detail_, buf_view)  # short
+    def insert_into_bytearray(self, buf_view):
+        buf_view = Convert.put_short(self.operation_id_, buf_view)  # short                  0,1
+        buf_view = Convert.put_short(0, buf_view)  # + 2 filler                              2,3
+        buf_view = Convert.put_int(self.dialogueId_, buf_view)  # int                        4-7
+        buf_view = Convert.put_int(self.total_length_, buf_view)  # int                      8-11
+        buf_view = Convert.put_int(self.cmp_length_, buf_view)  # int                        12-15
+        buf_view = Convert.put_char(self.compress_ind_.encode("utf-8"), buf_view)  # char    16
+        buf_view = Convert.put_char(self.compress_type_.encode("utf-8"), buf_view)  # char   17
+        buf_view = Convert.put_short(0, buf_view)  # + 2 filler                              18,19
+        buf_view = Convert.put_int(self.hdr_type_, buf_view)  # int                          20-23
+        buf_view = Convert.put_int(self.signature_, buf_view)  # int                         24-27
+        buf_view = Convert.put_int(self.version_, buf_view)  # int
+        buf_view = Convert.put_char(self.platform_.encode("utf-8"), buf_view)  # char
+        buf_view = Convert.put_char(self.transport_.encode("utf-8"), buf_view)  # char
+        buf_view = Convert.put_char(self.swap_.encode("utf-8"), buf_view)  # char
+        buf_view = Convert.put_char('0'.encode("utf-8"), buf_view)  # + 1 filler
+        buf_view = Convert.put_short(self.error_, buf_view)  # short
+        buf_view = Convert.put_short(self.error_detail_, buf_view)  # short
         return buf_view
 
 
-    def extractFromByteArray(self, buf, little=False):
+    def extract_from_bytearray(self, buf, little=False):
         buf_view = memoryview(buf)
-        self.operation_id_, buf_view = convert.get_short(buf_view, little)
-        __, buf_view = convert.get_short(buf_view, little)  # +2 fillter
+        self.operation_id_, buf_view = Convert.get_short(buf_view, little)
+        __, buf_view = Convert.get_short(buf_view, little)  # +2 fillter
 
-        self.dialogueId_, buf_view = convert.get_int(buf_view, little)
-        self.total_length_, buf_view = convert.get_int(buf_view, little)
-        self.cmp_length_, buf_view = convert.get_int(buf_view, little)
-        self.compress_ind_, buf_view = convert.get_char(buf_view)
-        self.compress_type_, buf_view = convert.get_char(buf_view)
+        self.dialogueId_, buf_view = Convert.get_int(buf_view, little)
+        self.total_length_, buf_view = Convert.get_int(buf_view, little)
+        self.cmp_length_, buf_view = Convert.get_int(buf_view, little)
+        self.compress_ind_, buf_view = Convert.get_char(buf_view)
+        self.compress_type_, buf_view = Convert.get_char(buf_view)
 
-        __, buf_view = convert.get_short(buf_view, little)  # +2 fillter
+        __, buf_view = Convert.get_short(buf_view, little)  # +2 fillter
 
-        self.hdr_type_, buf_view = convert.get_int(buf_view, little)
-        self.signature_, buf_view = convert.get_int(buf_view, little)
-        self.version_, buf_view = convert.get_int(buf_view, little)
-        self.platform_, buf_view = convert.get_char(buf_view)
-        self.transport_, buf_view = convert.get_char(buf_view)
-        self.swap_, buf_view = convert.get_char(buf_view)
-        __, buf_view = convert.get_char(buf_view)  # +1 fillter
-        self.error_, buf_view = convert.get_short(buf_view, little)
-        self.error_detail_, buf_view = convert.get_short(buf_view, little)
+        self.hdr_type_, buf_view = Convert.get_int(buf_view, little)
+        self.signature_, buf_view = Convert.get_int(buf_view, little)
+        self.version_, buf_view = Convert.get_int(buf_view, little)
+        self.platform_, buf_view = Convert.get_char(buf_view)
+        self.transport_, buf_view = Convert.get_char(buf_view)
+        self.swap_, buf_view = Convert.get_char(buf_view)
+        __, buf_view = Convert.get_char(buf_view)  # +1 fillter
+        self.error_, buf_view = Convert.get_short(buf_view, little)
+        self.error_detail_, buf_view = Convert.get_short(buf_view, little)
 
-class USER_DESC_def:
+
+class UserDescDef:
 
     def __init__(self):
         self.userDescType = 0
@@ -372,13 +374,13 @@ class USER_DESC_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view, little=False):
-        buf_view = convert.put_int(self.userDescType, buf_view, little)
+    def insert_into_bytearray(self, buf_view, little=False):
+        buf_view = Convert.put_int(self.userDescType, buf_view, little)
 
-        buf_view = convert.put_string(self.userSid, buf_view, little)
-        buf_view = convert.put_string(self.domainName, buf_view, little)
-        buf_view = convert.put_string(self.userName, buf_view, little)
-        buf_view = convert.put_bytes(self.password, buf_view, little)
+        buf_view = Convert.put_string(self.userSid, buf_view, little)
+        buf_view = Convert.put_string(self.domainName, buf_view, little)
+        buf_view = Convert.put_string(self.userName, buf_view, little)
+        buf_view = Convert.put_bytes(self.password, buf_view, little)
 
         return buf_view
 
@@ -519,15 +521,16 @@ class TrafProperty:
     def DelayedErrorMode(self, bool):
         self._DelayedErrorMode = bool
 
+
 class GetPbjRefHdlExc:
 
     exception_nr = 0
     exception_detail = 0
     error_text = ''
-    def extractFromByteArray(self,buf_view):
-        self.exception_nr, buf_view = convert.get_int(buf_view, little=True)
-        self.exception_detail, buf_view = convert.get_int(buf_view, little=True)
-        self.error_text, buf_view = convert.get_string(buf_view)
+    def extract_from_bytearray(self,buf_view):
+        self.exception_nr, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        self.error_text, buf_view = Convert.get_string(buf_view)
 
         #TODO need to handle exception_nr
 
@@ -537,37 +540,35 @@ class GetPbjRefHdlExc:
 class ConnectReply:
     def __init__(self):
         pass
+
     def init_reply(self, buf_view, conn):
         self.buf_exception = GetPbjRefHdlExc()
-        buf_view = self.buf_exception.extractFromByteArray(buf_view)
+        buf_view = self.buf_exception.extract_from_bytearray(buf_view)
 
         # TODO handle error
-        self.dialogue_id, buf_view = convert.get_int(buf_view, little=True)
-        self.data_source, buf_view = convert.get_string(buf_view, little=True)
-        self.user_sid, buf_view = convert.get_string(buf_view, little=True, byteoffset=True)
+        self.dialogue_id, buf_view = Convert.get_int(buf_view, little=True)
+        self.data_source, buf_view = Convert.get_string(buf_view, little=True)
+        self.user_sid, buf_view = Convert.get_string(buf_view, little=True, byteoffset=True)
         self.version_list = VERSION_LIST_def()
-        buf_view = self.version_list.extractFromByteArray(buf_view)
-        __, buf_view = convert.get_int(buf_view, little=True)  # old iso mapping
+        buf_view = self.version_list.extract_from_bytearray(buf_view)
+        __, buf_view = Convert.get_int(buf_view, little=True)  # old iso mapping
         self.isoMapping = 15 #utf-8
-        self.server_host_name, buf_view = convert.get_string(buf_view, little=True)
-        self.server_node_id, buf_view = convert.get_int(buf_view, little=True)
-        self.server_process_id, buf_view = convert.get_int(buf_view, little=True)
-        self.server_process_name, buf_view = convert.get_string(buf_view, little=True)
-        self.server_ip_address, buf_view = convert.get_string(buf_view, little=True)
-        self.server_port, buf_view = convert.get_int(buf_view, little=True)
+        self.server_host_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.server_node_id, buf_view = Convert.get_int(buf_view, little=True)
+        self.server_process_id, buf_view = Convert.get_int(buf_view, little=True)
+        self.server_process_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.server_ip_address, buf_view = Convert.get_string(buf_view, little=True)
+        self.server_port, buf_view = Convert.get_int(buf_view, little=True)
 
-        if (self.version_list.list[0].buildId and conn.PASSWORD_SECURITY > 0):
+        if self.version_list.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0:
             self.security_enabled = True
-            self.timestamp, buf_view = convert.get_timestamp(buf_view)
-            self.cluster_name, buf_view = convert.get_string(buf_view, little=True)
+            self.timestamp, buf_view = Convert.get_timestamp(buf_view)
+            self.cluster_name, buf_view = Convert.get_string(buf_view, little=True)
         else:
             self.security_enabled = False
 
-class OUT_CONNECTION_CONTEXT_def:
-    OUTCONTEXT_OPT1_ENFORCE_ISO88591 = 1  #   (2^0)
-    OUTCONTEXT_OPT1_IGNORE_SQLCANCEL = 1073741824  #   (2^30)
-    OUTCONTEXT_OPT1_EXTRA_OPTIONS = 2147483648  #   (2^31)
-    OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE = 536870912  #  (2^29)
+
+class OutConnectionContextDef:
 
     def __init__(self):
         self.version_list = VERSION_LIST_def()
@@ -585,33 +586,33 @@ class OUT_CONNECTION_CONTEXT_def:
 
         self.certificate = b''
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
 
         self.version_list = VERSION_LIST_def()
-        buf_view = self.version_list.extractFromByteArray(buf_view)
+        buf_view = self.version_list.extract_from_bytearray(buf_view)
 
-        self.node_id, buf_view = convert.get_short(buf_view, little=True)
-        self.process_id, buf_view = convert.get_int(buf_view, little=True)
-        self.computer_name, buf_view = convert.get_string(buf_view, little=True)
-        self.catalog, buf_view = convert.get_string(buf_view, little=True)
-        self.schema, buf_view = convert.get_string(buf_view, little=True)
-        self.option_flags1, buf_view = convert.get_int(buf_view, little=True)
-        self.option_flags2, buf_view = convert.get_int(buf_view, little=True)
-        self.enforce_iso = (self.option_flags1 and self.OUTCONTEXT_OPT1_ENFORCE_ISO88591) > 0
-        self.ignore_cancel = (self.option_flags1 and self.OUTCONTEXT_OPT1_IGNORE_SQLCANCEL) > 0
+        self.node_id, buf_view = Convert.get_short(buf_view, little=True)
+        self.process_id, buf_view = Convert.get_int(buf_view, little=True)
+        self.computer_name, buf_view = Convert.get_string(buf_view, little=True)
+        self.catalog, buf_view = Convert.get_string(buf_view, little=True)
+        self.schema, buf_view = Convert.get_string(buf_view, little=True)
+        self.option_flags1, buf_view = Convert.get_int(buf_view, little=True)
+        self.option_flags2, buf_view = Convert.get_int(buf_view, little=True)
+        self.enforce_iso = (self.option_flags1 and STRUCTDEF.OUTCONTEXT_OPT1_ENFORCE_ISO88591) > 0
+        self.ignore_cancel = (self.option_flags1 and STRUCTDEF.OUTCONTEXT_OPT1_IGNORE_SQLCANCEL) > 0
 
-        if self.option_flags1 & self.OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE > 0:
-            self.certificate, buf_view = convert.get_string(buf_view, little=True)
-        elif self.option_flags1 & self.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
+        if self.option_flags1 & STRUCTDEF.OUTCONTEXT_OPT1_DOWNLOAD_CERTIFICATE > 0:
+            self.certificate, buf_view = Convert.get_string(buf_view, little=True)
+        elif self.option_flags1 & STRUCTDEF.OUTCONTEXT_OPT1_EXTRA_OPTIONS > 0:
             try:
-                buf, buf_view = convert.get_string(buf_view, little=True)
-                self.decodeExtraOptions(buf)
+                buf, buf_view = Convert.get_string(buf_view, little=True)
+                self.decode_extra_options(buf)
             except:
                 pass
 
         return buf_view
 
-    def decodeExtraOptions(self, options):
+    def decode_extra_options(self, options):
         opts = options.split("")
         for x in opts:
             token, value = x.split("=")
@@ -620,82 +621,73 @@ class OUT_CONNECTION_CONTEXT_def:
 
 
 class InitializeDialogueReply:
-    odbc_SQLSvc_InitializeDialogue_ParamError_exn_ = 1
-    odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_ = 2
-    odbc_SQLSvc_InitializeDialogue_SQLError_exn_ = 3
-    odbc_SQLSvc_InitializeDialogue_SQLInvalidHandle_exn_ = 4
-    odbc_SQLSvc_InitializeDialogue_SQLNeedData_exn_ = 5
-    odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_ = 6
-
-    SQL_PASSWORD_EXPIRING = 8857
-    SQL_PASSWORD_GRACEPERIOD = 8837
 
     def __init__(self):
         self.exception_nr = 0
         self.exception_detail = 0
         self.param_error = ''
-        self.SQLError = ERROR_DESC_LIST_def()
-        self.InvalidUser = ERROR_DESC_LIST_def()
+        self.SQLError = ErrorDescListDef()
+        self.InvalidUser = ErrorDescListDef()
         self.client_error_text = ''
 
-        self.out_context = OUT_CONNECTION_CONTEXT_def()
+        self.out_context = OutConnectionContextDef()
 
     def init_reply(self, buf_view, conn):
-        self.exception_nr, buf_view = convert.get_int(buf_view, little=True)
-        self.exception_detail, buf_view = convert.get_int(buf_view, little=True)
+        self.exception_nr, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
 
         if self.exception_nr == Transport.CEE_SUCCESS:
-            buf_view = self.out_context.extractFromByteArray(buf_view)
+            buf_view = self.out_context.extract_from_bytearray(buf_view)
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
-            buf_view = self.SQLError.extractFromByteArray(buf_view)
-            if (self.exception_detail == self.SQL_PASSWORD_EXPIRING or self.exception_detail == self.SQL_PASSWORD_GRACEPERIOD):
-                self.out_context.extractFromByteArray(buf_view)
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_SQLError_exn_:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            if self.exception_detail == STRUCTDEF.SQL_PASSWORD_EXPIRING \
+                or self.exception_detail == STRUCTDEF.SQL_PASSWORD_GRACEPERIOD:
+                self.out_context.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
 
-            error_info = ''
-            for error_desc in self.SQLError.list:
-                error_info += error_desc.errorText
-            raise errors.DatabaseError(error_info)
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            buf_view = self.out_context.extract_from_bytearray(buf_view)
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
-            buf_view = self.SQLError.extractFromByteArray(buf_view)
-            buf_view = self.out_context.extractFromByteArray(buf_view)
-
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
-            self.param_error, buf_view = convert.get_string(buf_view, little=True)
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
+            self.param_error, buf_view = Convert.get_string(buf_view, little=True)
             raise errors.ProgrammingError(self.param_error)
 
-        elif self.exception_nr == self.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
+        elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
             raise errors.InternalError("invalid connection")
 
         else:
             self.client_error_text = "unknow error"
 
 
-class ERROR_DESC_LIST_def:
+class ErrorDescListDef:
 
     def __init__(self):
         self.length = 0
         self.list = []
 
-    def extractFromByteArray(self, buf_view):
+    def extract_from_bytearray(self, buf_view):
 
-        length, buf_view = convert.get_int(buf_view, little=True)
+        length, buf_view = Convert.get_int(buf_view, little=True)
 
         for i in range(length):
-            error_desc = ERROR_DESC_Def()
-            buf_view = error_desc.extractFromByteArray(buf_view)
+            error_desc = ErrorDescDef()
+            buf_view = error_desc.extract_from_bytearray(buf_view)
             self.list.append(error_desc)
 
         return buf_view
 
+    def get_error_info(self):
+        return '\n'.join([error_desc.errorText for error_desc in self.list])
 
-class ERROR_DESC_Def:
 
-    def __int__(self):
+class ErrorDescDef:
+
+    def __init__(self):
         self.rowId = 0
         self.errorDiagnosticId = 0
-        self.sqlcode  = 0
+        self.sqlcode = 0
         self.sqlstate = ''
         self.errorText = ''
         self.operationAbortId = 0
@@ -708,27 +700,27 @@ class ERROR_DESC_Def:
         self.Param6 = ''
         self.Param7 = ''
 
-    def extractFromByteArray(self, buf_view):
-        self.rowId, buf_view= convert.get_int(buf_view, little=True)
-        self.errorDiagnosticId, buf_view = convert.get_int(buf_view, little=True)
-        self.sqlcode, buf_view = convert.get_int(buf_view, little=True)
+    def extract_from_bytearray(self, buf_view):
+        self.rowId, buf_view= Convert.get_int(buf_view, little=True)
+        self.errorDiagnosticId, buf_view = Convert.get_int(buf_view, little=True)
+        self.sqlcode, buf_view = Convert.get_int(buf_view, little=True)
 
         # Note, SQLSTATE is logically 5 bytes, but ODBC uses 6 bytes for some reason.
-        self.sqlstate, buf_view = convert.get_bytes(buf_view, length=6)
-        self.errorText, buf_view = convert.get_string(buf_view, little=True)
-        self.operationAbortId, buf_view = convert.get_int(buf_view, little=True)
-        self.errorCodeType, buf_view = convert.get_int(buf_view, little=True)
-        self.Param1, buf_view = convert.get_string(buf_view, little=True)
-        self.Param2, buf_view = convert.get_string(buf_view, little=True)
-        self.Param3, buf_view = convert.get_string(buf_view, little=True)
-        self.Param4, buf_view = convert.get_string(buf_view, little=True)
-        self.Param5, buf_view = convert.get_string(buf_view, little=True)
-        self.Param6, buf_view = convert.get_string(buf_view, little=True)
-        self.Param7, buf_view = convert.get_string(buf_view, little=True)
+        self.sqlstate, buf_view = Convert.get_bytes(buf_view, length=6)
+        self.errorText, buf_view = Convert.get_string(buf_view, little=True)
+        self.operationAbortId, buf_view = Convert.get_int(buf_view, little=True)
+        self.errorCodeType, buf_view = Convert.get_int(buf_view, little=True)
+        self.Param1, buf_view = Convert.get_string(buf_view, little=True)
+        self.Param2, buf_view = Convert.get_string(buf_view, little=True)
+        self.Param3, buf_view = Convert.get_string(buf_view, little=True)
+        self.Param4, buf_view = Convert.get_string(buf_view, little=True)
+        self.Param5, buf_view = Convert.get_string(buf_view, little=True)
+        self.Param6, buf_view = Convert.get_string(buf_view, little=True)
+        self.Param7, buf_view = Convert.get_string(buf_view, little=True)
         return buf_view
 
 
-class SQL_DataValue_def:
+class SQLDataValueDef:
 
     def __init__(self):
         self.buffer = None
@@ -737,17 +729,17 @@ class SQL_DataValue_def:
     def sizeof(self):
         return Transport.size_int if self.buffer is None else Transport.size_int + len(self.buffer) + 1
 
-    def insertIntoByteArray(self, buf_view, little=False):
+    def insert_into_bytearray(self, buf_view, little=False):
         try:
             if self.buffer is not None:
                 if isinstance(self.buffer, str):
-                    buf_view = convert.put_string(self.buffer, buf_view, little)  # string
+                    buf_view = Convert.put_string(self.buffer, buf_view, little)  # string
                 else:
-                    buf_view = convert.put_bytes(self.buffer, buf_view, little, is_data=True)
+                    buf_view = Convert.put_bytes(self.buffer, buf_view, little, is_data=True)
             else:
-                buf_view = convert.put_int(0, buf_view, little)
+                buf_view = Convert.put_int(0, buf_view, little)
         except:
-            raise errors.InternalError("convert buffer error")
+            raise errors.InternalError("Convert buffer error")
 
         return buf_view
 
@@ -757,22 +749,23 @@ class SQL_DataValue_def:
     def set_user_buffer(self, buffer:str):
         self.user_buffer = buffer
 
-    def extractFromByteArray(self, buf_view: memoryview)->memoryview:
-        self.buffer, buf_view = convert.get_string(buf_view, little=True)
+    def extract_from_bytearray(self, buf_view: memoryview)->memoryview:
+        self.buffer, buf_view = Convert.get_string(buf_view, little=True)
         return buf_view
 
     @classmethod
-    def fill_in_sql_values(cls, describer, param_rowcount, param_values):
-        data_value = SQL_DataValue_def()
+    def fill_in_sql_values(cls, describer, param_rowcount, param_values, is_executemany=False):
+        data_value = SQLDataValueDef()
 
         #TODO handle param_values
-        if (param_rowcount == 0 and param_values is not None and  len(param_values) > 0):
-            param_rowcount = 1 # fake a single row if we are doing inputParams
+        if param_rowcount == 0 and param_values is not None and len(param_values) > 0:
+            param_rowcount = 1  # fake a single row if we are doing inputParams
         # for an SPJ
 
         param_count = 0
         if param_values is not None:
-            param_count = len(param_values)
+            param_count = len(param_values[0]) if is_executemany else len(param_values)
+
         # TODO: we should really figure out WHY this could happen
 
         row_len = 0
@@ -790,10 +783,10 @@ class SQL_DataValue_def:
                 data_value.buffer = bytearray(buf_len)
                 buf_view = memoryview(data_value.buffer)
                 for row in range(param_rowcount):
+                    row_value = param_values[row] if is_executemany else param_values
                     for col in range(param_count):
                         _ = cls.convert_object_to_sql(describer.input_desc_list, param_rowcount, col,
-                                                              param_values[col],
-                                                              row, buf_view)
+                                                      row_value[col], row, buf_view)
 
         data_value.length = row_len * param_rowcount
 
@@ -821,14 +814,15 @@ class SQL_DataValue_def:
         dataOffset = 2
         shortLength = False
 
-        if dataType == FetchReply.SQLTYPECODE_VARCHAR_WITH_LENGTH:
+        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH:
             shortLength = precision < 2**15
             dataOffset = 2 if shortLength else 4
             dataLength += dataOffset
 
             if dataLength % 2 != 0:
                 dataLength = dataLength + 1
-        elif dataType == FetchReply.SQLTYPECODE_BLOB or dataType == FetchReply.SQLTYPECODE_CLOB:
+
+        elif dataType == FIELD_TYPE.SQLTYPECODE_BLOB or dataType == FIELD_TYPE.SQLTYPECODE_CLOB:
             shortLength = False
             dataOffset = 4
             dataLength += dataOffset
@@ -844,14 +838,14 @@ class SQL_DataValue_def:
             if nullValue == -1:
                 raise errors.DataError("null_parameter_for_not_null_column")
             # values[nullValue] = -1
-            _ = convert.put_short(-1, buf_view[nullValue:], True)
+            _ = Convert.put_short(-1, buf_view[nullValue:], True)
             return buf_view
 
-        if dataType == FetchReply.SQLTYPECODE_CHAR:
+        if dataType == FIELD_TYPE.SQLTYPECODE_CHAR:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
-                _ = convert.put_short(0, buf_view[noNullValue:], True)
+                _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return buf_view
             elif isinstance(param_values, (bytes, str)):
                 charSet = ""
@@ -876,16 +870,16 @@ class SQL_DataValue_def:
             # We now have a byte array containing the parameter
             data_len = len(param_values)
             if max_len >= data_len:
-                _ = convert.put_bytes(param_values, buf_view[noNullValue:], True, nolen=True)
+                _ = Convert.put_bytes(param_values, buf_view[noNullValue:], True, nolen=True)
                 # Blank pad for rest of the buffer
                 if max_len > data_len:
                     if dataCharSet == Transport.charset_to_value["UTF-16BE"]:
                         # pad with Unicode spaces (0x00 0x20)
                         i2 = data_len
                         while i2 < max_len:
-                            _ = convert.put_bytes(' '.encode(), buf_view[noNullValue + i2:], little=True,
+                            _ = Convert.put_bytes(' '.encode(), buf_view[noNullValue + i2:], little=True,
                                              nolen=True)
-                            _ = convert.put_bytes(' '.encode(), buf_view[noNullValue + i2 + 1:], little=True,
+                            _ = Convert.put_bytes(' '.encode(), buf_view[noNullValue + i2 + 1:], little=True,
                                              nolen=True)
                             i2 = i2 + 2
 
@@ -893,17 +887,17 @@ class SQL_DataValue_def:
                         b = bytearray()
                         for x in range(max_len - data_len):
                             b.append(ord(' '))
-                        _ = convert.put_bytes(b, buf_view[noNullValue + data_len:], little=True, nolen=True)
+                        _ = Convert.put_bytes(b, buf_view[noNullValue + data_len:], little=True, nolen=True)
             else:
                 raise errors.ProgrammingError(
                         "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
 
             return None
-        if dataType == FetchReply.SQLTYPECODE_VARCHAR:
+        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
-                _ = convert.put_short(0, buf_view[noNullValue:], True)
+                _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return None
             elif isinstance(param_values, (bytes, str)):
                 charSet = ""
@@ -928,18 +922,18 @@ class SQL_DataValue_def:
 
             data_len = len(param_values)
             if max_len >= data_len:
-                _ = convert.put_short(data_len, buf_view[noNullValue:], little=True)
-                _ = convert.put_bytes(param_values, buf_view[noNullValue + 2:], nolen=True)
+                _ = Convert.put_short(data_len, buf_view[noNullValue:], little=True)
+                _ = Convert.put_bytes(param_values, buf_view[noNullValue + 2:], nolen=True)
             else:
                 raise errors.DataError(
                     "invalid_string_parameter input data is longer than the length for column: {0}".format(
                         param_count))
             return None
-        if dataType == FetchReply.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FetchReply.SQLTYPECODE_VARCHAR_LONG:
+        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG:
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
-                _ = convert.put_short(0, buf_view[noNullValue:], True)
+                _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return buf_view
             elif isinstance(param_values, (bytes, str)):
                 charSet = ""
@@ -966,16 +960,16 @@ class SQL_DataValue_def:
             if max_len > (data_len + dataOffset):
                 max_len = data_len + dataOffset
                 if shortLength:
-                    _ = convert.put_short(data_len, buf_view[noNullValue:], little=True)
+                    _ = Convert.put_short(data_len, buf_view[noNullValue:], little=True)
                 else:
-                    _ = convert.put_int(data_len, buf_view[noNullValue:], little=True)
-                _ = convert.put_bytes(param_values, buf_view[noNullValue + dataOffset:], nolen=True)
+                    _ = Convert.put_int(data_len, buf_view[noNullValue:], little=True)
+                _ = Convert.put_bytes(param_values, buf_view[noNullValue + dataOffset:], nolen=True)
             else:
                 raise errors.DataError(
                     "invalid_string_parameter input data is longer than the length for column: {0}".format(
                         param_count))
             return None
-        if dataType == FetchReply.SQLTYPECODE_INTEGER:
+        if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -992,10 +986,10 @@ class SQL_DataValue_def:
                 if param_values > pre or param_values < -pre:
                     raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_int(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_int(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_INTEGER_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1012,28 +1006,17 @@ class SQL_DataValue_def:
                 if param_values > pre or param_values < -pre:
                     raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_uint(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_uint(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FetchReply.SQLTYPECODE_TINYINT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT:
             # TODO have not finished
-            """
-                        if not isinstance(param_values,(int, float)):
-                            raise errors.ProgrammingError(
-                                "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                                    param_count))
-                        if scale > 0:
-                            raise errors.DataError("invalid_parameter_value: Cannot have scale for param {0}".format(param_values))
 
-                        if param_values > Transport.max_tinyint or param_values < Transport.min_tinyint:
-                            raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-                        """
             raise errors.NotSupportedError("not support tinyint")
 
-        if dataType == FetchReply.SQLTYPECODE_TINYINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
             raise errors.NotSupportedError("not support utinyint")
 
-        if dataType == FetchReply.SQLTYPECODE_SMALLINT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_SMALLINT:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1050,10 +1033,10 @@ class SQL_DataValue_def:
                 if param_values > pre or param_values < -pre:
                     raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_short(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_short(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_SMALLINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1070,10 +1053,10 @@ class SQL_DataValue_def:
                 if param_values > pre or param_values < -pre:
                     raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_ushort(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_ushort(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_LARGEINT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_LARGEINT:
             if not isinstance(param_values, (int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1090,9 +1073,9 @@ class SQL_DataValue_def:
                 if param_values > pre or param_values < -pre:
                     raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_longlong(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_longlong(param_values, buf_view[noNullValue:], little=True)
             return None
-        if dataType == FetchReply.SQLTYPECODE_LARGEINT_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
             if not isinstance(param_values, (int, float)):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either int or float for column: {0}".format(
@@ -1103,17 +1086,11 @@ class SQL_DataValue_def:
             if param_values > Transport.max_ulong or param_values < Transport.min_ulong:
                 raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
             return None
 
-        if dataType == FetchReply.SQLTYPECODE_DECIMAL or \
-                        dataType == FetchReply.SQLTYPECODE_DECIMAL_UNSIGNED:
+        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL \
+                or dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED:
 
             if not isinstance(param_values, (int, str, Decimal)):
                 raise errors.DataError(
@@ -1136,20 +1113,23 @@ class SQL_DataValue_def:
                 raise errors.DataError("data_truncation_exceed {0}".format(param_count))
 
             padding = bytes('0'.encode() * num_zeros)
-            _ = convert.put_bytes(padding, buf_view[noNullValue:], nolen=True)
+            _ = Convert.put_bytes(padding, buf_view[noNullValue:], nolen=True)
 
             if sign:
-                _ = convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:],is_data=True)
+                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], nolen=True, is_data=True)
 
                 # byte -80 : 0xFFFFFFB0
-                _ = convert.put_bytes(b'0xB0', buf_view[noNullValue:], nolen=True, is_data=True)
+                num, _ = Convert.get_bytes(buf_view[noNullValue:], length=1)
+
+                _ = Convert.put_bytes(bytes([int(num) | 0xB0]), buf_view[noNullValue:], nolen=True, is_data=True)
+                # _ = Convert.put_bytes(num | 0xB0, buf_view[noNullValue:], nolen=True, is_data=True)
             else:
-                _ = convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], is_data=True)
+                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], nolen=True,
+                                      is_data=True)
 
             return buf_view
-        if dataType == FetchReply.SQLTYPECODE_REAL:
-            pass
-        if dataType == FetchReply.SQLTYPECODE_FLOAT:
+        if dataType == FIELD_TYPE.SQLTYPECODE_REAL:
+
             if not isinstance(param_values, float):
                 raise errors.DataError(
                     "invalid_parameter_value, data should be either float for column: {0}".format(
@@ -1157,51 +1137,70 @@ class SQL_DataValue_def:
             if param_values > Transport.max_float:
                 raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = convert.put_float(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
 
-        if dataType == FetchReply.SQLTYPECODE_DOUBLE:
-            pass
-        if dataType == FetchReply.SQLTYPECODE_NUMERIC or \
-                        dataType == FetchReply.SQLTYPECODE_NUMERIC_UNSIGNED:
-            pass
-        if dataType == FetchReply.SQLTYPECODE_BOOLEAN:
-            pass
-        if dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE or \
-                        dataType == FetchReply.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED or \
-                        dataType == FetchReply.SQLTYPECODE_BIT or \
-                        dataType == FetchReply.SQLTYPECODE_BITVAR or \
-                        dataType == FetchReply.SQLTYPECODE_BPINT_UNSIGNED:
-            pass
+        if dataType == FIELD_TYPE.SQLTYPECODE_FLOAT or dataType == FIELD_TYPE.SQLTYPECODE_DOUBLE:
+            if not isinstance(param_values, float):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either float for column: {0}".format(
+                        param_count))
+            if param_values > Transport.max_double:
+                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
+
+            _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
+
+        if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC \
+                or dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
+
+            if not isinstance(param_values, (int, str, Decimal)):
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either int or str or decimal for value: {0}".format(
+                        param_values))
+
+            sign = Convert.put_numeric(param_values, buf_view[noNullValue:], scale, max_len)
+            if sign:
+                # byte -80 : 0xFFFFFFB0
+                num, _ = Convert.get_bytes(buf_view[noNullValue + max_len - 1:], length=1)
+                _ = Convert.put_bytes(num | 0x80, buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
+
+        if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
+            raise errors.NotSupportedError
+        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
+                or dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED \
+                or dataType == FIELD_TYPE.SQLTYPECODE_BIT \
+                or dataType == FIELD_TYPE.SQLTYPECODE_BITVAR \
+                or dataType == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
+            raise errors.NotSupportedError
 
 
-class SQLValue_def:
+class SQLValueDef:
 
     def __init__(self):
         self.data_type = 0                      #  int
         self.data_ind = 0                       #  short
-        self.data_value = SQL_DataValue_def()
+        self.data_value = SQLDataValueDef()
         self.data_charset = 0                   #  int
 
     def sizeof(self):
         return Transport.size_int * 2 + Transport.size_short + self.data_value.sizeof()
 
-    def insertIntoByteArray(self, buf_view, little=True):
-        buf_view = convert.put_int(self.data_type, buf_view, little=little)
-        buf_view = convert.put_short(self.data_ind, buf_view, little=little)
-        buf_view = self.data_value.insertIntoByteArray(buf_view, little=little)
-        buf_view = convert.put_int(self.data_charset, buf_view, little=little)
+    def insert_into_bytearray(self, buf_view, little=True):
+        buf_view = Convert.put_int(self.data_type, buf_view, little=little)
+        buf_view = Convert.put_short(self.data_ind, buf_view, little=little)
+        buf_view = self.data_value.insert_into_bytearray(buf_view, little=little)
+        buf_view = Convert.put_int(self.data_charset, buf_view, little=little)
 
         return buf_view
 
-    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
-        self.data_type, buf_view = convert.get_int(buf_view, little=True)
-        self.data_ind, buf_view = convert.get_short(buf_view, little=True)
-        buf_view = self.data_value.extractFromByteArray(buf_view)
-        self.data_charset, buf_view = convert.get_int(buf_view, little=True)
+    def extract_from_bytearray(self, buf_view:memoryview)->memoryview:
+        self.data_type, buf_view = Convert.get_int(buf_view, little=True)
+        self.data_ind, buf_view = Convert.get_short(buf_view, little=True)
+        buf_view = self.data_value.extract_from_bytearray(buf_view)
+        self.data_charset, buf_view = Convert.get_int(buf_view, little=True)
         return buf_view
 
 
-class SQLValueList_def:
+class SQLValueListDef:
 
     def __init__(self):
         self.value_list = []
@@ -1214,22 +1213,22 @@ class SQLValueList_def:
 
         return size
 
-    def insertIntoByteArray(self, buf_view, little=True):
+    def insert_into_bytearray(self, buf_view, little=True):
         count = len(self.value_list)
         if count is not 0:
-            convert.put_int(count, buf_view,little)
+            Convert.put_int(count, buf_view,little)
             for x in self.value_list:
-                x.insertIntoByteArray(buf_view)
+                x.insert_into_bytearray(buf_view)
         else:
-            convert.put_int(0, buf_view, little)
+            Convert.put_int(0, buf_view, little)
         return buf_view
 
-    def extractFromByteArray(self, buf_view:memoryview)->memoryview:
-        count, buf_view = convert.get_int(buf_view, little=True)
+    def extract_from_bytearray(self, buf_view:memoryview)->memoryview:
+        count, buf_view = Convert.get_int(buf_view, little=True)
 
         for x in range(count):
-            temp_sql_value = SQLValue_def()
-            buf_view = temp_sql_value.extractFromByteArray(buf_view)
+            temp_sql_value = SQLValueDef()
+            buf_view = temp_sql_value.extract_from_bytearray(buf_view)
             self.value_list.append(buf_view)
 
         return buf_view
@@ -1251,13 +1250,13 @@ class ExecuteReply:
         self.proxy_syntax_list = []
 
     def init_reply(self, buf_view):
-        self.return_code, buf_view = convert.get_int(buf_view, little=True)
-        self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.total_error_length, buf_view = Convert.get_int(buf_view, little=True)
         if self.total_error_length > 0:
-            error_count, buf_view = convert.get_int(buf_view, little=True)
+            error_count, buf_view = Convert.get_int(buf_view, little=True)
             for x in range(error_count):
                 t = SQLWarningOrError()
-                buf_view = t.extractFromByteArray(buf_view)
+                buf_view = t.extract_from_bytearray(buf_view)
                 self.errorlist.append(t)
             error_info = ''
             for item in self.errorlist:
@@ -1268,58 +1267,57 @@ class ExecuteReply:
             else:
                 raise errors.Warning(error_info)
 
-        self.output_desc_length, buf_view = convert.get_int(buf_view, little=True)
+        self.output_desc_length, buf_view = Convert.get_int(buf_view, little=True)
         if self.output_desc_length > 0:
 
-            output_param_length, buf_view = convert.get_int(buf_view, little=True)
-            output_number_params, buf_view = convert.get_int(buf_view, little=True)
+            output_param_length, buf_view = Convert.get_int(buf_view, little=True)
+            output_number_params, buf_view = Convert.get_int(buf_view, little=True)
             for x in range(output_number_params):
                 t = Descriptor()
-                buf_view = t.extractFromByteArray(buf_view)
+                buf_view = t.extract_from_bytearray(buf_view)
                 t.set_row_length(output_param_length)
                 self.output_desc_list.append(t)
 
-        self.rows_affected, buf_view = convert.get_int(buf_view, little=True)
-        self.query_type, buf_view = convert.get_int(buf_view, little=True)
-        self.estimated_cost, buf_view = convert.get_int(buf_view, little=True)
+        self.rows_affected, buf_view = Convert.get_int(buf_view, little=True)
+        self.query_type, buf_view = Convert.get_int(buf_view, little=True)
+        self.estimated_cost, buf_view = Convert.get_int(buf_view, little=True)
 
         # 64 bit rows_affected,this is a horrible hack because we cannot change the protocol yet
         # rows_affected should be made a regular 64 bit value when possible
         self.rows_affected = self.rows_affected or (self.estimated_cost << 32)
-        self.out_values, buf_view = convert.get_bytes(buf_view)
-        self.num_resultsets, buf_view = convert.get_int(buf_view, little=True)
+        self.out_values, buf_view = Convert.get_bytes(buf_view)
+        self.num_resultsets, buf_view = Convert.get_int(buf_view, little=True)
 
         if self.num_resultsets > 0:
 
             self.output_desc_list = []
             for x in range(self.num_resultsets):
-                _, buf_view = convert.get_int(buf_view, little=True) # stmt handle
-                stmt_lable, buf_view = convert.get_string(buf_view, little=True)
+                _, buf_view = Convert.get_int(buf_view, little=True)  # stmt handle
+                stmt_lable, buf_view = Convert.get_string(buf_view, little=True)
                 self.stmt_labels_list.append(stmt_lable)
-                _, buf_view = convert.get_int(buf_view, little=True)  # long stmt_label_charset
-                output_desc_length, buf_view = convert.get_int(buf_view, little=True)
+                _, buf_view = Convert.get_int(buf_view, little=True)  # long stmt_label_charset
+                output_desc_length, buf_view = Convert.get_int(buf_view, little=True)
 
                 temp_descriptor_list = []
                 if self.output_desc_length > 0:
 
-                    output_param_length, buf_view = convert.get_int(buf_view, little=True)
-                    output_number_params, buf_view = convert.get_int(buf_view, little=True)
+                    output_param_length, buf_view = Convert.get_int(buf_view, little=True)
+                    output_number_params, buf_view = Convert.get_int(buf_view, little=True)
 
                     for y in range(output_number_params):
                         t = Descriptor()
-                        t.extractFromByteArray(buf_view)
+                        t.extract_from_bytearray(buf_view)
                         t.set_row_length(output_param_length)
                         temp_descriptor_list.append(t)
 
                 self.output_desc_list.append(temp_descriptor_list)
-                proxy_syntax, buf_view = convert.get_string(buf_view, little=True)
+                proxy_syntax, buf_view = Convert.get_string(buf_view, little=True)
                 self.proxy_syntax_list.append(proxy_syntax)
 
-        single_syntax, buf_view = convert.get_string(buf_view, little=True)
+        single_syntax, buf_view = Convert.get_string(buf_view, little=True)
 
         if not self.proxy_syntax_list:
             self.proxy_syntax_list.append(single_syntax)
-
 
 
 class SQLWarningOrError:
@@ -1330,12 +1328,12 @@ class SQLWarningOrError:
         self.text = text
         self.sql_state = sql_state
 
-    def extractFromByteArray(self, buf_view: memoryview) -> memoryview:
-        self.row_id, buf_view = convert.get_int(buf_view, little=True)
-        self.sql_code, buf_view = convert.get_int(buf_view, little=True)
-        self.text, buf_view = convert.get_string(buf_view, little=True)
-        self.sql_state, buf_view = convert.get_bytes(buf_view, 5)
-        _, buf_view = convert.get_char(buf_view)
+    def extract_from_bytearray(self, buf_view: memoryview) -> memoryview:
+        self.row_id, buf_view = Convert.get_int(buf_view, little=True)
+        self.sql_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.text, buf_view = Convert.get_string(buf_view, little=True)
+        self.sql_state, buf_view = Convert.get_bytes(buf_view, 5)
+        _, buf_view = Convert.get_char(buf_view)
         return buf_view
 
 
@@ -1347,7 +1345,7 @@ class Descriptor:
         self.version_ = 0
         self.dataType_ = 0   # sql_data_type
         self.datetimeCode_ = 0
-        self.maxLen_ = 0
+        self.maxLen_ = 0    # sqlOctetLength_
         self.precision_ = 0
         self.scale_ = 0
         self.nullInfo_ = 0
@@ -1368,101 +1366,33 @@ class Descriptor:
     def set_row_length(self, num):
         self.row_length = num
 
-    def extractFromByteArray(self, buf_view: memoryview) -> memoryview:
-        self.noNullValue_, buf_view = convert.get_int(buf_view, little=True)
-        self.nullValue_, buf_view = convert.get_int(buf_view, little=True)
-        self.version_, buf_view = convert.get_int(buf_view, little=True)
-        self.dataType_, buf_view = convert.get_int(buf_view, little=True)
-        self.datetimeCode_, buf_view = convert.get_int(buf_view, little=True)
-        self.maxLen_, buf_view = convert.get_int(buf_view, little=True)
-        self.precision_, buf_view = convert.get_int(buf_view, little=True)
-        self.scale_, buf_view = convert.get_int(buf_view, little=True)
-        self.nullInfo_, buf_view = convert.get_int(buf_view, little=True)
-        self.signed_, buf_view = convert.get_int(buf_view, little=True)
-        self.odbcDataType_, buf_view = convert.get_int(buf_view, little=True)
-        self.odbcPrecision_, buf_view = convert.get_int(buf_view, little=True)
-        self.sqlCharset_, buf_view = convert.get_int(buf_view, little=True)
-        self.odbcCharset_, buf_view = convert.get_int(buf_view, little=True)
-        self.colHeadingNm_, buf_view = convert.get_string(buf_view, little=True)
-        self.tableName_, buf_view = convert.get_string(buf_view, little=True)
-        self.catalogName_, buf_view = convert.get_string(buf_view, little=True)
-        self.schemaName_, buf_view = convert.get_string(buf_view, little=True)
-        self.headingName_, buf_view = convert.get_string(buf_view, little=True)
-        self.intLeadPrec_, buf_view = convert.get_int(buf_view, little=True)
-        self.paramMode_, buf_view = convert.get_int(buf_view, little=True)
+    def extract_from_bytearray(self, buf_view: memoryview) -> memoryview:
+        self.noNullValue_, buf_view = Convert.get_int(buf_view, little=True)
+        self.nullValue_, buf_view = Convert.get_int(buf_view, little=True)
+        self.version_, buf_view = Convert.get_int(buf_view, little=True)
+        self.dataType_, buf_view = Convert.get_int(buf_view, little=True)
+        self.datetimeCode_, buf_view = Convert.get_int(buf_view, little=True)
+        self.maxLen_, buf_view = Convert.get_int(buf_view, little=True)
+        self.precision_, buf_view = Convert.get_int(buf_view, little=True)
+        self.scale_, buf_view = Convert.get_int(buf_view, little=True)
+        self.nullInfo_, buf_view = Convert.get_int(buf_view, little=True)
+        self.signed_, buf_view = Convert.get_int(buf_view, little=True)
+        self.odbcDataType_, buf_view = Convert.get_int(buf_view, little=True)
+        self.odbcPrecision_, buf_view = Convert.get_int(buf_view, little=True)
+        self.sqlCharset_, buf_view = Convert.get_int(buf_view, little=True)
+        self.odbcCharset_, buf_view = Convert.get_int(buf_view, little=True)
+        self.colHeadingNm_, buf_view = Convert.get_string(buf_view, little=True)
+        self.tableName_, buf_view = Convert.get_string(buf_view, little=True)
+        self.catalogName_, buf_view = Convert.get_string(buf_view, little=True)
+        self.schemaName_, buf_view = Convert.get_string(buf_view, little=True)
+        self.headingName_, buf_view = Convert.get_string(buf_view, little=True)
+        self.intLeadPrec_, buf_view = Convert.get_int(buf_view, little=True)
+        self.paramMode_, buf_view = Convert.get_int(buf_view, little=True)
 
         return buf_view
 
 
 class FetchReply:
-
-    SQLTYPECODE_CHAR = 1
-    # NUMERIC * /
-    SQLTYPECODE_NUMERIC = 2
-    SQLTYPECODE_NUMERIC_UNSIGNED = -201
-    # DECIMAL * /
-    SQLTYPECODE_DECIMAL = 3
-    SQLTYPECODE_DECIMAL_UNSIGNED = -301
-    SQLTYPECODE_DECIMAL_LARGE = -302
-    SQLTYPECODE_DECIMAL_LARGE_UNSIGNED = -303
-    # INTEGER / INT * /
-    SQLTYPECODE_INTEGER = 4
-    SQLTYPECODE_INTEGER_UNSIGNED = -401
-    SQLTYPECODE_LARGEINT = -402
-    SQLTYPECODE_LARGEINT_UNSIGNED = -405
-    # SMALLINT
-    SQLTYPECODE_SMALLINT = 5
-    SQLTYPECODE_SMALLINT_UNSIGNED = -502
-    SQLTYPECODE_BPINT_UNSIGNED = -503
-
-        # TINYINT */
-    SQLTYPECODE_TINYINT                = -403
-    SQLTYPECODE_TINYINT_UNSIGNED       = -404
-
-    # DOUBLE depending on precision
-    SQLTYPECODE_FLOAT = 6
-    SQLTYPECODE_REAL = 7
-    SQLTYPECODE_DOUBLE = 8
-
-    # DATE,TIME,TIMESTAMP */
-    SQLTYPECODE_DATETIME = 9
-
-    # TIMESTAMP */
-    SQLTYPECODE_INTERVAL = 10
-
-    # no ANSI value 11 */
-
-	# VARCHAR/CHARACTER VARYING */
-    SQLTYPECODE_VARCHAR = 12
-
-    # SQL/MP stype VARCHAR with length prefix:
-
-    SQLTYPECODE_VARCHAR_WITH_LENGTH = -601
-    SQLTYPECODE_BLOB = -602
-    SQLTYPECODE_CLOB = -603
-    # LONG VARCHAR/ODBC CHARACTER VARYING */
-    SQLTYPECODE_VARCHAR_LONG = -1 # ## NEGATIVE??? */
-
-    # no ANSI value 13 */
-
-	# BIT */
-    SQLTYPECODE_BIT = 14 # not supported */
-
-    # BIT VARYING */
-    SQLTYPECODE_BITVAR = 15 # not supported */
-
-    # NCHAR -- CHAR(n) CHARACTER SET s -- where s uses two bytes per char */
-    SQLTYPECODE_CHAR_DBLBYTE = 16
-    # NCHAR VARYING -- VARCHAR(n) CHARACTER SET s -- s uses 2 bytes per char */
-    SQLTYPECODE_VARCHAR_DBLBYTE = 17
-    # BOOLEAN TYPE */
-    SQLTYPECODE_BOOLEAN = -701
-
-    # Date/Time/TimeStamp related constants */
-    SQLDTCODE_DATE = 1
-    SQLDTCODE_TIME = 2
-    SQLDTCODE_TIMESTAMP = 3
-    SQLDTCODE_MPDATETIME = 4
 
     def __init__(self):
         self.return_code = 0
@@ -1475,26 +1405,24 @@ class FetchReply:
         self.end_of_data = False
 
     def init_reply(self, buf_view: memoryview, execute_desc):
-        self.return_code, buf_view = convert.get_int(buf_view, little=True)
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
         if self.return_code != Transport.SQL_SUCCESS and self.return_code != Transport.NO_DATA_FOUND:
-            self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+            self.total_error_length, buf_view = Convert.get_int(buf_view, little=True)
             if self.total_error_length > 0:
-                error_count, buf_view = convert.get_int(buf_view, little=True)
+                error_count, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(error_count):
                     t = SQLWarningOrError()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
 
-                error_info = ''
-                for item in self.errorlist:
-                    error_info += item.text + '\n'
+                error_info = '\n'.join([item.text for item in self.errorlist])
                 raise errors.ProgrammingError(error_info)
 
-        self.rows_affected, buf_view = convert.get_int(buf_view, little=True)
-        self.out_values_format, buf_view = convert.get_int(buf_view, little=True)
+        self.rows_affected, buf_view = Convert.get_int(buf_view, little=True)
+        self.out_values_format, buf_view = Convert.get_int(buf_view, little=True)
 
         if self.return_code == Transport.SQL_SUCCESS or self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
-            self.out_values, buf_view = convert.get_bytes(buf_view, little=True)
+            self.out_values, buf_view = Convert.get_bytes(buf_view, little=True)
 
             if len(self.errorlist) != 0:
                 pass
@@ -1529,14 +1457,14 @@ class FetchReply:
 
                 null_value = 0
                 if null_value_offset != -1:
-                    null_value, _ = convert.get_short(buf_view[null_value_offset:], little=True)
+                    null_value, _ = Convert.get_short(buf_view[null_value_offset:], little=True)
 
                 column_value = None
                 if null_value_offset != -1 and null_value == -1:
                     column_value = None
                 else:
                     column_value = self._get_execute_to_fetch_string(nonull_value_offset, out_desc_list[column_x])
-                    if not column_value:
+                    if column_value is None:
                         raise errors.InternalError("column value is null")
 
                 column_result_list.append(column_value)
@@ -1555,24 +1483,24 @@ class FetchReply:
         ret_obj = None
         buf_view = memoryview(self.out_values)
         sql_data_type = column_desc.dataType_
-        if sql_data_type == self.SQLTYPECODE_CHAR:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_CHAR:
             length = column_desc.maxLen_
-            ret_obj, _ = convert.get_bytes(buf_view[nonull_value_offset:], length=length)
+            ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
 
-        if sql_data_type == self.SQLTYPECODE_VARCHAR or \
-                        sql_data_type == self.SQLTYPECODE_VARCHAR_WITH_LENGTH or \
-                        sql_data_type == self.SQLTYPECODE_VARCHAR_LONG or \
-                        sql_data_type == self.SQLTYPECODE_BLOB or \
-                        sql_data_type == self.SQLTYPECODE_CLOB:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
 
             short_length = 2 if column_desc.precision_ < 2**15 else 4
             data_offset = nonull_value_offset + short_length
 
             data_len = 0
             if short_length == 2:
-                data_len, _ = convert.get_short(buf_view[nonull_value_offset:], little=True)
+                data_len, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
             else:
-                data_len, _ = convert.get_int(buf_view[nonull_value_offset:], little=True)
+                data_len, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
 
             length_left = len(self.out_values) - data_offset
 
@@ -1580,12 +1508,63 @@ class FetchReply:
 
             ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
 
-        if sql_data_type == self.SQLTYPECODE_INTERVAL:
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTERVAL:
             pass
 
-        if sql_data_type == self.SQLTYPECODE_INTEGER:
-            ret_obj, _ = convert.get_int(buf_view[nonull_value_offset:], little=True)
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
+            ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT:
+            ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT:
+            ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
+            ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER:
+            ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
             # TODO scale of big decimal
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
+            ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
+            # TODO scale of big decimal
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT:
+            ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
+            ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
+            ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.maxLen_, column_desc.scale_)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+            first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
+            int_first_byte = int.from_bytes(first_byte, byteorder='little')
+            if int_first_byte & 0x80:
+                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.maxLen_,
+                                               little=True)
+                ret_obj = '-' + (bytes([ret_obj[0] & 0x7F]) + ret_obj[1:]).decode()
+                ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale_)
+            else:
+                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.maxLen_, little=True)
+                ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale_)
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_REAL:
+            ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DOUBLE or sql_data_type == FIELD_TYPE.SQLTYPECODE_FLOAT:
+            ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR \
+                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
+            pass
         return ret_obj
 
 
@@ -1603,54 +1582,129 @@ class PrepareReply:
         self.total_error_length = 0
 
     def init_reply(self, buf_view: memoryview):
-        self.return_code, buf_view = convert.get_int(buf_view, little=True)
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
 
         if self.return_code == Transport.SQL_SUCCESS or self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
             if self.return_code == Transport.SQL_SUCCESS_WITH_INFO:
-                self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+                self.total_error_length, buf_view = Convert.get_int(buf_view, little=True)
                 if self.total_error_length > 0:
-                    error_count, buf_view = convert.get_int(buf_view, little=True)
+                    error_count, buf_view = Convert.get_int(buf_view, little=True)
                     for x in error_count:
                         t = SQLWarningOrError()
-                        buf_view = t.extractFromByteArray(buf_view)
+                        buf_view = t.extract_from_bytearray(buf_view)
                         self.errorlist.append(t)
-                    error_info = ''
-                    for item in self.errorlist:
-                        error_info += item.text + '\n'
+                    error_info = '\n'.join([item.text for item in self.errorlist])
                     raise errors.Warning(error_info)
-            self.sql_query_type, buf_view = convert.get_int(buf_view, little=True)
-            self.stmt_handle, buf_view = convert.get_int(buf_view, little=True)
-            self.estimated_cost, buf_view = convert.get_int(buf_view, little=True)
-            self.input_desc_length, buf_view = convert.get_int(buf_view, little=True)
+            self.sql_query_type, buf_view = Convert.get_int(buf_view, little=True)
+            self.stmt_handle, buf_view = Convert.get_int(buf_view, little=True)
+            self.estimated_cost, buf_view = Convert.get_int(buf_view, little=True)
+            self.input_desc_length, buf_view = Convert.get_int(buf_view, little=True)
 
             if self.input_desc_length > 0:
-                input_param_length, buf_view = convert.get_int(buf_view, little=True)
-                input_number_params, buf_view = convert.get_int(buf_view, little=True)
+                input_param_length, buf_view = Convert.get_int(buf_view, little=True)
+                input_number_params, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(input_number_params):
                     t = Descriptor()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     t.set_row_length(input_param_length)
                     self.input_desc_list.append(t)
 
-            self.output_desc_length, buf_view = convert.get_int(buf_view, little=True)
+            self.output_desc_length, buf_view = Convert.get_int(buf_view, little=True)
             if self.output_desc_length > 0:
-                output_param_length, buf_view = convert.get_int(buf_view, little=True)
-                output_number_params, buf_view = convert.get_int(buf_view, little=True)
+                output_param_length, buf_view = Convert.get_int(buf_view, little=True)
+                output_number_params, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(output_number_params):
                     t = Descriptor()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     t.set_row_length(output_param_length)
                     self.output_desc_list.append(t)
 
         else:
-            self.total_error_length, buf_view = convert.get_int(buf_view, little=True)
+            self.total_error_length, buf_view = Convert.get_int(buf_view, little=True)
             if self.total_error_length > 0:
-                error_count, buf_view = convert.get_int(buf_view, little=True)
+                error_count, buf_view = Convert.get_int(buf_view, little=True)
                 for x in range(error_count):
                     t = SQLWarningOrError()
-                    buf_view = t.extractFromByteArray(buf_view)
+                    buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
-                error_info = ''
-                for item in self.errorlist:
-                    error_info += item.text + '\n'
+                error_info = '\n'.join([item.text for item in self.errorlist])
                 raise errors.ProgrammingError(error_info)
+
+
+class TerminateReply:
+
+    def __init__(self):
+        self.return_code = 0
+        self.exception_detail = 0
+        self.SQLError = ErrorDescListDef()
+        self.error_text = ''
+
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        if self.return_code == Transport.SQL_SUCCESS:
+            return True
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_SQLError_exn_:
+            if self.exception_detail == 25000:
+                raise errors.DatabaseError("ids_25_000")
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_ParamError_exn_:
+            self.error_text, buf_view = Convert.get_string(buf_view)
+            raise errors.DatabaseError(self.error_text)
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_:
+            raise errors.DatabaseError("ids_08_s01")
+        raise errors.DatabaseError("ids_unknown_reply_error")
+
+
+class SetConnectionOptionReply:
+
+    def __init__(self):
+        self.return_code = 0
+        self.exception_detail = 0
+        self.SQLError = ErrorDescListDef()
+        self.error_text = ''
+
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        if self.return_code == Transport.SQL_SUCCESS:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            return None
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_SQLError_exn_:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_ParamError_exn_:
+            self.error_text, buf_view = Convert.get_string(buf_view)
+            raise errors.DatabaseError(self.error_text)
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_:
+            raise errors.DatabaseError("Invalid connection:" + "ids_program_error")
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_:
+            raise errors.DatabaseError("autocommit_txn_in_progress")
+
+
+class EndTransactionReply:
+
+    def __init__(self):
+        self.return_code = 0
+        self.exception_detail = 0
+        self.SQLError = ErrorDescListDef()
+        self.error_text = ''
+
+    def init_reply(self, buf_view: memoryview):
+        self.return_code, buf_view = Convert.get_int(buf_view, little=True)
+        self.exception_detail, buf_view = Convert.get_int(buf_view, little=True)
+        if self.return_code == Transport.SQL_SUCCESS:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            return None
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_SQLError_exn_:
+            buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            raise errors.DatabaseError(self.SQLError.get_error_info())
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_ParamError_exn_:
+            self.error_text, buf_view = Convert.get_string(buf_view)
+            raise errors.DatabaseError(self.error_text)
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_InvalidConnection_exn_:
+            raise errors.DatabaseError("Invalid connection:" + "ids_transaction_error")
+        if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_:
+            raise errors.DatabaseError("autocommit_txn_in_progress")
+        raise errors.DatabaseError("ids_unknown_reply_error")

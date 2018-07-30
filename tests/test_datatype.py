@@ -45,7 +45,7 @@ class TestsCursor(DataTypes):
         self.conn = Connect(**config)
         self.drop_tables(self.conn)
 
-    
+    @unittest.skip("no")
     def test_numeric_int(self):
         tb_name = self.tables['int']
 
@@ -91,21 +91,25 @@ class TestsCursor(DataTypes):
         for x in data:
             cur.execute(insert, x)
 
-    @unittest.skip("debug decimal")
+    @unittest.skip("no")
     def test_numeric_decimal(self):
         tb_name = self.tables['decimal']
 
         cur = self.conn.cursor()
-        cur.execute("DROP TABLE IF EXISTS {0}".format(tb_name))
+
         columns = [
             'decimal_signed',
             'decimal_unsigned',
         ]
+
+        sql = ("CREATE TABLE {table} ("
+               "decimal_signed DECIMAL(17,5) SIGNED,"
+               "decimal_unsigned DECIMAL(8,7) UNSIGNED )"
+               ).format(table=tb_name)
+
+        print(sql)
         cur.execute(
-            ("CREATE TABLE {table} ("
-             "decimal_signed DECIMAL(17,5) SIGNED,"
-             "decimal_unsigned DECIMAL(8,7) UNSIGNED )"
-             ).format(table=tb_name)
+            sql
         )
 
         insert = _insert_query(tb_name, columns)
@@ -114,16 +118,48 @@ class TestsCursor(DataTypes):
             (Decimal(
                 '-9999999999.99999'),
              Decimal(
-                 '+999.9999')),
+                 '+9.9999')),
             (Decimal('-1234567.1234'),
-             Decimal('+125.126')),
+             Decimal('+0.126452')),
             (Decimal(
-                '-125.190'),
+                '-1587.190'),
              Decimal(
-                 '+1245.190')),
+                 '+1.190')),
         ]
 
         for x in data:
             cur.execute(insert, x)
+
+    def test_numeric_float(self):
+        tb_name = self.tables['float']
+
+        cur = self.conn.cursor()
+        columns = [
+            'real_signed',
+            'real_unsigned',
+            'double_signed',
+            'double_unsigned',
+        ]
+        cur.execute((
+                        "CREATE TABLE {table} ("
+                        "real_signed REAL ,"
+                        "real_unsigned real ,"
+                        "double_signed DOUBLE PRECISION ,"
+                        "double_unsigned DOUBLE PRECISION )"
+                    ).format(table=tb_name)
+                    )
+
+        insert = _insert_query(tb_name, columns)
+
+        data = [
+            (-3.402823466, 0.0, -1.7976931348623157, 0.0,),
+            (-1.175494351, 3.402823466,
+             1.7976931348623157, 2.2250738585072014),
+            (-1.23455678, 2.999999, -1.3999999999999999, 1.9999999999999999),
+        ]
+
+        for x in data:
+            cur.execute(insert, x)
+
 
 

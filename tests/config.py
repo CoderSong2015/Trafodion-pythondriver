@@ -1,6 +1,5 @@
-
-trafconfig = {
-        'host': '10.10.10.7',
+config = {
+        'host': '192.168.0.59',
         'port': 23400,
         'database': 'seabase',
         'user': 'trafodion',
@@ -9,16 +8,6 @@ trafconfig = {
         'use_unicode': True,
         'get_warnings': True,
     }
-
-mysqlconfig = {
-    'host':'localhost',
-    'port':3306,
-    'database':'test',
-    'user':'root',
-    'password':'123456',
-}
-
-config = mysqlconfig
 
 # config = {
 #     'host': '192.168.0.59',
