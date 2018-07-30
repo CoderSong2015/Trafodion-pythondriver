@@ -53,7 +53,6 @@ class Statement:
             txId = stmt.connection_.transactionToJoin;
         """
 
-
         input_value_list = SQLValueListDef()
 
         self.sql_stmt_type_ = self._get_statement_type(sqlstring, params)
@@ -196,7 +195,7 @@ class Statement:
 
         batch_exception = False
 
-        if delay_error_mode  and  self._last_count < 1:
+        if delay_error_mode and self._last_count < 1:
             for x in range(num_status):
                 self._batch_row_count.append(-2)  # fill with success
         elif (recv_reply.return_code == Transport.SQL_SUCCESS or

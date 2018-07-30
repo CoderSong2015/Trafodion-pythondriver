@@ -301,3 +301,25 @@ class TrafCursor(CursorBase):
         self._connection = None
 
         return True
+
+    def fetchall(self):
+        if not self._connection.is_connected():
+            raise errors.DatabaseError("Connection not available.")
+
+        if self._st.sql_stmt_type_ != Transport.TYPE_SELECT:
+            raise errors.InternalError("No result set available.")
+            # if no data found, do not fetch again
+        if self._end_data:
+            return None
+
+        res = []
+        if self._next_row < self._row_cached:
+            self._next_row += 1
+            res = self._result_set[self._next_row - 1:]
+
+        while not self._end_data:
+            fetch_reply = self._st.fetch()
+            self._end_data = fetch_reply.end_of_data
+            if self._end_data:
+                return res
+            res = res + fetch_reply.result_set
