@@ -1,6 +1,5 @@
 import unittest
-# from pdbc.trafodion import connector
-from mysql import connector
+from pdbc.trafodion import connector
 from .config import config
 
 class TestConnectionObject(unittest.TestCase):

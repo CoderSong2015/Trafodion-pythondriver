@@ -1,6 +1,6 @@
 import unittest
 import datetime
-from mysql import connector
+from pdbc.trafodion import connector
 from .config import config
 
 class TestCursorObject(unittest.TestCase):
