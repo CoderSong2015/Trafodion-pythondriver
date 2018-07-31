@@ -36,7 +36,13 @@ class TrafConnectionAbstract(object):
             self._host = config['host']
             self.property.master_host = self._host
 
+        if 'tenant_name' in config and config['tenant_name']:
+            self.property.tenant_name = config['tenant_name']
+        else:
+            self.property.tenant_name = "ESGYNDB"
+
         # Check network locations
+
         try:
             self._port = int(config['port'])
             self.property.master_port = self._port

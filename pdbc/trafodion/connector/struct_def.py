@@ -404,6 +404,15 @@ class TrafProperty:
         self._retry_count = 5
         self._srvr_type = 2  # AS
         self._fetch_ahead = ''
+        self._tenant_name = None
+
+    @property
+    def tenant_name(self):
+        return self._tenant_name
+
+    @tenant_name.setter
+    def tenant_name(self, tenant):
+        self._tenant_name = tenant
 
     @property
     def retry_count(self):
@@ -548,26 +557,48 @@ class ConnectReply:
         buf_view = self.buf_exception.extract_from_bytearray(buf_view)
 
         # TODO handle error
-        self.dialogue_id, buf_view = Convert.get_int(buf_view, little=True)
-        self.data_source, buf_view = Convert.get_string(buf_view, little=True)
-        self.user_sid, buf_view = Convert.get_string(buf_view, little=True, byteoffset=True)
-        self.versionlist = VERSION_LIST_def()
-        buf_view = self.versionlist.extract_from_bytearray(buf_view)
-        __, buf_view = Convert.get_int(buf_view, little=True)  # old iso mapping
-        self.isoMapping = 15 #utf-8
-        self.server_host_name, buf_view = Convert.get_string(buf_view, little=True)
-        self.server_node_id, buf_view = Convert.get_int(buf_view, little=True)
-        self.server_process_id, buf_view = Convert.get_int(buf_view, little=True)
-        self.server_process_name, buf_view = Convert.get_string(buf_view, little=True)
-        self.server_ip_address, buf_view = Convert.get_string(buf_view, little=True)
-        self.server_port, buf_view = Convert.get_int(buf_view, little=True)
+        if self.buf_exception.exception_nr == Transport.SQL_SUCCESS:
+            self.dialogue_id, buf_view = Convert.get_int(buf_view, little=True)
+            self.data_source, buf_view = Convert.get_string(buf_view, little=True)
+            self.user_sid, buf_view = Convert.get_string(buf_view, little=True, byteoffset=True)
+            self.versionlist = VERSION_LIST_def()
+            buf_view = self.versionlist.extract_from_bytearray(buf_view)
+            __, buf_view = Convert.get_int(buf_view, little=True)  # old iso mapping
+            self.isoMapping = 15 #utf-8
+            self.server_host_name, buf_view = Convert.get_string(buf_view, little=True)
+            self.server_node_id, buf_view = Convert.get_int(buf_view, little=True)
+            self.server_process_id, buf_view = Convert.get_int(buf_view, little=True)
+            self.server_process_name, buf_view = Convert.get_string(buf_view, little=True)
+            self.server_ip_address, buf_view = Convert.get_string(buf_view, little=True)
+            self.server_port, buf_view = Convert.get_int(buf_view, little=True)
 
-        if self.versionlist.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0:
-            self.security_enabled = True
-            self.timestamp, buf_view = Convert.get_timestamp(buf_view)
-            self.cluster_name, buf_view = Convert.get_string(buf_view, little=True)
+            if self.versionlist.list[0].buildId and CONNECTION.PASSWORD_SECURITY > 0:
+                self.security_enabled = True
+                self.timestamp, buf_view = Convert.get_timestamp(buf_view)
+                self.cluster_name, buf_view = Convert.get_string(buf_view, little=True)
+            else:
+                self.security_enabled = False
         else:
-            self.security_enabled = False
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASParamError_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASParamError_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASTimeout_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASTimeout_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASNoSrvrHdl_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASNoSrvrHdl_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASTryAgain_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASTryAgain_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASNotAvailable_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASNotAvailable_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_DSNotAvailable_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_DSNotAvailable_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_PortNotAvailable_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_PortNotAvailable_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_InvalidUser_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASParamError_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_LogonUserFailure_exn_:
+                raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_LogonUserFailure_exn_")
+            if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_TenantName_exn_:
+                raise errors.DatabaseError("wrong tenant name")
 
 
 class OutConnectionContextDef:

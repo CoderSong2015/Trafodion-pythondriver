@@ -1,5 +1,6 @@
 import getpass
 import threading
+import socket
 
 from . import authentication
 from . import errors
@@ -35,7 +36,6 @@ class TrafConnection(TrafConnectionAbstract):
         self._buffered = None
         self._raw = None
         self._connecte_status = 0
-
         super(TrafConnection, self).__init__(**kwargs)
 
         if kwargs:
@@ -56,7 +56,7 @@ class TrafConnection(TrafConnectionAbstract):
                 self._connecte_status = 1
         else:
             self._old_encrypt_password()
-            self.init_diag(True , False)
+            self.init_diag(True, False)
         #TODO self._get_connection() get connection from mxosrvr
 
         #TODO
@@ -265,8 +265,23 @@ class TrafConnection(TrafConnectionAbstract):
                            vproc="Traf_pybc_${buildId}",
                            ):
         wlength = Header.sizeOf()
-        buf = b''
 
+        cc_extention = "\"sessionName\":\"{0}\"," \
+                       "\"clientIpAddress\":\"{1}\"," \
+                       "\"clientHostName\":\"{2}\"," \
+                       "\"userName\":\"{3}\"," \
+                       "\"roleName\":\"{4}\"," \
+                       "\"applicationName\":\"{5}\"," \
+                       "\"tenantName\":\"{6}\"".format(self._session_name,
+                                                       "",  # clientIpAddress,
+                                                       "",  # clientHostName,
+                                                       self.property.userRole,
+                                                       self.property.application_name,
+                                                       in_context.computerName,
+                                                       self.property.tenant_name,
+                                                       )
+
+        cc_extention = "{" + cc_extention + "}"
         clientUser = getpass.getuser()
 
         wlength += (in_context.sizeOf()
@@ -276,7 +291,8 @@ class TrafConnection(TrafConnectionAbstract):
                     + Transport.size_int    # option_flags_1
                     + Transport.size_int    # option_flags_2
                     + Transport.size_bytes(vproc.encode("utf-8"))
-                    + Transport.size_bytes(clientUser.encode("utf-8")))
+                    + Transport.size_bytes(clientUser.encode("utf-8"))
+                    + Transport.size_bytes(cc_extention.encode("utf-8")))
         buf = bytearray(b'')
 
         buf.extend(bytearray(wlength))
@@ -297,7 +313,7 @@ class TrafConnection(TrafConnectionAbstract):
 
         # TODO: restructure all the flags and this new param
         buf_view = Convert.put_string(clientUser, buf_view)
-
+        buf_view = Convert.put_string(cc_extention, buf_view)
         return buf
 
     def _get_context(self):

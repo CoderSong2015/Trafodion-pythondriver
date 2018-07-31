@@ -1,3 +1,14 @@
+odbc_Dcs_GetObjRefHdl_ASParamError_exn_ = 1
+odbc_Dcs_GetObjRefHdl_ASTimeout_exn_ = 2
+odbc_Dcs_GetObjRefHdl_ASNoSrvrHdl_exn_ = 3
+odbc_Dcs_GetObjRefHdl_ASTryAgain_exn_ = 4
+odbc_Dcs_GetObjRefHdl_ASNotAvailable_exn_ = 5
+odbc_Dcs_GetObjRefHdl_DSNotAvailable_exn_ = 6
+odbc_Dcs_GetObjRefHdl_PortNotAvailable_exn_ = 7
+odbc_Dcs_GetObjRefHdl_InvalidUser_exn_ = 8
+odbc_Dcs_GetObjRefHdl_LogonUserFailure_exn_ = 9
+odbc_Dcs_GetObjRefHdl_TenantName_exn_ = 10
+
 #
 # out context
 #
