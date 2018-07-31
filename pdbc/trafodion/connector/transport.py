@@ -637,7 +637,7 @@ class Convert:
             # go through the remainder and add each digit to the final String
 
             result += remainder * 10**digit
-            digit += len(str(remainder))
+            digit += 4
             remainder = 0
         remainder = data_shorts[0]
         result += remainder * 10 ** digit
