@@ -25,7 +25,7 @@ class Statement:
         self._cursor_name = self._cursor._cursor_name
         self._cursor_name_charset = 1
         self._stmt_options = ""
-        self._max_rowset_size = self._cursor._max_rows
+        self._max_rowset_size = self._cursor._max_rowset_size
         self._module_name = ""
         self._module_name_charset = 1
         self._module_timestamp = 0

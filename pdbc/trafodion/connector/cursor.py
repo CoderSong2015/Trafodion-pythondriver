@@ -128,7 +128,7 @@ class TrafCursor(CursorBase):
         self._next_row = 0
         self._st = None
         self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
-        self._max_rows = 100
+        self._max_rowset_size = 0
         self._cursor_name = ''
         self._using_rawrowset = False
         self._stmt_name_charset = 1
@@ -136,6 +136,7 @@ class TrafCursor(CursorBase):
         self._end_data = False
         self._row_cached = 0
         self._executed = None
+        self._max_rows_count = 100
         if connection is not None:
             self._set_connection(connection)
         self._stmt_name = self._generate_stmtlabel()
@@ -204,7 +205,7 @@ class TrafCursor(CursorBase):
             self._execute_type = Transport.SRVR_API_SQLEXECDIRECT
             self._st = Statement(self._connection, self)
 
-        self._st.set_max_row_count(self._max_rows)
+        self._st.set_max_row_count(self._max_rows_count)
         try:
             if self._execute_type == Transport.SRVR_API_SQLEXECDIRECT:
                 descriptor = self._st.execute(_operation, self._execute_type)
@@ -330,6 +331,6 @@ class TrafCursor(CursorBase):
         return self._next_row
 
     def set_fetch_buffer_size(self, size=100):
-        self._max_rows = size
+        self._max_rows_count = size
         if self._st:
-            self._st.set_max_row_count(self._max_rows)
+            self._st.set_max_row_count(self._max_rows_count)
