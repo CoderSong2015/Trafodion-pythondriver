@@ -1182,7 +1182,7 @@ class SQLDataValueDef:
             if param_values > Transport.max_double:
                 raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
-            _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
+            _ = Convert.put_double(param_values, buf_view[noNullValue:], little=True)
 
         if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC \
                 or dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
