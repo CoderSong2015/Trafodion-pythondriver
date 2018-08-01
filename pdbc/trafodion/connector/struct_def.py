@@ -1,5 +1,7 @@
 import socket
 import time
+import datetime
+import re
 from decimal import Decimal
 
 from . import errors
@@ -1204,6 +1206,46 @@ class SQLDataValueDef:
                 or dataType == FIELD_TYPE.SQLTYPECODE_BITVAR \
                 or dataType == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
             raise errors.NotSupportedError
+        if dataType == FIELD_TYPE.SQLTYPECODE_DATETIME:
+            if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_DATE:
+                if not isinstance(param_values, (datetime.date, str)):
+                    raise errors.DataError(
+                        "invalid_parameter_value: data should be either datetime.date or string for value: {0}".format(
+                            param_values))
+                if isinstance(param_values, datetime.date):
+                    param_values = str(param_values)
+                if isinstance(param_values, str):
+                    if not re.fullmatch('[\d]{4}-[\d]{2}-[\d]{2}', param_values):
+                        raise errors.DataError("invalid_parameter_value: string date should be YYYY-MM-DD")
+                    _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue:], nolen=True, is_data=True)
+
+            if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_TIMESTAMP:
+                if not isinstance(param_values, datetime.datetime):
+                    raise errors.DataError(
+                        "invalid_parameter_value: data should be either datetime.time for value: {0}".format(
+                            param_values))
+
+                param_values = str(param_values) + '.0' if param_values.microsecond == 0 else str(param_values)
+
+                # ODBC precision is nano secs. PDBC precision is micro secs
+                # so substract 3 from ODBC precision.
+                #max_len = max_len
+                param_values = param_values.encode()
+                length = len(param_values)
+                padding = bytes(' '.encode() * (max_len - length))
+                _ = Convert.put_bytes(param_values + padding, buf_view[noNullValue:], nolen=True, is_data=True)
+
+            if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_TIME:
+                if not isinstance(param_values, (datetime.time, str)):
+                    raise errors.DataError(
+                        "invalid_parameter_value: data should be either datetime.time or string for value: {0}".format(
+                            param_values))
+                if isinstance(param_values, datetime.time):
+                    param_values = str(param_values)
+                if isinstance(param_values, str):
+                    if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}', param_values):
+                        raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss")
+                    _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue:], nolen=True, is_data=True)
 
 
 class SQLValueDef:
@@ -1598,6 +1640,35 @@ class FetchReply:
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR \
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
             pass
+
+        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DATETIME:
+            if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_DATE:
+                # "yyyy-mm-dd"
+                year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+                month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+                day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
+                ret_obj = datetime.date(year, month, day)
+            if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIMESTAMP:
+                # yyyy - mm - dd hh: mm:ss.fffffffff
+                year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+                month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+                day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
+                hour, _ = Convert.get_char(buf_view[nonull_value_offset + 4:], to_python_int=True)
+                min, _ = Convert.get_char(buf_view[nonull_value_offset + 5:], to_python_int=True)
+                sec, _ = Convert.get_char(buf_view[nonull_value_offset + 6:], to_python_int=True)
+
+                nano_seconds = 123
+                if column_desc.precision > 0:
+                    nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 7:], little=True)
+                    if nano_seconds > 999999:  # returned in microseconds
+                        nano_seconds = 0
+                ret_obj = datetime.datetime(year, month, day, hour, min, sec, microsecond=nano_seconds)
+            if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
+                # "hh:mm:ss"
+                hour, _ = Convert.get_char(buf_view[nonull_value_offset:], to_python_int=True)
+                minute, _ = Convert.get_char(buf_view[nonull_value_offset + 1:], to_python_int=True)
+                second, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+                ret_obj = datetime.time(hour=hour, minute=minute, second=second)
         return ret_obj
 
 

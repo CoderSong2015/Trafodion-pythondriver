@@ -580,8 +580,14 @@ class Convert:
             return to_bytes, buf_view[length:]
 
     @classmethod
-    def get_char(cls, buf_view: memoryview):
-        return struct.unpack('!c', buf_view[0:1].tobytes())[0], buf_view[1:]
+    def get_char(cls, buf_view: memoryview, to_python_int=False, little=True):
+        little_str = "little" if little else "big"
+
+        if to_python_int:
+            char = struct.unpack('!c', buf_view[0:1].tobytes())[0]
+            return int.from_bytes(char, little_str), buf_view[1:]
+        else:
+            return struct.unpack('!c', buf_view[0:1].tobytes())[0], buf_view[1:]
 
     @classmethod
     def get_timestamp(cls, buf_view: memoryview):
