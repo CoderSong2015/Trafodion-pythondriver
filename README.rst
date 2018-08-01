@@ -4,6 +4,8 @@
 .. image:: https://badge.fury.io/py/PyTrafodion.svg
     :target: https://badge.fury.io/py/PyTrafodion
 
+.. image:: https://travis-ci.com/CoderSong2015/Trafodion-pythondriver.svg?branch=master
+    :target: https://travis-ci.com/CoderSong2015/Trafodion-pythondriver.svg?branch=master
 
 Python Driver of Apache Trafodion
 =================================
