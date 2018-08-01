@@ -38,7 +38,8 @@ Requirement
 
   - Trafodion_ >= 2.3
 
-
+* Python Module:
+    cryptography >=2.3 (You can still use 2.2.2 although it has a known security vulnerability. Python-driver doesn't use related functions)
 .. _CPython: https://www.python.org/
 .. _PyPy: https://pypy.org/
 .. _Trafodion: https://trafodion.apache.org/
