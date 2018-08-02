@@ -42,7 +42,8 @@ class TrafConnectionAbstract(object):
             self.property.tenant_name = "ESGYNDB"
 
         # Check network locations
-
+        if 'schema' in config and config['schema']:
+            self.property.schema = config['schema']
         try:
             self._port = int(config['port'])
             self.property.master_port = self._port

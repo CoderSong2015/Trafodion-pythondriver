@@ -4,14 +4,16 @@ from .config import config
 
 class TestConnectionObject(unittest.TestCase):
     def setUp(self):
-        self.cnx = connector.connect(user=config['user'], password=config['password'], database=config['database'])
+        self.cnx = connector.connect(host=config['host'], user=config['user'], password=config['password'], database=config['database'])
         self.cursor = self.cnx.cursor()
+        self.cursor.execute('drop table if EXISTS bank_account cascade')
         self.cursor.execute('create table bank_account(id int, money float)')
 
     def tearDown(self):
-        self.cursor.execute('drop table bank_account cascade')
-        self.cursor.close()
-        self.cnx.close()
+        pass
+        #self.cursor.execute('drop table bank_account cascade')
+        #self.cursor.close()
+        #self.cnx.close()
 
     def test_close(self):
         self.cnx.close()

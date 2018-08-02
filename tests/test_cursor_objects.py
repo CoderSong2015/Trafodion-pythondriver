@@ -15,7 +15,7 @@ class TestCursorObject(unittest.TestCase):
         self.cnx = connector.connect(**config)
         cursor = self.cnx.cursor()
         cursor.execute("DROP TABLE IF EXISTS employee CASCADE")
-        cursor.execute("CREATE TABLE employee (id INT, name CHAR(20), salary DOUBLE, hire_date DATE)")
+        cursor.execute("CREATE TABLE employee (id INT, name CHAR(20), salary DOUBLE PRECISION , hire_date DATE)")
         query = "INSERT INTO employee VALUES (%s, %s, %s, %s)"
         cursor.executemany(query, self.testdata)
         cursor.close()

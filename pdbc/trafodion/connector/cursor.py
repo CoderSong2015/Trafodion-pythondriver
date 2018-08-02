@@ -181,7 +181,7 @@ class TrafCursor(CursorBase):
             raise errors.ProgrammingError("Cursor is not connected")
 
         if not self._connection.is_connected():
-            raise errors.DatabaseError("Connection not available.")
+            raise errors.OperationalError("Connection not available.")
 
         #self._connection.handle_unread_result()
 

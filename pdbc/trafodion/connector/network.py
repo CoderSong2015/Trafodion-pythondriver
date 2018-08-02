@@ -19,6 +19,7 @@ class BaseTrafSocket(object):
 
     def close_connection(self):
         try:
+            self.sock.shutdown(2)
             self.sock.close()
         except (socket.error, AttributeError):
             raise
