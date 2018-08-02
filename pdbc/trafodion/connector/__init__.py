@@ -1,5 +1,5 @@
 from .connection import TrafConnection
-from .errors import (Warning, InterfaceError, DatabaseError, InternalError, OperationalError, ProgrammingError,
+from .errors import (Error, Warning, InterfaceError, DatabaseError, InternalError, OperationalError, ProgrammingError,
                      IntegrityError, DataError,
                      NotSupportedError)
 from .constants import FIELD_TYPE
