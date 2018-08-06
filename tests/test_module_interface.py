@@ -4,69 +4,55 @@ from .config import config
 
 class TestModuleInterface(unittest.TestCase):
 
-    @unittest.skip("unsupported feature")
-    def test_connect_support_default_port(self):
-        conx = connector.connect(user=config['user'], password=config['password'])
-
-    @unittest.skip("unsupported feature")
-    def test_connect_with_valid_parameters(self):
-        conx = connector.connect(user=config['user'], password=config['password'],
-                                 host=config['host'], port=config['port'])
+    def test_connect_host_user_password(self):
+        conx = connector.connect(host=config['host'], user=config['user'], password=config['password'])
         self.assertTrue(isinstance(conx, connector.TrafConnection))
 
-    @unittest.skip("unsupported feature")
-    def test_connect_with_invalid_user(self):
-        with self.assertRaises(Exception):
-            conx = connector.connect(user='notexistsuser', passwd='traf123',
+    def test_connect_host_user_password_port(self):
+        conx = connector.connect(host=config['host'], user=config['user'],
+                                 password=config['password'], port=config['port'])
+        self.assertTrue(isinstance(conx, connector.TrafConnection))
+
+    def test_connect_host_user_password_port_database(self):
+        conx = connector.connect(**config)
+        cursor = conx.cursor()
+        cursor.execute('create schema if not exists python_testsch1')
+        cursor.execute('set schema python_testsch1')
+        cursor.execute('create table if not EXISTS python_testtb(i int)')
+        cursor.close()
+        conx1 = connector.connect(host=config['host'], user=config['user'],
+                                  password=config['password'], port=config['port'], database='python_testsch1')
+        cursor = conx1.cursor()
+        cursor.execute('get tables')
+        self.assertTrue(['python_testtb'] in cursor)
+
+    def test_connect_with_invalid_user_or_password(self):
+        with self.assertRaises(connector.DatabaseError):
+            conx = connector.connect(user='notexistsuser', password='apasswod',
+                                     host=config['host'], port=config['port'])
+            cnx1 = connector.connect(user='trafodion', password='wrongpass',
                                      host=config['host'], port=config['port'])
 
-    @unittest.skip("unsupported feature")
-    def test_connect_with_invalid_user(self):
-        try:
-            conx = connector.connect(user='invalidusername', passwd='traf123',
-                                     host=config['host'], port=config['port'])
-        except Exception as err:
-            self.assertEqual(err, Exception("invalid username"))
+    def test_connect_with_not_reachable_host(self):
+        with self.assertEqual(connector.Error):
+            cnx = connector.connect(user='someuser', password='somepass', host='notreachable')
 
-    @unittest.skip("mysql don't support this feature")
-    def test_with_keyvalue_parameter(self):
-        conx = connector.connect(config)
-        self.assertTrue(isinstance(conx, connector.TrafConnection))
+    @unittest.skip('unsupported feature')
+    def test_connect_with_config_file(self):
+        cnx = connector.connect(config_file='/path/to/config')
+        self.assertTrue(isinstance(cnx, connector.TrafConnection))
 
-    @unittest.skip("mysql don't support this feature")
-    def test_connect_keyvalue_args_1(self):
-        config = {
-            'host':'10.10.23.54',
-            'user':'trafodion',
-            'password':'traf123'
-        }
-        conx = connector.connect(config)
-        self.assertTrue(isinstance(conx, connector.TrafConnection))
-
-    @unittest.skip("unsupported feature, Error not in Module scope")
-    def test_connect_with_invalid_kevalue_args(self):
-        wrongconfig = {
-            'host':config['host'],
-            'port':config['port'],
-            'user':'usernotexist',
-            'password':'wrong password'
-        }
-        with self.assertRaises(Exception):
-            conx = connector.connect(wrongconfig)
-
-    @unittest.skip("unsupported feature")
     def test_globals_apilevel(self):
-        self.assertEqual(connector.apilevel, 2)
+        self.assertEqual(connector.apilevel, '2.0')
 
-    @unittest.skip("unsupported feature")
     def test_globals_threadsafety(self):
         self.assertTrue(hasattr(connector, 'threadsafety'))
+        self.assertTrue(connector.threadsafety in [0, 1, 2, 3])
 
-    @unittest.skip("unsupported feature")
     def test_globals_paramstyle(self):
         self.assertTrue(hasattr(connector, 'paramstyle'))
+        self.assertTrue(connector.paramstyle in ['qmark', 'numeric', 'named', 'format', 'pyformat'])
 
-    @unittest.skip("unsupported feature")
     def test_exception_warning(self):
         self.assertTrue(hasattr(connector, 'Warning'))
 
@@ -101,9 +87,11 @@ class TestModuleInterface(unittest.TestCase):
         self.assertTrue(issubclass(connector.Error, Exception))
 
     def test_exception_inheritance_InterfaceError(self):
+        self.assertTrue(hasattr(connector, 'InterfaceError'))
         self.assertTrue(issubclass(connector.InterfaceError, connector.Error))
 
     def test_exception_inheritance_DatabaseError(self):
+        self.assertTrue(hasattr(connector, 'DatabaseError'))
         self.assertTrue(issubclass(connector.DatabaseError, connector.Error))
 
     def test_exception_inheritance_DataError(self):
