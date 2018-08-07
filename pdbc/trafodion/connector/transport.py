@@ -261,7 +261,7 @@ class Transport:
     value_to_charset = {
         1: "ISO8859_1",
         10: "MS932",
-        11: "UTF-16BE",
+        11: "UTF-16LE",    # server needs little endian
         12: "EUCJP",
         13: "MS950",
         14: "GB18030",

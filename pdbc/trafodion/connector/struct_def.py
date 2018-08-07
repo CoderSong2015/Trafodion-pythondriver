@@ -407,6 +407,18 @@ class TrafProperty:
         self._srvr_type = 2  # AS
         self._fetch_ahead = ''
         self._tenant_name = None
+        self._charset = "UTF-8"
+
+    @property
+    def charset(self):
+        return self._charset
+
+    @charset.setter
+    def charset(self, charset):
+        charset = charset.upper()
+        if charset not in Transport.charset_to_value:
+            raise errors.ProgrammingError("unsupport charset: {0}".format(charset))
+        self._charset = charset
 
     @property
     def tenant_name(self):
@@ -877,30 +889,31 @@ class SQLDataValueDef:
             return buf_view
 
         if dataType == FIELD_TYPE.SQLTYPECODE_CHAR:
+            target_charset = "utf-8"
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
                 _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return buf_view
             elif isinstance(param_values, (bytes, str)):
-                charSet = ""
 
                 try:
                     if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        charSet = "UTF-8"
+                        target_charset = "UTF-8"
                     elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        charSet = "UTF-16LE"
+                        target_charset = "UTF-16LE"
                     else:
-                        charSet = Transport.value_to_charset[dataCharSet]
+                        target_charset = Transport.value_to_charset[dataCharSet]
                     if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(charSet)
+                        param_values = param_values.decode("utf-8").encode(target_charset)
                     else:
-                        param_values = param_values.encode(charSet)
+                        param_values = param_values.encode(target_charset)
                 except:
-                    raise errors.NotSupportedError("unsupported_encoding")
+                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
             else:
-                raise errors.DataError("invalid_parameter_value, data should be either bytes or String for column: %d",
-                                       param_count)
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either bytes or String for column number {0}".format(
+                        param_count))
 
             # We now have a byte array containing the parameter
             data_len = len(param_values)
@@ -912,10 +925,10 @@ class SQLDataValueDef:
                         # pad with Unicode spaces (0x00 0x20)
                         i2 = data_len
                         while i2 < max_len:
-                            _ = Convert.put_bytes(' '.encode(), buf_view[noNullValue + i2:], little=True,
-                                             nolen=True)
-                            _ = Convert.put_bytes(' '.encode(), buf_view[noNullValue + i2 + 1:], little=True,
-                                             nolen=True)
+                            _ = Convert.put_bytes(' '.encode("UTF-16BE"), buf_view[noNullValue + i2:], little=True,
+                                                  nolen=True)
+                            _ = Convert.put_bytes(' '.encode("UTF-16BE"), buf_view[noNullValue + i2 + 1:], little=True,
+                                                  nolen=True)
                             i2 = i2 + 2
 
                     else:
@@ -925,7 +938,8 @@ class SQLDataValueDef:
                         _ = Convert.put_bytes(b, buf_view[noNullValue + data_len:], little=True, nolen=True)
             else:
                 raise errors.ProgrammingError(
-                        "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
+                    "invalid_string_parameter CHAR input data is longer than the length for column number {0}".format(
+                        param_count))
 
             return None
         if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR:
@@ -935,24 +949,24 @@ class SQLDataValueDef:
                 _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return None
             elif isinstance(param_values, (bytes, str)):
-                charSet = ""
+                target_charset = ""
 
                 try:
                     if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        charSet = "UTF-8"
+                        target_charset = "UTF-8"
                     elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        charSet = "UTF-16LE"
+                        target_charset = "UTF-16LE"
                     else:
-                        charSet = Transport.value_to_charset[dataCharSet]
+                        target_charset = Transport.value_to_charset[dataCharSet]
                     if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(charSet)
+                        param_values = param_values.decode("utf-8").encode(target_charset)
                     else:
-                        param_values = param_values.encode(charSet)
+                        param_values = param_values.encode(target_charset)
                 except:
-                    raise errors.NotSupportedError("unsupported_encoding")
+                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
             else:
                 raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column: {0}".format(
+                    "invalid_parameter_value, data should be either bytes or String for column number: {0}".format(
                         param_count))
 
             data_len = len(param_values)
@@ -961,39 +975,47 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values, buf_view[noNullValue + 2:], nolen=True)
             else:
                 raise errors.DataError(
-                    "invalid_string_parameter input data is longer than the length for column: {0}".format(
+                    "invalid_string_parameter input data is longer than the length for column number: {0}".format(
                         param_count))
             return None
         if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG:
+
+            character_len = 0
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
                 _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return buf_view
             elif isinstance(param_values, (bytes, str)):
-                charSet = ""
+                target_charset = "utf-8"
 
                 try:
                     if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        charSet = "UTF-8"
+                        target_charset = "UTF-8"
                     elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        charSet = "UTF-16LE"
+                        target_charset = "UTF-16LE"
                     else:
-                        charSet = Transport.value_to_charset[dataCharSet]
+                        target_charset = Transport.value_to_charset[dataCharSet]
+                        character_len = len(param_values)
                     if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(charSet)
+                        param_values = param_values.decode().encode(target_charset)
                     else:
-                        param_values = param_values.encode(charSet)
+                        param_values = param_values.encode(target_charset)
                 except:
-                    raise errors.NotSupportedError("unsupported_encoding")
+                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
             else:
                 raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column: {0}".format(
+                    "invalid_parameter_value, data should be either bytes or String for column number: {0}".format(
                         param_count))
 
             data_len = len(param_values)
-            if max_len > (data_len + dataOffset):
-                max_len = data_len + dataOffset
+            # if column is utf-8, length is the number of character while other charset is the number of bytes
+            # max len will be length * 4 if charset is utf-8
+            if dataCharSet != Transport.charset_to_value["UTF-8"]:
+                character_len = data_len
+            else:
+                max_len = max_len // 4
+            if max_len >= character_len:
                 if shortLength:
                     _ = Convert.put_short(data_len, buf_view[noNullValue:], little=True)
                 else:
@@ -1001,13 +1023,13 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values, buf_view[noNullValue + dataOffset:], nolen=True)
             else:
                 raise errors.DataError(
-                    "invalid_string_parameter input data is longer than the length for column: {0}".format(
+                    "invalid_string_parameter input data is longer than the length for column number: {0}".format(
                         param_count))
             return None
         if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                    "invalid_parameter_value, data should be either int or float for column number: {0}".format(
                         param_count))
             if scale > 0:
                 param_values = round(param_values * (10 ** scale))
@@ -1563,8 +1585,10 @@ class FetchReply:
         buf_view = memoryview(self.out_values)
         sql_data_type = column_desc.data_type
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_CHAR:
+            charset = Transport.value_to_charset[column_desc.odbc_charset]
             length = column_desc.max_len
             ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
+            ret_obj = ret_obj.decode(charset)
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR \
                 or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH \
@@ -1586,6 +1610,8 @@ class FetchReply:
             data_len = length_left if length_left < data_len else data_len
 
             ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
+            charset = Transport.value_to_charset[column_desc.odbc_charset]
+            ret_obj = ret_obj.decode(charset)
 
         if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTERVAL:
             pass
