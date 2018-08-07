@@ -294,7 +294,7 @@ class TrafCursor(CursorBase):
             row = self.fetchone()
             if row:
                 res.append(row)
-        return res
+        return res if res else None
 
     def close(self):
         if self._connection is None:
@@ -323,7 +323,7 @@ class TrafCursor(CursorBase):
             fetch_reply = self._st.fetch()
             self._end_data = fetch_reply.end_of_data
             if self._end_data:
-                return res
+                return res if res else None
             res = res + fetch_reply.result_set
 
     @property

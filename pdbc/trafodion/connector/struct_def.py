@@ -1230,11 +1230,15 @@ class SQLDataValueDef:
                 # ODBC precision is nano secs. PDBC precision is micro secs
                 # so substract 3 from ODBC precision.
                 #max_len = max_len
+
                 param_values = param_values.encode()
                 length = len(param_values)
-                padding = bytes(' '.encode() * (max_len - length))
-                _ = Convert.put_bytes(param_values + padding, buf_view[noNullValue:], nolen=True, is_data=True)
 
+                if max_len > length:
+                    padding = bytes(' '.encode() * (max_len - length))
+                    _ = Convert.put_bytes(param_values + padding, buf_view[noNullValue:], nolen=True, is_data=True)
+                else:
+                    _ = Convert.put_bytes(param_values[0:precision], buf_view[noNullValue:], nolen=True, is_data=True)
             if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_TIME:
                 if not isinstance(param_values, (datetime.time, str)):
                     raise errors.DataError(
