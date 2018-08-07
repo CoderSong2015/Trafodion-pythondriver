@@ -348,16 +348,18 @@ class Convert:
         return struct.pack('!c', char)
 
     @classmethod
-    def put_data_memview(cls, mem, buf):
+    def put_data_memview(cls, mem: memoryview, buf: bytes):
         """
         :param mem: memoryview
         :param buf: 
         :return: 
         """
 
+        if len(buf) > 0:
+            mem[0:len(buf)] = buf
         #TODO It should to make sure that the length of buf is long enough
-        for index, byte in enumerate(buf):
-                mem[index] = byte
+        #for index, byte in enumerate(buf):
+        #        mem[index] = byte
 
     @classmethod
     def put_string(cls, string, buf_view: memoryview, little=False, charset="utf-8"):
