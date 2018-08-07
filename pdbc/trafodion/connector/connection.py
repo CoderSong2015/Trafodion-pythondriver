@@ -463,6 +463,9 @@ class TrafConnection(TrafConnectionAbstract):
         if not self.is_connected():
             raise errors.DatabaseError("Connection not available.")
 
+        if not self._auto_commit:
+            self.rollback()
+
         wbuffer = self._marshal_close(self._dialogue_id)
 
         data = self.get_from_server(Transport.SRVR_API_SQLDISCONNECT, wbuffer, self._mxosrvr_conn)
