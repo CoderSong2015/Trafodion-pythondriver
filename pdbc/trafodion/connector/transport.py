@@ -750,17 +750,24 @@ def get_sqltype_smallint_unsigned(buf_view, column_desc, nonull_value_offset):
 def get_sqltype_int(buf_view, column_desc, nonull_value_offset):
     ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
     # TODO scale of big decimal
+
+    if column_desc.scale > 0:
+        ret_obj = ret_obj / 10**column_desc.scale
     return ret_obj
 
 
 def get_sqltype_int_unsigned(buf_view, column_desc, nonull_value_offset):
     ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
     # TODO scale of big decimal
+    if column_desc.scale > 0:
+        ret_obj = ret_obj / 10**column_desc.scale
     return ret_obj
 
 
 def get_sqltype_largeint(buf_view, column_desc, nonull_value_offset):
     ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
+    if column_desc.scale > 0:
+        ret_obj = ret_obj / 10**column_desc.scale
     return ret_obj
 
 
