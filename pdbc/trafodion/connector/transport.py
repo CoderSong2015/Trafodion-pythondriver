@@ -494,7 +494,7 @@ class Convert:
     @classmethod
     def put_numeric(cls, num, buf_view: memoryview, scale, max_len, little=False):
 
-        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale)
+        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale, max_len)
 
         save_buf_view = buf_view
         for x in data_lits:
@@ -650,13 +650,14 @@ class Convert:
             remainder = 0
         remainder = data_shorts[0]
         result += remainder * 10 ** digit
+        result = Decimal(str(result))
         if scale > 0:
-            result = result / scale
+            result = result.scaleb(-scale)
 
         return result if not negative else -result
 
     @classmethod
-    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, is_unsigned=False):
+    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, max_len, is_unsigned=False):
 
         try:
             param_values = Decimal(numeric_bytes)
@@ -674,7 +675,8 @@ class Convert:
         val_len = len(param_values)
         i = 0
         ar = []
-        target_list = [0] * 5
+        target_len = max_len // 2
+        target_list = [0] * target_len
         tar_pos = 1
         while i < val_len:
             str_num = param_values[i: i + 4]
@@ -686,7 +688,7 @@ class Convert:
             target_list[0] = temp & 0xFFFF  # we save only up to 16bits -- the rest gets carried over
 
             # we do the same thing for the rest of the digits now that we have # an upper bound
-            for x in range(1, 5, 1):
+            for x in range(1, target_len, 1):
                 t = (temp & 0xFFFF0000) >> 16
                 temp = target_list[x] * 10 ** power + t
                 target_list[x] = temp & 0xFFFF
