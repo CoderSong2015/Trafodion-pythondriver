@@ -1218,7 +1218,10 @@ class SQLDataValueDef:
             if sign:
                 # byte -80 : 0xFFFFFFB0
                 num, _ = Convert.get_bytes(buf_view[noNullValue + max_len - 1:], length=1)
-                _ = Convert.put_bytes(num | 0x80, buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
+
+                plus_sign = int.from_bytes(num, 'little') | 0x80
+
+                _ = Convert.put_bytes(plus_sign.to_bytes(1, 'little'), buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
 
         if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
             raise errors.NotSupportedError
