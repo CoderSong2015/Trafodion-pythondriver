@@ -1715,6 +1715,7 @@ class PrepareReply:
         self.output_desc_list = []
         self.output_desc_length = 0
         self.total_error_length = 0
+        self.rows_affected = 0
 
     def init_reply(self, buf_view: memoryview):
         self.return_code, buf_view = Convert.get_int(buf_view, little=True)
