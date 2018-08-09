@@ -1,9 +1,8 @@
 from . import errors
 from .struct_def import (SQLDataValueDef, SQLValueListDef, Header, ExecuteReply, FetchReply, PrepareReply)
-from .transport import Transport
+from .constants.TRANSPORT import Transport
 
-from .transport import Convert
-
+from .converters import Convert
 
 class Statement:
 

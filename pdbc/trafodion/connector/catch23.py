@@ -2,6 +2,7 @@ import sys
 
 PY2 = sys.version_info[0] == 2
 
+
 def make_abc(base_class):
     """Decorator used to create a abstract base class
 

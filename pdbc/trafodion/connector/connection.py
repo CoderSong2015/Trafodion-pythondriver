@@ -12,7 +12,8 @@ from .struct_def import (
     VersionDef, Header, InitializeDialogueReply, TerminateReply, EndTransactionReply
 )
 
-from .transport import Transport, Convert
+from .constants.TRANSPORT import Transport
+from .converters import Convert
 
 
 class TrafConnection(TrafConnectionAbstract):
