@@ -917,6 +917,12 @@ class SQLDataValueDef:
 
             # We now have a byte array containing the parameter
             data_len = len(param_values)
+            # if column is utf-8, length is the number of character while other charset is the number of bytes
+            # max len will be length * 4 if charset is utf-8
+            if dataCharSet != Transport.charset_to_value["UTF-8"]:
+                character_len = data_len
+            else:
+                max_len = max_len // 4
             if max_len >= data_len:
                 _ = Convert.put_bytes(param_values, buf_view[noNullValue:], True, nolen=True)
                 # Blank pad for rest of the buffer
