@@ -1214,7 +1214,7 @@ class SQLDataValueDef:
                     "invalid_parameter_value, data should be either int or str or decimal for value: {0}".format(
                         param_values))
 
-            sign = Convert.put_numeric(param_values, buf_view[noNullValue:], scale, max_len)
+            sign = Convert.put_numeric(param_values, buf_view[noNullValue:], scale, max_len, precision)
             if sign:
                 # byte -80 : 0xFFFFFFB0
                 num, _ = Convert.get_bytes(buf_view[noNullValue + max_len - 1:], length=1)

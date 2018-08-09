@@ -492,11 +492,10 @@ class Convert:
         return buf_view[1:]
 
     @classmethod
-    def put_numeric(cls, num, buf_view: memoryview, scale, max_len, little=False):
+    def put_numeric(cls, num, buf_view: memoryview, scale, max_len, precision, little=False):
 
-        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale, max_len)
+        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale, max_len, precision)
 
-        save_buf_view = buf_view
         for x in data_lits:
             buf_view = cls.put_ushort(x, buf_view, little=True)
 
@@ -650,27 +649,37 @@ class Convert:
             remainder = 0
         remainder = data_shorts[0]
         result += remainder * 10 ** digit
-        result = Decimal(str(result))
+        result = str(result)
         if scale > 0:
-            result = result.scaleb(-scale)
-
-        return result if not negative else -result
+            result = result[:-scale] + '.' + result[len(result) - scale:]
+        if negative:
+            result = '-' + result
+        return Decimal(result)
 
     @classmethod
-    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, max_len, is_unsigned=False):
+    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, max_len, precision, is_unsigned=False):
 
         try:
             param_values = Decimal(numeric_bytes)
+            sign = 1 if param_values.is_signed() else 0
+            param_values = param_values.to_eng_string()
+            if sign:
+                param_values = param_values.lstrip('-')
         except:
             raise errors.DataError("decimal.ConversionSyntax")
         if scale > 0:
-            param_values = param_values.fma(10 ** scale, 0)
+            pos_point = param_values.find('.')
+            if pos_point == -1:
+                param_values = ''.join((param_values, '0' * scale))
+            else:
+                remove_point = param_values.replace('.', '')
+                if pos_point + scale > len(remove_point):
+                    param_values = ''.join((remove_point, '0' * (pos_point + scale - len(remove_point))))
+                else:
+                    param_values = remove_point[:pos_point + scale]
 
-        sign = 1 if param_values.is_signed() else 0
-
-        param_values = param_values.__abs__()
-        param_values = param_values.to_integral_exact().to_eng_string()
-
+        #keep precision in driver
+        param_values = param_values[:precision]
         # iterate through 4 bytes at a time
         val_len = len(param_values)
         i = 0
