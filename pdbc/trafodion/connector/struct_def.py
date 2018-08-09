@@ -1,12 +1,10 @@
 import socket
 import time
-import datetime
-import re
-from decimal import Decimal
 
 from . import errors
 
-from .transport import Transport, Convert, sql_to_py_convert_dict
+from .transport import Transport, Convert
+from .converters import sql_to_py_convert_dict, py_to_sql_convert_dict
 from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
 
 
@@ -846,441 +844,43 @@ class SQLDataValueDef:
         desc = input_desc_list[param_count]
 
         precision = desc.odbc_precision
-        scale = desc.scale
-        sqlDatetimeCode = desc.datetime_code
-        FSDataType = desc.data_type
-        OdbcDataType = desc.odbc_data_type
-        max_len = desc.max_len
         dataType = desc.data_type
-        dataCharSet = desc.sql_charset
         # setup the offsets
-        noNullValue = desc.no_null_value
-        nullValue = desc.null_value
-        dataLength = desc.max_len
+        no_nullvalue = desc.no_null_value
+        null_value = desc.null_value
+        data_length = desc.max_len
 
-        dataOffset = 2
-        shortLength = False
+        short_length = False
 
         if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH:
-            shortLength = precision < 2**15
-            dataOffset = 2 if shortLength else 4
-            dataLength += dataOffset
+            short_length = precision < 2**15
+            data_offset = 2 if short_length else 4
+            data_length += data_offset
 
-            if dataLength % 2 != 0:
-                dataLength = dataLength + 1
+            if data_length % 2 != 0:
+                data_length = data_length + 1
 
         elif dataType == FIELD_TYPE.SQLTYPECODE_BLOB or dataType == FIELD_TYPE.SQLTYPECODE_CLOB:
-            shortLength = False
-            dataOffset = 4
-            dataLength += dataOffset
+            short_length = False
+            data_offset = 4
+            data_length += data_offset
 
-            if dataLength % 2 != 0:
-                dataLength = dataLength + 1
+            if data_length % 2 != 0:
+                data_length = data_length + 1
 
-        if nullValue != -1:
-            nullValue = (nullValue * param_rowcount) + (row_num * 2)
+        if null_value != -1:
+            null_value = (null_value * param_rowcount) + (row_num * 2)
 
-        noNullValue = (noNullValue * param_rowcount) + (row_num * dataLength)
-        if param_values == None :
-            if nullValue == -1:
+        no_nullvalue = (no_nullvalue * param_rowcount) + (row_num * data_length)
+        if param_values is None :
+            if null_value == -1:
                 raise errors.DataError("null_parameter_for_not_null_column")
-            # values[nullValue] = -1
-            _ = Convert.put_short(-1, buf_view[nullValue:], True)
+            # values[null_value] = -1
+            _ = Convert.put_short(-1, buf_view[null_value:], True)
             return buf_view
 
-        if dataType == FIELD_TYPE.SQLTYPECODE_CHAR:
-            target_charset = "utf-8"
-            if param_values is None:
-                # Note for future optimization. We can probably remove the next line,
-                # because the array is already initialized to 0.
-                _ = Convert.put_short(0, buf_view[noNullValue:], True)
-                return buf_view
-            elif isinstance(param_values, (bytes, str)):
+        py_to_sql_convert_dict[dataType](buf_view, no_nullvalue, param_values, desc, param_count, short_length)
 
-                try:
-                    if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        target_charset = "UTF-8"
-                    elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        target_charset = "UTF-16LE"
-                    else:
-                        target_charset = Transport.value_to_charset[dataCharSet]
-                    if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(target_charset)
-                    else:
-                        param_values = param_values.encode(target_charset)
-                except:
-                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
-            else:
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column number {0}".format(
-                        param_count))
-
-            # We now have a byte array containing the parameter
-            data_len = len(param_values)
-            # if column is utf-8, length is the number of character while other charset is the number of bytes
-            # max len will be length * 4 if charset is utf-8
-            if dataCharSet != Transport.charset_to_value["UTF-8"]:
-                character_len = data_len
-            else:
-                max_len = max_len // 4
-            if max_len >= data_len:
-                _ = Convert.put_bytes(param_values, buf_view[noNullValue:], True, nolen=True)
-                # Blank pad for rest of the buffer
-                if max_len > data_len:
-                    if dataCharSet == Transport.charset_to_value["UTF-16BE"]:
-                        # pad with Unicode spaces (0x00 0x20)
-                        i2 = data_len
-                        while i2 < max_len:
-                            _ = Convert.put_bytes(' '.encode("UTF-16BE"), buf_view[noNullValue + i2:], little=True,
-                                                  nolen=True)
-                            _ = Convert.put_bytes(' '.encode("UTF-16BE"), buf_view[noNullValue + i2 + 1:], little=True,
-                                                  nolen=True)
-                            i2 = i2 + 2
-
-                    else:
-                        b = bytearray()
-                        for x in range(max_len - data_len):
-                            b.append(ord(' '))
-                        _ = Convert.put_bytes(b, buf_view[noNullValue + data_len:], little=True, nolen=True)
-            else:
-                raise errors.ProgrammingError(
-                    "invalid_string_parameter CHAR input data is longer than the length for column number {0}".format(
-                        param_count))
-
-            return None
-        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR:
-            if param_values is None:
-                # Note for future optimization. We can probably remove the next line,
-                # because the array is already initialized to 0.
-                _ = Convert.put_short(0, buf_view[noNullValue:], True)
-                return None
-            elif isinstance(param_values, (bytes, str)):
-                target_charset = ""
-
-                try:
-                    if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        target_charset = "UTF-8"
-                    elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        target_charset = "UTF-16LE"
-                    else:
-                        target_charset = Transport.value_to_charset[dataCharSet]
-                    if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(target_charset)
-                    else:
-                        param_values = param_values.encode(target_charset)
-                except:
-                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
-            else:
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column number: {0}".format(
-                        param_count))
-
-            data_len = len(param_values)
-            if max_len >= data_len:
-                _ = Convert.put_short(data_len, buf_view[noNullValue:], little=True)
-                _ = Convert.put_bytes(param_values, buf_view[noNullValue + 2:], nolen=True)
-            else:
-                raise errors.DataError(
-                    "invalid_string_parameter input data is longer than the length for column number: {0}".format(
-                        param_count))
-            return None
-        if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG:
-
-            character_len = 0
-            if param_values is None:
-                # Note for future optimization. We can probably remove the next line,
-                # because the array is already initialized to 0.
-                _ = Convert.put_short(0, buf_view[noNullValue:], True)
-                return buf_view
-            elif isinstance(param_values, (bytes, str)):
-                target_charset = "utf-8"
-
-                try:
-                    if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        target_charset = "UTF-8"
-                    elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        target_charset = "UTF-16LE"
-                    else:
-                        target_charset = Transport.value_to_charset[dataCharSet]
-                        character_len = len(param_values)
-                    if isinstance(param_values, bytes):
-                        param_values = param_values.decode().encode(target_charset)
-                    else:
-                        param_values = param_values.encode(target_charset)
-                except:
-                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
-            else:
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column number: {0}".format(
-                        param_count))
-
-            data_len = len(param_values)
-            # if column is utf-8, length is the number of character while other charset is the number of bytes
-            # max len will be length * 4 if charset is utf-8
-            if dataCharSet != Transport.charset_to_value["UTF-8"]:
-                character_len = data_len
-            else:
-                max_len = max_len // 4
-            if max_len >= character_len:
-                if shortLength:
-                    _ = Convert.put_short(data_len, buf_view[noNullValue:], little=True)
-                else:
-                    _ = Convert.put_int(data_len, buf_view[noNullValue:], little=True)
-                _ = Convert.put_bytes(param_values, buf_view[noNullValue + dataOffset:], nolen=True)
-            else:
-                raise errors.DataError(
-                    "invalid_string_parameter input data is longer than the length for column number: {0}".format(
-                        param_count))
-            return None
-        if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER:
-            if not isinstance(param_values,(int, float)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column number: {0}".format(
-                        param_count))
-            if scale > 0:
-                param_values = round(param_values * (10 ** scale))
-
-            if param_values > Transport.max_int or param_values < Transport.min_int:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_int(param_values, buf_view[noNullValue:], little=True)
-            return None
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
-            if not isinstance(param_values,(int, float)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                        param_count))
-            if scale > 0:
-                param_values = round(param_values * (10 ** scale))
-
-            if param_values > Transport.max_uint or param_values < Transport.min_uint:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_uint(param_values, buf_view[noNullValue:], little=True)
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT:
-            # TODO have not finished
-
-            raise errors.NotSupportedError("not support tinyint")
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
-            raise errors.NotSupportedError("not support utinyint")
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_SMALLINT:
-            if not isinstance(param_values,(int, float)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                        param_count))
-            if scale > 0:
-                param_values = round(param_values * (10 ** scale))
-
-            if param_values > Transport.max_short or param_values < Transport.min_short:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_short(param_values, buf_view[noNullValue:], little=True)
-            return None
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
-            if not isinstance(param_values,(int, float)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                        param_count))
-            if scale > 0:
-                param_values = round(param_values * (10 ** scale))
-
-            if param_values > Transport.max_ushort or param_values < Transport.min_ushort:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_ushort(param_values, buf_view[noNullValue:], little=True)
-            return None
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_LARGEINT:
-            if not isinstance(param_values, (int, float)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                        param_count))
-            if scale > 0:
-                param_values = round(param_values * (10 ** scale))
-
-            if param_values > Transport.max_long or param_values < Transport.min_long:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            # check for numeric(x, y)
-            if precision > 0:
-                pre = 10 ** precision
-                if param_values > pre or param_values < -pre:
-                    raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_longlong(param_values, buf_view[noNullValue:], little=True)
-            return None
-        if dataType == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
-            if not isinstance(param_values, (int, float)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
-                        param_count))
-            if scale > 0:
-                param_values = round(param_values * (10 ** scale))
-
-            if param_values > Transport.max_ulong or param_values < Transport.min_ulong:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_ulonglong(param_values, buf_view[noNullValue:], little=True)
-            return None
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL \
-                or dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED:
-
-            if not isinstance(param_values, (int, str, Decimal)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or str or decimal for column: {0}".format(
-                        param_count))
-
-            try:
-                param_values = Decimal(param_values)
-            except:
-                raise errors.DataError("decimal.ConversionSyntax")
-            if scale > 0:
-                param_values = param_values.fma(10 ** scale, 0)
-
-            sign = 1 if param_values.is_signed() else 0
-            param_values = param_values.__abs__()
-            param_values = param_values.to_integral_exact().to_eng_string()
-
-            num_zeros = max_len - len(param_values)
-            if num_zeros < 0:
-                raise errors.DataError("data_truncation_exceed {0}".format(param_count))
-
-            padding = bytes('0'.encode() * num_zeros)
-            _ = Convert.put_bytes(padding, buf_view[noNullValue:], nolen=True)
-
-            if sign:
-                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], nolen=True, is_data=True)
-
-                # byte -80 : 0xFFFFFFB0
-                num, _ = Convert.get_bytes(buf_view[noNullValue:], length=1)
-
-                _ = Convert.put_bytes(bytes([int(num) | 0xB0]), buf_view[noNullValue:], nolen=True, is_data=True)
-                # _ = Convert.put_bytes(num | 0xB0, buf_view[noNullValue:], nolen=True, is_data=True)
-            else:
-                _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue + num_zeros:], nolen=True,
-                                      is_data=True)
-
-            return buf_view
-        if dataType == FIELD_TYPE.SQLTYPECODE_REAL:
-
-            if not isinstance(param_values, float):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either float for column: {0}".format(
-                        param_count))
-            if param_values > Transport.max_float:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_float(param_values, buf_view[noNullValue:], little=True)
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_FLOAT or dataType == FIELD_TYPE.SQLTYPECODE_DOUBLE:
-            if not isinstance(param_values, float):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either float for column: {0}".format(
-                        param_count))
-            if param_values > Transport.max_double:
-                raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
-
-            _ = Convert.put_double(param_values, buf_view[noNullValue:], little=True)
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC \
-                or dataType == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
-
-            if not isinstance(param_values, (int, str, Decimal)):
-                raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or str or decimal for value: {0}".format(
-                        param_values))
-
-            sign = Convert.put_numeric(param_values, buf_view[noNullValue:], scale, max_len, precision)
-            if sign:
-                # byte -80 : 0xFFFFFFB0
-                num, _ = Convert.get_bytes(buf_view[noNullValue + max_len - 1:], length=1)
-
-                plus_sign = int.from_bytes(num, 'little') | 0x80
-
-                _ = Convert.put_bytes(plus_sign.to_bytes(1, 'little'), buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
-
-        if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
-            raise errors.NotSupportedError
-        if dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
-                or dataType == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED \
-                or dataType == FIELD_TYPE.SQLTYPECODE_BIT \
-                or dataType == FIELD_TYPE.SQLTYPECODE_BITVAR \
-                or dataType == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
-            raise errors.NotSupportedError
-        if dataType == FIELD_TYPE.SQLTYPECODE_DATETIME:
-            if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_DATE:
-                if not isinstance(param_values, (datetime.date, str)):
-                    raise errors.DataError(
-                        "invalid_parameter_value: data should be either datetime.date or string for value: {0}".format(
-                            param_values))
-                if isinstance(param_values, datetime.date):
-                    param_values = str(param_values)
-                if isinstance(param_values, str):
-                    if not re.fullmatch('[\d]{4}-[\d]{2}-[\d]{2}', param_values):
-                        raise errors.DataError("invalid_parameter_value: string date should be YYYY-MM-DD")
-                    _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue:], nolen=True, is_data=True)
-
-            if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_TIMESTAMP:
-                if not isinstance(param_values, datetime.datetime):
-                    raise errors.DataError(
-                        "invalid_parameter_value: data should be either datetime.time for value: {0}".format(
-                            param_values))
-
-                param_values = str(param_values) + '.0' if param_values.microsecond == 0 else str(param_values)
-
-                # ODBC precision is nano secs. PDBC precision is micro secs
-                # so substract 3 from ODBC precision.
-                #max_len = max_len
-
-                param_values = param_values.encode()
-                length = len(param_values)
-
-                if max_len > length:
-                    padding = bytes(' '.encode() * (max_len - length))
-                    _ = Convert.put_bytes(param_values + padding, buf_view[noNullValue:], nolen=True, is_data=True)
-                else:
-                    _ = Convert.put_bytes(param_values[0:precision], buf_view[noNullValue:], nolen=True, is_data=True)
-            if sqlDatetimeCode == FIELD_TYPE.SQLDTCODE_TIME:
-                if not isinstance(param_values, (datetime.time, str)):
-                    raise errors.DataError(
-                        "invalid_parameter_value: data should be either datetime.time or string for value: {0}".format(
-                            param_values))
-                if isinstance(param_values, datetime.time):
-                    param_values = str(param_values)
-                if isinstance(param_values, str):
-                    if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}', param_values):
-                        raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss")
-                    _ = Convert.put_bytes(param_values.encode(), buf_view[noNullValue:], nolen=True, is_data=True)
 
 
 class SQLValueDef:
