@@ -66,7 +66,8 @@ class Statement:
         input_data_value = SQLDataValueDef.fill_in_sql_values(self._descriptor, input_row_count, params,
                                                               is_executemany=is_executemany)
 
-        self._descriptor = self._to_send(execute_api, sql_async_enable, input_row_count,
+
+        temp_descriptor = self._to_send(execute_api, sql_async_enable, input_row_count,
                                          max_rowset_size, self.sql_stmt_type_, self._stmt_handle_, sqlstring,
                                          sqlstring_charset,
                                          self._cursor_name,
@@ -74,6 +75,9 @@ class Statement:
                                          input_data_value,
                                          input_value_list, tx_id,
                                          self._cursor._using_rawrowset)
+
+        if execute_api == Transport.SRVR_API_SQLEXECDIRECT:
+            self._descriptor = temp_descriptor
 
         return self._descriptor
         # TODO now there is no need to make a resultset

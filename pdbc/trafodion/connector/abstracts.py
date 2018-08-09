@@ -44,6 +44,9 @@ class TrafConnectionAbstract(object):
         # Check network locations
         if 'schema' in config and config['schema']:
             self.property.schema = config['schema']
+
+        if 'charset' in config and config['charset']:
+            self.property.charset = config['charset']
         try:
             self._port = int(config['port'])
             self.property.master_port = self._port

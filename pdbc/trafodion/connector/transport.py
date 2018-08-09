@@ -1,7 +1,8 @@
 import struct
 from . import errors
+from .constants import FIELD_TYPE
 from decimal import Decimal
-
+import datetime
 
 class Transport:
     size_long = 8
@@ -261,7 +262,7 @@ class Transport:
     value_to_charset = {
         1: "ISO8859_1",
         10: "MS932",
-        11: "UTF-16BE",
+        11: "UTF-16LE",    # server needs little endian
         12: "EUCJP",
         13: "MS950",
         14: "GB18030",
@@ -348,16 +349,18 @@ class Convert:
         return struct.pack('!c', char)
 
     @classmethod
-    def put_data_memview(cls, mem, buf):
+    def put_data_memview(cls, mem: memoryview, buf: bytes):
         """
         :param mem: memoryview
         :param buf: 
         :return: 
         """
 
+        if len(buf) > 0:
+            mem[0:len(buf)] = buf
         #TODO It should to make sure that the length of buf is long enough
-        for index, byte in enumerate(buf):
-                mem[index] = byte
+        #for index, byte in enumerate(buf):
+        #        mem[index] = byte
 
     @classmethod
     def put_string(cls, string, buf_view: memoryview, little=False, charset="utf-8"):
@@ -491,7 +494,7 @@ class Convert:
     @classmethod
     def put_numeric(cls, num, buf_view: memoryview, scale, max_len, little=False):
 
-        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale)
+        data_lits, sign = cls.convert_bigdecimal_to_sqlbignum(num, scale, max_len)
 
         save_buf_view = buf_view
         for x in data_lits:
@@ -647,13 +650,14 @@ class Convert:
             remainder = 0
         remainder = data_shorts[0]
         result += remainder * 10 ** digit
+        result = Decimal(str(result))
         if scale > 0:
-            result = result / scale
+            result = result.scaleb(-scale)
 
         return result if not negative else -result
 
     @classmethod
-    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, is_unsigned=False):
+    def convert_bigdecimal_to_sqlbignum(cls, numeric_bytes, scale, max_len, is_unsigned=False):
 
         try:
             param_values = Decimal(numeric_bytes)
@@ -671,7 +675,8 @@ class Convert:
         val_len = len(param_values)
         i = 0
         ar = []
-        target_list = [0] * 5
+        target_len = max_len // 2
+        target_list = [0] * target_len
         tar_pos = 1
         while i < val_len:
             str_num = param_values[i: i + 4]
@@ -683,7 +688,7 @@ class Convert:
             target_list[0] = temp & 0xFFFF  # we save only up to 16bits -- the rest gets carried over
 
             # we do the same thing for the rest of the digits now that we have # an upper bound
-            for x in range(1, 5, 1):
+            for x in range(1, target_len, 1):
                 t = (temp & 0xFFFF0000) >> 16
                 temp = target_list[x] * 10 ** power + t
                 target_list[x] = temp & 0xFFFF
@@ -694,3 +699,181 @@ class Convert:
                 tar_pos += 1
 
         return target_list, sign
+
+
+def get_sqltype_char(buf_view, column_desc, nonull_value_offset):
+    charset = Transport.value_to_charset[column_desc.odbc_charset]
+    length = column_desc.max_len
+    ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
+    ret_obj = ret_obj.decode(charset)
+    return ret_obj
+
+
+def get_sqltype_varchar(buf_view, column_desc, nonull_value_offset):
+    short_length = 2 if column_desc.precision < 2 ** 15 else 4
+    data_offset = nonull_value_offset + short_length
+    data_len = 0
+    if short_length == 2:
+        data_len, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
+    else:
+        data_len, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
+    length_left = len(buf_view) - data_offset
+    data_len = length_left if length_left < data_len else data_len
+    ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
+    charset = Transport.value_to_charset[column_desc.odbc_charset]
+    ret_obj = ret_obj.decode(charset)
+    return ret_obj
+
+
+def get_sqltype_interval(buf_view, column_desc, nonull_value_offset):
+    pass
+
+
+def get_sqltype_tiny_unsigned(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+    return ret_obj
+
+
+def get_sqltype_tiny(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+    return ret_obj
+
+
+def get_sqltype_smallint(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
+    return ret_obj
+
+
+def get_sqltype_smallint_unsigned(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+    return ret_obj
+
+
+def get_sqltype_int(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
+    # TODO scale of big decimal
+
+    if column_desc.scale > 0:
+        ret_obj = ret_obj / 10**column_desc.scale
+    return ret_obj
+
+
+def get_sqltype_int_unsigned(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
+    # TODO scale of big decimal
+    if column_desc.scale > 0:
+        ret_obj = ret_obj / 10**column_desc.scale
+    return ret_obj
+
+
+def get_sqltype_largeint(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
+    if column_desc.scale > 0:
+        ret_obj = ret_obj / 10**column_desc.scale
+    return ret_obj
+
+
+def get_sqltype_largeint_unsigned(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
+    return ret_obj
+
+
+def get_sqltype_numeric(buf_view, column_desc, nonull_value_offset):
+    ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.max_len, column_desc.scale)
+    return ret_obj
+
+
+def get_sqltype_decimal(buf_view, column_desc, nonull_value_offset):
+    first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
+    int_first_byte = int.from_bytes(first_byte, byteorder='little')
+    if int_first_byte & 0x80:
+        ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len,
+                                       little=True)
+        ret_obj = '-' + (bytes([ret_obj[0] & 0x7F]) + ret_obj[1:]).decode()
+        ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale)
+    else:
+        ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len, little=True)
+        ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale)
+    return ret_obj
+
+
+def get_sqltype_real(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
+    return ret_obj
+
+
+def get_sqltype_double(buf_view, column_desc, nonull_value_offset):
+    ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
+    return ret_obj
+
+
+def get_sqltype_bit(buf_view, column_desc, nonull_value_offset):
+    pass
+
+
+def get_sqltype_datetime(buf_view, column_desc, nonull_value_offset):
+
+    ret_obj = None
+    if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_DATE:
+        # "yyyy-mm-dd"
+        year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+        month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+        day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
+        ret_obj = datetime.date(year, month, day)
+    if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIMESTAMP:
+        # yyyy - mm - dd hh: mm:ss.fffffffff
+        year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+        month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+        day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
+        hour, _ = Convert.get_char(buf_view[nonull_value_offset + 4:], to_python_int=True)
+        min, _ = Convert.get_char(buf_view[nonull_value_offset + 5:], to_python_int=True)
+        sec, _ = Convert.get_char(buf_view[nonull_value_offset + 6:], to_python_int=True)
+
+        nano_seconds = 123
+        if column_desc.precision > 0:
+            nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 7:], little=True)
+            if nano_seconds > 999999:  # returned in microseconds
+                nano_seconds = 0
+        ret_obj = datetime.datetime(year, month, day, hour, min, sec, microsecond=nano_seconds)
+    if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
+        # "hh:mm:ss"
+        hour, _ = Convert.get_char(buf_view[nonull_value_offset:], to_python_int=True)
+        minute, _ = Convert.get_char(buf_view[nonull_value_offset + 1:], to_python_int=True)
+        second, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+        ret_obj = datetime.time(hour=hour, minute=minute, second=second)
+
+    return ret_obj
+
+
+sql_to_py_convert_dict = {
+    FIELD_TYPE.SQLTYPECODE_CHAR:             get_sqltype_char,
+    FIELD_TYPE.SQLTYPECODE_VARCHAR:          get_sqltype_varchar,
+    FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH:get_sqltype_varchar,
+    FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG:     get_sqltype_varchar,
+    FIELD_TYPE.SQLTYPECODE_BLOB :            get_sqltype_varchar,
+    FIELD_TYPE.SQLTYPECODE_CLOB:             get_sqltype_varchar,
+    FIELD_TYPE.SQLTYPECODE_INTERVAL:         get_sqltype_interval,
+    FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED: get_sqltype_tiny_unsigned,
+    FIELD_TYPE.SQLTYPECODE_TINYINT:          get_sqltype_tiny,
+    FIELD_TYPE.SQLTYPECODE_SMALLINT:         get_sqltype_smallint,
+    FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:get_sqltype_smallint_unsigned,
+    FIELD_TYPE.SQLTYPECODE_INTEGER:          get_sqltype_int,
+    FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED: get_sqltype_int_unsigned,
+    FIELD_TYPE.SQLTYPECODE_LARGEINT:         get_sqltype_largeint,
+    FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:get_sqltype_largeint_unsigned,
+    FIELD_TYPE.SQLTYPECODE_NUMERIC:          get_sqltype_numeric,
+    FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED: get_sqltype_numeric,
+    FIELD_TYPE.SQLTYPECODE_DECIMAL:          get_sqltype_decimal,
+    FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED: get_sqltype_decimal,
+    FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE:    get_sqltype_decimal,
+    FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED: get_sqltype_decimal,
+    FIELD_TYPE.SQLTYPECODE_REAL:             get_sqltype_real,
+    FIELD_TYPE.SQLTYPECODE_DOUBLE:           get_sqltype_double,
+    FIELD_TYPE.SQLTYPECODE_FLOAT:            get_sqltype_double,
+    FIELD_TYPE.SQLTYPECODE_BIT:              get_sqltype_bit,
+    FIELD_TYPE.SQLTYPECODE_BITVAR:           get_sqltype_bit,
+    FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:   get_sqltype_bit,
+    FIELD_TYPE.SQLTYPECODE_DATETIME:         get_sqltype_datetime,
+}
+
+

@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from . import errors
 
-from .transport import Transport, Convert
+from .transport import Transport, Convert, sql_to_py_convert_dict
 from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
 
 
@@ -407,6 +407,18 @@ class TrafProperty:
         self._srvr_type = 2  # AS
         self._fetch_ahead = ''
         self._tenant_name = None
+        self._charset = "UTF-8"
+
+    @property
+    def charset(self):
+        return self._charset
+
+    @charset.setter
+    def charset(self, charset):
+        charset = charset.upper()
+        if charset not in Transport.charset_to_value:
+            raise errors.ProgrammingError("unsupport charset: {0}".format(charset))
+        self._charset = charset
 
     @property
     def tenant_name(self):
@@ -877,30 +889,31 @@ class SQLDataValueDef:
             return buf_view
 
         if dataType == FIELD_TYPE.SQLTYPECODE_CHAR:
+            target_charset = "utf-8"
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
                 _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return buf_view
             elif isinstance(param_values, (bytes, str)):
-                charSet = ""
 
                 try:
                     if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        charSet = "UTF-8"
+                        target_charset = "UTF-8"
                     elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        charSet = "UTF-16LE"
+                        target_charset = "UTF-16LE"
                     else:
-                        charSet = Transport.value_to_charset[dataCharSet]
+                        target_charset = Transport.value_to_charset[dataCharSet]
                     if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(charSet)
+                        param_values = param_values.decode("utf-8").encode(target_charset)
                     else:
-                        param_values = param_values.encode(charSet)
+                        param_values = param_values.encode(target_charset)
                 except:
-                    raise errors.NotSupportedError("unsupported_encoding")
+                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
             else:
-                raise errors.DataError("invalid_parameter_value, data should be either bytes or String for column: %d",
-                                       param_count)
+                raise errors.DataError(
+                    "invalid_parameter_value, data should be either bytes or String for column number {0}".format(
+                        param_count))
 
             # We now have a byte array containing the parameter
             data_len = len(param_values)
@@ -912,10 +925,10 @@ class SQLDataValueDef:
                         # pad with Unicode spaces (0x00 0x20)
                         i2 = data_len
                         while i2 < max_len:
-                            _ = Convert.put_bytes(' '.encode(), buf_view[noNullValue + i2:], little=True,
-                                             nolen=True)
-                            _ = Convert.put_bytes(' '.encode(), buf_view[noNullValue + i2 + 1:], little=True,
-                                             nolen=True)
+                            _ = Convert.put_bytes(' '.encode("UTF-16BE"), buf_view[noNullValue + i2:], little=True,
+                                                  nolen=True)
+                            _ = Convert.put_bytes(' '.encode("UTF-16BE"), buf_view[noNullValue + i2 + 1:], little=True,
+                                                  nolen=True)
                             i2 = i2 + 2
 
                     else:
@@ -925,7 +938,8 @@ class SQLDataValueDef:
                         _ = Convert.put_bytes(b, buf_view[noNullValue + data_len:], little=True, nolen=True)
             else:
                 raise errors.ProgrammingError(
-                        "invalid_string_parameter CHAR input data is longer than the length for column: %d",param_count)
+                    "invalid_string_parameter CHAR input data is longer than the length for column number {0}".format(
+                        param_count))
 
             return None
         if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR:
@@ -935,24 +949,24 @@ class SQLDataValueDef:
                 _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return None
             elif isinstance(param_values, (bytes, str)):
-                charSet = ""
+                target_charset = ""
 
                 try:
                     if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        charSet = "UTF-8"
+                        target_charset = "UTF-8"
                     elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        charSet = "UTF-16LE"
+                        target_charset = "UTF-16LE"
                     else:
-                        charSet = Transport.value_to_charset[dataCharSet]
+                        target_charset = Transport.value_to_charset[dataCharSet]
                     if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(charSet)
+                        param_values = param_values.decode("utf-8").encode(target_charset)
                     else:
-                        param_values = param_values.encode(charSet)
+                        param_values = param_values.encode(target_charset)
                 except:
-                    raise errors.NotSupportedError("unsupported_encoding")
+                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
             else:
                 raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column: {0}".format(
+                    "invalid_parameter_value, data should be either bytes or String for column number: {0}".format(
                         param_count))
 
             data_len = len(param_values)
@@ -961,39 +975,47 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values, buf_view[noNullValue + 2:], nolen=True)
             else:
                 raise errors.DataError(
-                    "invalid_string_parameter input data is longer than the length for column: {0}".format(
+                    "invalid_string_parameter input data is longer than the length for column number: {0}".format(
                         param_count))
             return None
         if dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH or dataType == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG:
+
+            character_len = 0
             if param_values is None:
                 # Note for future optimization. We can probably remove the next line,
                 # because the array is already initialized to 0.
                 _ = Convert.put_short(0, buf_view[noNullValue:], True)
                 return buf_view
             elif isinstance(param_values, (bytes, str)):
-                charSet = ""
+                target_charset = "utf-8"
 
                 try:
                     if dataCharSet == Transport.charset_to_value["ISO8859_1"]:
-                        charSet = "UTF-8"
+                        target_charset = "UTF-8"
                     elif dataCharSet == Transport.charset_to_value["UTF-16BE"]:   # default is little endian
-                        charSet = "UTF-16LE"
+                        target_charset = "UTF-16LE"
                     else:
-                        charSet = Transport.value_to_charset[dataCharSet]
+                        target_charset = Transport.value_to_charset[dataCharSet]
+                        character_len = len(param_values)
                     if isinstance(param_values, bytes):
-                        param_values = param_values.decode("utf-8").encode(charSet)
+                        param_values = param_values.decode().encode(target_charset)
                     else:
-                        param_values = param_values.encode(charSet)
+                        param_values = param_values.encode(target_charset)
                 except:
-                    raise errors.NotSupportedError("unsupported_encoding")
+                    raise errors.NotSupportedError("unsupported charset: {0}".format(target_charset))
             else:
                 raise errors.DataError(
-                    "invalid_parameter_value, data should be either bytes or String for column: {0}".format(
+                    "invalid_parameter_value, data should be either bytes or String for column number: {0}".format(
                         param_count))
 
             data_len = len(param_values)
-            if max_len > (data_len + dataOffset):
-                max_len = data_len + dataOffset
+            # if column is utf-8, length is the number of character while other charset is the number of bytes
+            # max len will be length * 4 if charset is utf-8
+            if dataCharSet != Transport.charset_to_value["UTF-8"]:
+                character_len = data_len
+            else:
+                max_len = max_len // 4
+            if max_len >= character_len:
                 if shortLength:
                     _ = Convert.put_short(data_len, buf_view[noNullValue:], little=True)
                 else:
@@ -1001,13 +1023,13 @@ class SQLDataValueDef:
                 _ = Convert.put_bytes(param_values, buf_view[noNullValue + dataOffset:], nolen=True)
             else:
                 raise errors.DataError(
-                    "invalid_string_parameter input data is longer than the length for column: {0}".format(
+                    "invalid_string_parameter input data is longer than the length for column number: {0}".format(
                         param_count))
             return None
         if dataType == FIELD_TYPE.SQLTYPECODE_INTEGER:
             if not isinstance(param_values,(int, float)):
                 raise errors.DataError(
-                    "invalid_parameter_value, data should be either int or float for column: {0}".format(
+                    "invalid_parameter_value, data should be either int or float for column number: {0}".format(
                         param_count))
             if scale > 0:
                 param_values = round(param_values * (10 ** scale))
@@ -1196,7 +1218,10 @@ class SQLDataValueDef:
             if sign:
                 # byte -80 : 0xFFFFFFB0
                 num, _ = Convert.get_bytes(buf_view[noNullValue + max_len - 1:], length=1)
-                _ = Convert.put_bytes(num | 0x80, buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
+
+                plus_sign = int.from_bytes(num, 'little') | 0x80
+
+                _ = Convert.put_bytes(plus_sign.to_bytes(1, 'little'), buf_view[noNullValue + max_len - 1:], nolen=True, is_data=True)
 
         if dataType == FIELD_TYPE.SQLTYPECODE_BOOLEAN:
             raise errors.NotSupportedError
@@ -1562,118 +1587,123 @@ class FetchReply:
         ret_obj = None
         buf_view = memoryview(self.out_values)
         sql_data_type = column_desc.data_type
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_CHAR:
-            length = column_desc.max_len
-            ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
-
-            short_length = 2 if column_desc.precision < 2**15 else 4
-            data_offset = nonull_value_offset + short_length
-
-            data_len = 0
-            if short_length == 2:
-                data_len, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
-            else:
-                data_len, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
-
-            length_left = len(self.out_values) - data_offset
-
-            data_len = length_left if length_left < data_len else data_len
-
-            ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTERVAL:
-            pass
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
-            ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT:
-            ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT:
-            ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
-            ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER:
-            ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
-            # TODO scale of big decimal
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
-            ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
-            # TODO scale of big decimal
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT:
-            ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
-            ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
-            ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.max_len, column_desc.scale)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
-            first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
-            int_first_byte = int.from_bytes(first_byte, byteorder='little')
-            if int_first_byte & 0x80:
-                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len,
-                                               little=True)
-                ret_obj = '-' + (bytes([ret_obj[0] & 0x7F]) + ret_obj[1:]).decode()
-                ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale)
-            else:
-                ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len, little=True)
-                ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale)
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_REAL:
-            ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DOUBLE or sql_data_type == FIELD_TYPE.SQLTYPECODE_FLOAT:
-            ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR \
-                or sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
-            pass
-
-        if sql_data_type == FIELD_TYPE.SQLTYPECODE_DATETIME:
-            if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_DATE:
-                # "yyyy-mm-dd"
-                year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
-                month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
-                day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
-                ret_obj = datetime.date(year, month, day)
-            if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIMESTAMP:
-                # yyyy - mm - dd hh: mm:ss.fffffffff
-                year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
-                month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
-                day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
-                hour, _ = Convert.get_char(buf_view[nonull_value_offset + 4:], to_python_int=True)
-                min, _ = Convert.get_char(buf_view[nonull_value_offset + 5:], to_python_int=True)
-                sec, _ = Convert.get_char(buf_view[nonull_value_offset + 6:], to_python_int=True)
-
-                nano_seconds = 123
-                if column_desc.precision > 0:
-                    nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 7:], little=True)
-                    if nano_seconds > 999999:  # returned in microseconds
-                        nano_seconds = 0
-                ret_obj = datetime.datetime(year, month, day, hour, min, sec, microsecond=nano_seconds)
-            if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
-                # "hh:mm:ss"
-                hour, _ = Convert.get_char(buf_view[nonull_value_offset:], to_python_int=True)
-                minute, _ = Convert.get_char(buf_view[nonull_value_offset + 1:], to_python_int=True)
-                second, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
-                ret_obj = datetime.time(hour=hour, minute=minute, second=second)
-        return ret_obj
+        return sql_to_py_convert_dict[sql_data_type](buf_view, column_desc, nonull_value_offset)
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_CHAR:
+        #     charset = Transport.value_to_charset[column_desc.odbc_charset]
+        #     length = column_desc.max_len
+        #     ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
+        #     ret_obj = ret_obj.decode(charset)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_WITH_LENGTH \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_VARCHAR_LONG \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_BLOB \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_CLOB:
+        #
+        #     short_length = 2 if column_desc.precision < 2**15 else 4
+        #     data_offset = nonull_value_offset + short_length
+        #
+        #     data_len = 0
+        #     if short_length == 2:
+        #         data_len, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
+        #     else:
+        #         data_len, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
+        #
+        #     length_left = len(buf_view) - data_offset
+        #
+        #     data_len = length_left if length_left < data_len else data_len
+        #
+        #     ret_obj = buf_view[data_offset:data_offset + data_len].tobytes()
+        #     charset = Transport.value_to_charset[column_desc.odbc_charset]
+        #     ret_obj = ret_obj.decode(charset)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTERVAL:
+        #     pass
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT_UNSIGNED:
+        #     ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_TINYINT:
+        #     ret_obj, _ = Convert.get_char(buf_view[nonull_value_offset:])
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT:
+        #     ret_obj, _ = Convert.get_short(buf_view[nonull_value_offset:], little=True)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_SMALLINT_UNSIGNED:
+        #     ret_obj, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER:
+        #     ret_obj, _ = Convert.get_int(buf_view[nonull_value_offset:], little=True)
+        #     # TODO scale of big decimal
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_INTEGER_UNSIGNED:
+        #     ret_obj, _ = Convert.get_uint(buf_view[nonull_value_offset:], little=True)
+        #     # TODO scale of big decimal
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT:
+        #     ret_obj, _ = Convert.get_longlong(buf_view[nonull_value_offset:], little=True)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_LARGEINT_UNSIGNED:
+        #     ret_obj, _ = Convert.get_ulonglong(buf_view[nonull_value_offset:], little=True)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_NUMERIC_UNSIGNED:
+        #     ret_obj = Convert.get_numeric(buf_view[nonull_value_offset:], column_desc.max_len, column_desc.scale)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_UNSIGNED \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_DECIMAL_LARGE_UNSIGNED:
+        #     first_byte, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=1, little=True)
+        #     int_first_byte = int.from_bytes(first_byte, byteorder='little')
+        #     if int_first_byte & 0x80:
+        #         ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len,
+        #                                        little=True)
+        #         ret_obj = '-' + (bytes([ret_obj[0] & 0x7F]) + ret_obj[1:]).decode()
+        #         ret_obj = Decimal(ret_obj) / (10 ** column_desc.scale)
+        #     else:
+        #         ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=column_desc.max_len, little=True)
+        #         ret_obj = Decimal(ret_obj.decode()) / (10 ** column_desc.scale)
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_REAL:
+        #     ret_obj, _ = Convert.get_float(buf_view[nonull_value_offset:], little=True)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_DOUBLE or sql_data_type == FIELD_TYPE.SQLTYPECODE_FLOAT:
+        #     ret_obj, _ = Convert.get_double(buf_view[nonull_value_offset:], little=True)
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_BIT \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_BITVAR \
+        #         or sql_data_type == FIELD_TYPE.SQLTYPECODE_BPINT_UNSIGNED:
+        #     pass
+        #
+        # if sql_data_type == FIELD_TYPE.SQLTYPECODE_DATETIME:
+        #     if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_DATE:
+        #         # "yyyy-mm-dd"
+        #         year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+        #         month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+        #         day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
+        #         ret_obj = datetime.date(year, month, day)
+        #     if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIMESTAMP:
+        #         # yyyy - mm - dd hh: mm:ss.fffffffff
+        #         year, _ = Convert.get_ushort(buf_view[nonull_value_offset:], little=True)
+        #         month, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+        #         day, _ = Convert.get_char(buf_view[nonull_value_offset + 3:], to_python_int=True)
+        #         hour, _ = Convert.get_char(buf_view[nonull_value_offset + 4:], to_python_int=True)
+        #         min, _ = Convert.get_char(buf_view[nonull_value_offset + 5:], to_python_int=True)
+        #         sec, _ = Convert.get_char(buf_view[nonull_value_offset + 6:], to_python_int=True)
+        #
+        #         nano_seconds = 123
+        #         if column_desc.precision > 0:
+        #             nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 7:], little=True)
+        #             if nano_seconds > 999999:  # returned in microseconds
+        #                 nano_seconds = 0
+        #         ret_obj = datetime.datetime(year, month, day, hour, min, sec, microsecond=nano_seconds)
+        #     if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
+        #         # "hh:mm:ss"
+        #         hour, _ = Convert.get_char(buf_view[nonull_value_offset:], to_python_int=True)
+        #         minute, _ = Convert.get_char(buf_view[nonull_value_offset + 1:], to_python_int=True)
+        #         second, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
+        #         ret_obj = datetime.time(hour=hour, minute=minute, second=second)
+        # return ret_obj
 
 
 class PrepareReply:
@@ -1688,6 +1718,7 @@ class PrepareReply:
         self.output_desc_list = []
         self.output_desc_length = 0
         self.total_error_length = 0
+        self.rows_affected = 0
 
     def init_reply(self, buf_view: memoryview):
         self.return_code, buf_view = Convert.get_int(buf_view, little=True)
