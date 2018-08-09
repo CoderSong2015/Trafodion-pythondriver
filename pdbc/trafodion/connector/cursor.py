@@ -3,7 +3,7 @@ import weakref
 from . import errors
 from .abstracts import TrafCursorAbstract
 from .statement import Statement, PreparedStatement
-from .transport import Transport
+from .constants.TRANSPORT import Transport
 
 
 class CursorBase(TrafCursorAbstract):

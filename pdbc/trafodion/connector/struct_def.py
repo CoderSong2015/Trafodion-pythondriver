@@ -3,7 +3,7 @@ import time
 
 from . import errors
 
-from .transport import Transport
+from .constants.TRANSPORT import Transport
 from .converters import sql_to_py_convert_dict, py_to_sql_convert_dict, Convert
 from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
 

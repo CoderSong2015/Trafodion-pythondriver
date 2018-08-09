@@ -1,8 +1,3 @@
-import struct
-from . import errors
-from decimal import Decimal
-
-
 class Transport:
     size_long = 8
     size_int = 4
@@ -279,4 +274,3 @@ class Transport:
         return cls.size_int + len(buf) + 1 + cls.size_int if buf and len(buf) > 0 else cls.size_int
 
     # end class TRANSPORT
-

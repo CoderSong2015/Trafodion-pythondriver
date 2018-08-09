@@ -1,4 +1,4 @@
-from .transport import Transport
+from .constants.TRANSPORT import Transport
 from . import errors
 from .constants import FIELD_TYPE
 from decimal import Decimal
