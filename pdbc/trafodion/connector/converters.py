@@ -925,7 +925,7 @@ def put_sqltype_decimal(buf_view, no_null_value, param_values, desc, param_count
 
     sign = 1 if param_values.is_signed() else 0
     param_values = param_values.__abs__()
-    param_values = param_values.to_integral_exact().to_eng_string()
+    param_values = param_values.to_integral_exact(rounding='ROUND_DOWN').to_eng_string()
 
     num_zeros = max_len - len(param_values)
     if num_zeros < 0:
