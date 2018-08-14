@@ -1037,11 +1037,11 @@ def put_sqltype_datetime(buf_view, no_null_value, param_values, desc, param_coun
         param_values = param_values.encode()
         length = len(param_values)
 
-        if max_len > length:
+        if max_len >= length:
             padding = bytes(' '.encode() * (max_len - length))
             _ = Convert.put_bytes(param_values + padding, buf_view[no_null_value:], nolen=True, is_data=True)
         else:
-            _ = Convert.put_bytes(param_values[0:precision], buf_view[no_null_value:], nolen=True, is_data=True)
+            _ = Convert.put_bytes(param_values[0:max_len], buf_view[no_null_value:], nolen=True, is_data=True)
     if datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
         if not isinstance(param_values, (datetime.time, str)):
             raise errors.DataError(
@@ -1050,8 +1050,8 @@ def put_sqltype_datetime(buf_view, no_null_value, param_values, desc, param_coun
         if isinstance(param_values, datetime.time):
             param_values = str(param_values)
         if isinstance(param_values, str):
-            if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}', param_values):
-                raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss")
+            if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}(\.\d{1,6})?', param_values):
+                raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss or HH:MM:ss.xxxxxx")
             _ = Convert.put_bytes(param_values.encode(), buf_view[no_null_value:], nolen=True, is_data=True)
 
 py_to_sql_convert_dict = {
