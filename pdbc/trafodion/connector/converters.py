@@ -574,7 +574,14 @@ def get_sqltype_datetime(buf_view, column_desc, nonull_value_offset):
         hour, _ = Convert.get_char(buf_view[nonull_value_offset:], to_python_int=True)
         minute, _ = Convert.get_char(buf_view[nonull_value_offset + 1:], to_python_int=True)
         second, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
-        ret_obj = datetime.time(hour=hour, minute=minute, second=second)
+
+        if column_desc.precision > 0:
+            nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 3:], little=True)
+            if nano_seconds > 999999:  # returned in microseconds
+                nano_seconds = 0
+            ret_obj = datetime.time(hour=hour, minute=minute, second=second, microsecond=nano_seconds)
+        else:
+            ret_obj = datetime.time(hour=hour, minute=minute, second=second)
 
     return ret_obj
 
@@ -1052,7 +1059,7 @@ def put_sqltype_datetime(buf_view, no_null_value, param_values, desc, param_coun
         if isinstance(param_values, str):
             if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}(\.\d{1,6})?', param_values):
                 raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss or HH:MM:ss.xxxxxx")
-            _ = Convert.put_bytes(param_values.encode(), buf_view[no_null_value:], nolen=True, is_data=True)
+            _ = Convert.put_bytes(param_values.encode()[0:max_len], buf_view[no_null_value:], nolen=True, is_data=True)
 
 py_to_sql_convert_dict = {
     FIELD_TYPE.SQLTYPECODE_CHAR:                   put_sqltype_char,
