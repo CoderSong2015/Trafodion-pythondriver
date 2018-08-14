@@ -579,6 +579,11 @@ def get_sqltype_datetime(buf_view, column_desc, nonull_value_offset):
             nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 3:], little=True)
             if nano_seconds > 999999:  # returned in microseconds
                 nano_seconds = 0
+
+            digit_num = len(str(nano_seconds))
+            # fractional seconds  to microsecond
+            # nano_seconds = nano_seconds * (10 ** (column_desc.precision - digit_num)) * 10 ** (6 - digit_num)
+            nano_seconds = nano_seconds * 10 ** (6 - column_desc.precision)
             ret_obj = datetime.time(hour=hour, minute=minute, second=second, microsecond=nano_seconds)
         else:
             ret_obj = datetime.time(hour=hour, minute=minute, second=second)
