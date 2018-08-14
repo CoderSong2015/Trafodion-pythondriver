@@ -20,8 +20,10 @@ class Transport:
     min_long = -9223372036854775808
     max_ulong = 18446744073709551616
     min_ulong = 0
-    max_float = 3.40282e+038
-    max_double = 1.79769e+308
+    max_float = 3.40282347e+38
+    min_float = -3.40282347e+38
+    max_double = 1.7976931348623157e+308
+    min_double = -1.7976931348623157e+308
 
     # password types
     UNAUTHENTICATED_USER_TYPE = 2  # regular password

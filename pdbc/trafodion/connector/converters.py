@@ -951,22 +951,28 @@ def put_sqltype_decimal(buf_view, no_null_value, param_values, desc, param_count
 
 def put_sqltype_real(buf_view, no_null_value, param_values, desc, param_count, short_length):
 
-    if not isinstance(param_values, float):
+    if not isinstance(param_values, (float, int)):
         raise errors.DataError(
             "invalid_parameter_value, data should be either float for column: {0}".format(
                 param_count))
-    if param_values > Transport.max_float:
+
+    if isinstance(param_values, int):
+        param_values = float(param_values)
+    if param_values > Transport.max_float or param_values < Transport.min_float:
         raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
     _ = Convert.put_float(param_values, buf_view[no_null_value:], little=True)
 
 
 def put_sqltype_double(buf_view, no_null_value, param_values, desc, param_count, short_length):
-    if not isinstance(param_values, float):
+    if not isinstance(param_values, (float, int)):
         raise errors.DataError(
             "invalid_parameter_value, data should be either float for column: {0}".format(
                 param_count))
-    if param_values > Transport.max_double:
+
+    if isinstance(param_values, int):
+        param_values = float(param_values)
+    if param_values > Transport.max_double or param_values < Transport.min_double:
         raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
     _ = Convert.put_double(param_values, buf_view[no_null_value:], little=True)
