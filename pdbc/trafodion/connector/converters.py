@@ -574,7 +574,19 @@ def get_sqltype_datetime(buf_view, column_desc, nonull_value_offset):
         hour, _ = Convert.get_char(buf_view[nonull_value_offset:], to_python_int=True)
         minute, _ = Convert.get_char(buf_view[nonull_value_offset + 1:], to_python_int=True)
         second, _ = Convert.get_char(buf_view[nonull_value_offset + 2:], to_python_int=True)
-        ret_obj = datetime.time(hour=hour, minute=minute, second=second)
+
+        if column_desc.precision > 0:
+            nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 3:], little=True)
+            if nano_seconds > 999999:  # returned in microseconds
+                nano_seconds = 0
+
+            digit_num = len(str(nano_seconds))
+            # fractional seconds  to microsecond
+            # nano_seconds = nano_seconds * (10 ** (column_desc.precision - digit_num)) * 10 ** (6 - digit_num)
+            nano_seconds = nano_seconds * 10 ** (6 - column_desc.precision)
+            ret_obj = datetime.time(hour=hour, minute=minute, second=second, microsecond=nano_seconds)
+        else:
+            ret_obj = datetime.time(hour=hour, minute=minute, second=second)
 
     return ret_obj
 
@@ -951,22 +963,28 @@ def put_sqltype_decimal(buf_view, no_null_value, param_values, desc, param_count
 
 def put_sqltype_real(buf_view, no_null_value, param_values, desc, param_count, short_length):
 
-    if not isinstance(param_values, float):
+    if not isinstance(param_values, (float, int)):
         raise errors.DataError(
             "invalid_parameter_value, data should be either float for column: {0}".format(
                 param_count))
-    if param_values > Transport.max_float:
+
+    if isinstance(param_values, int):
+        param_values = float(param_values)
+    if param_values > Transport.max_float or param_values < Transport.min_float:
         raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
     _ = Convert.put_float(param_values, buf_view[no_null_value:], little=True)
 
 
 def put_sqltype_double(buf_view, no_null_value, param_values, desc, param_count, short_length):
-    if not isinstance(param_values, float):
+    if not isinstance(param_values, (float, int)):
         raise errors.DataError(
             "invalid_parameter_value, data should be either float for column: {0}".format(
                 param_count))
-    if param_values > Transport.max_double:
+
+    if isinstance(param_values, int):
+        param_values = float(param_values)
+    if param_values > Transport.max_double or param_values < Transport.min_double:
         raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
 
     _ = Convert.put_double(param_values, buf_view[no_null_value:], little=True)
@@ -1031,22 +1049,30 @@ def put_sqltype_datetime(buf_view, no_null_value, param_values, desc, param_coun
         param_values = param_values.encode()
         length = len(param_values)
 
-        if max_len > length:
+        if max_len >= length:
             padding = bytes(' '.encode() * (max_len - length))
             _ = Convert.put_bytes(param_values + padding, buf_view[no_null_value:], nolen=True, is_data=True)
         else:
-            _ = Convert.put_bytes(param_values[0:precision], buf_view[no_null_value:], nolen=True, is_data=True)
+            _ = Convert.put_bytes(param_values[0:max_len], buf_view[no_null_value:], nolen=True, is_data=True)
     if datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
-        if not isinstance(param_values, (datetime.time, str)):
+
+        if isinstance(param_values, datetime.time):
+            param_values = str(param_values) + '.0' if precision > 0 and param_values.microsecond == 0 else str(param_values)
+        elif isinstance(param_values, str):
+            if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}(\.\d{1,6})?', param_values):
+                raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss or HH:MM:ss.xxxxxx")
+        else:
             raise errors.DataError(
                 "invalid_parameter_value: data should be either datetime.time or string for value: {0}".format(
                     param_values))
-        if isinstance(param_values, datetime.time):
-            param_values = str(param_values)
-        if isinstance(param_values, str):
-            if not re.fullmatch('[\d]{2}:[\d]{2}:[\d]{2}', param_values):
-                raise errors.DataError("invalid_parameter_value: string date should be HH:MM:ss")
-            _ = Convert.put_bytes(param_values.encode(), buf_view[no_null_value:], nolen=True, is_data=True)
+
+        param_values = param_values.encode()
+        length = len(param_values)
+        if max_len >= length:
+            padding = bytes(' '.encode() * (max_len - length))
+            _ = Convert.put_bytes(param_values + padding, buf_view[no_null_value:], nolen=True, is_data=True)
+        else:
+            _ = Convert.put_bytes(param_values[0:max_len], buf_view[no_null_value:], nolen=True, is_data=True)
 
 py_to_sql_convert_dict = {
     FIELD_TYPE.SQLTYPECODE_CHAR:                   put_sqltype_char,
