@@ -19,17 +19,6 @@ class TestConnectionObject(unittest.TestCase):
         self.cursor.close()
         self.cnx.close()
 
-    def test_Test(self):
-        cur = self.cursor
-        create = 1
-        if create:
-            cur.execute('drop table if EXISTS testtest')
-            cur.execute('create table testtest(id char(10) CHARACTER set utf8)')
-            cur.execute('insert into testtest values(?)', ['01234567891', ])
-            cur.execute('select * from testtest')
-        for row in cur:
-            print(row[0])
-
     def test_normal_close(self):
         try:
             cnx = connector.connect(**config)
