@@ -30,7 +30,7 @@ class TestConnectionObject(unittest.TestCase):
     def test_close_closed_connection(self):
         cnx = connector.connect(**config)
         cnx.close()
-        with self.assertRaises(connector.OperationalError):
+        with self.assertRaises(connector.Error):
             cursor = self.cnx.cursor()
 
     def test_close_after_execute(self):
@@ -54,8 +54,10 @@ class TestConnectionObject(unittest.TestCase):
 
     def test_close_connection_with_opened_cursor(self):
         try:
-            self.cursor.execute('get tables')
-            self.cnx.close()
+            cnx = connector.connect(**config)
+            cursor = cnx.cursor()
+            cursor.execute('get tables')
+            cnx.close()
         except Exception:
             self.fail('test_close_connection_with_opened_cursor() raise exception unexpectedly')
 

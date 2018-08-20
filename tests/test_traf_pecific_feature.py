@@ -10,7 +10,7 @@ class TestTrafFeature(unittest.TestCase):
     def test_multi_IP(self):
         pass
 
-    @unittest.skip("unsupported by python driver")    
+    @unittest.skip("unsupported by python driver")
     def test_multi_DCS(self):
         pass
 

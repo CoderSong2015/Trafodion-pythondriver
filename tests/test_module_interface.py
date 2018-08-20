@@ -24,7 +24,7 @@ class TestModuleInterface(unittest.TestCase):
                                   password=config['password'], port=config['port'], database='python_testsch1')
         cursor = conx1.cursor()
         cursor.execute('get tables')
-        self.assertTrue(['python_testtb'] in cursor)
+        self.assertTrue(('python_testtb') in cursor)
 
     def test_connect_with_invalid_user_or_password(self):
         with self.assertRaises(connector.DatabaseError):
@@ -34,7 +34,9 @@ class TestModuleInterface(unittest.TestCase):
                                      host=config['host'], port=config['port'])
 
     def test_connect_with_not_reachable_host(self):
-        with self.assertEqual(connector.Error):
+        """all exception should be correctly handled by the driver. exception throw from should be connector.Waring or
+        connecter.Error"""
+        with self.assertRaises(connector.Error):
             cnx = connector.connect(user='someuser', password='somepass', host='notreachable')
 
     @unittest.skip('unsupported feature')
@@ -111,3 +113,5 @@ class TestModuleInterface(unittest.TestCase):
 
     def test_exception_inheritance_NotSupportedError(self):
         self.assertTrue(issubclass(connector.NotSupportedError, connector.DatabaseError))
+
+        s = str()

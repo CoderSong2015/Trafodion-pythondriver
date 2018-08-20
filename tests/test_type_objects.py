@@ -55,7 +55,7 @@ class TestTypeObject(unittest.TestCase):
         self.assertTrue(hasattr(connector, 'NUMBER'))
 
     def test_DATETIME(self):
-        self.assertEqual(hasattr(connector, 'DATETIME'))
+        self.assertTrue(hasattr(connector, 'DATETIME'))
 
     def test_ROWID(self):
         self.assertTrue(hasattr(connector, 'ROWID'))
