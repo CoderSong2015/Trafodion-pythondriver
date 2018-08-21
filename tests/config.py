@@ -1,12 +1,12 @@
 config = {
-        'host': '192.168.0.59',
+        'host': '10.10.10.7',
         'port': 23400,
         'database': 'seabase',
         'user': 'trafodion',
         'password': 'traf123',
         'charset': 'utf-8',
         'use_unicode': True,
-        'get_warnings': True,
+        'get_warnings': True
     }
 
 # config = {

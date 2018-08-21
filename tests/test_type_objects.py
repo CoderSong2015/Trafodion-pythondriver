@@ -1,68 +1,61 @@
 import unittest
+from pdbc.trafodion import connector
+import datetime
+import time
+import random
+import string
 
 class TestTypeObject(unittest.TestCase):
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_Date(self):
-        pass
+        d1 = connector.Date(2018, 1, 1)
+        self.assertTrue(type(d1) is datetime.date)
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
+    # TODO: should Time support time precision?
     def test_Time(self):
-        pass
+        t1 = connector.Time(10, 50, 20)
+        self.assertTrue(type(t1) is datetime.time)
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_Timestamp(self):
-        pass
+        ts1 = connector.Timestamp(2018, 8, 16)
+        self.assertTrue(type(ts1) is datetime.datetime)
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_DateFromTicks(self):
-        pass
+        try:
+            ts1 = connector.DateFromTicks(time.mktime(time.localtime()))
+        except Exception:
+            self.fail('test_DateFromTicks raised unexpected exception')
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_TimeFromTicks(self):
-        pass
+        try:
+            ts1 = connector.TimeFromTicks(time.mktime(time.localtime()))
+        except Exception:
+            self.fail('test_DateFromTicks raised unexpected exception')
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_TimestampFromTicks(self):
-        pass
+        try:
+            ts1 = connector.TimestampFromTicks(time.mktime(time.localtime()))
+        except Exception:
+            self.fail('test_DateFromTicks raised unexpected exception')
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_Binary(self):
-        pass
+        try:
+            bin = connector.Binary(''.join(random.choices(string.ascii_letters + string.digits, k=20000)).encode())
+        except Exception:
+            self.fail('test_Binary raised unexpected exception')
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
+    # TODO: how to use this type?
     def test_STRING(self):
-        pass
+        self.assertTrue(hasattr(connector, 'STRING'))
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_BINARY(self):
-        pass
+        self.assertTrue(hasattr(connector, 'BINARY'))
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_NUMBER(self):
-        pass
+        self.assertTrue(hasattr(connector, 'NUMBER'))
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_DATETIME(self):
-        pass
+        self.assertTrue(hasattr(connector, 'DATETIME'))
 
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
     def test_ROWID(self):
-        pass
-
-    # TODO: unsupported feature
-    @unittest.skip("unsupported feature")
-    def test_SQLNULL(self):
-        pass
+        self.assertTrue(hasattr(connector, 'ROWID'))
