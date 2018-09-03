@@ -4,6 +4,8 @@ import datetime
 import time
 import random
 import string
+from pdbc.trafodion.connector.constants import FIELD_TYPE
+from .config import config
 
 class TestTypeObject(unittest.TestCase):
 
@@ -59,3 +61,26 @@ class TestTypeObject(unittest.TestCase):
 
     def test_ROWID(self):
         self.assertTrue(hasattr(connector, 'ROWID'))
+        
+    #improve code coverage
+    def test_DBAPISet(self):
+        self.assertTrue(connector.STRING==connector.STRING)
+        self.assertTrue(connector.STRING==FIELD_TYPE.SQLTYPECODE_CHAR)
+        self.assertTrue(connector.STRING!=connector.NUMBER)
+        self.assertTrue(hash(connector.STRING)==hash(connector.STRING))
+    
+    #improve code coverage
+    def test_insert_not_list_and_tuple(self):
+        cnx=connector.connect(**config)
+        cursor = cnx.cursor()
+        cursor.execute("DROP TABLE IF EXISTS employee1 CASCADE")
+        cursor.execute("CREATE TABLE employee1 (id INT, name CHAR(20), salary DOUBLE PRECISION , hire_date DATE)")
+        query = "INSERT INTO employee1 VALUES (?, ?, ?, ?)"
+        with self.assertRaises(connector.DataError):
+            cursor.execute(query, 100)
+
+        with self.assertRaises(connector.DataError):
+            cursor.executemany(query, 100)
+        cursor.close()
+        cnx.close()
+        
