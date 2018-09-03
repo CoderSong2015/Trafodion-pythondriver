@@ -1179,7 +1179,7 @@ class FetchReply:
 
                 column_result_list.append(column_value)
 
-            self.result_set.append(column_result_list)
+            self.result_set.append(tuple(column_result_list))
 
         self._clear_and_set()
 
