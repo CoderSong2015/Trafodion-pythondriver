@@ -563,11 +563,13 @@ def get_sqltype_datetime(buf_view, column_desc, nonull_value_offset):
         min, _ = Convert.get_char(buf_view[nonull_value_offset + 5:], to_python_int=True)
         sec, _ = Convert.get_char(buf_view[nonull_value_offset + 6:], to_python_int=True)
 
-        nano_seconds = 123
+        nano_seconds = 0
         if column_desc.precision > 0:
             nano_seconds, _ = Convert.get_uint(buf_view[nonull_value_offset + 7:], little=True)
             if nano_seconds > 999999:  # returned in microseconds
                 nano_seconds = 0
+
+        nano_seconds = nano_seconds * 10 ** (6 - column_desc.precision)
         ret_obj = datetime.datetime(year, month, day, hour, min, sec, microsecond=nano_seconds)
     if column_desc.datetime_code == FIELD_TYPE.SQLDTCODE_TIME:
         # "hh:mm:ss"
