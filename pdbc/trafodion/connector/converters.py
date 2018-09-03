@@ -440,6 +440,8 @@ def get_sqltype_char(buf_view, column_desc, nonull_value_offset):
     length = column_desc.max_len
     ret_obj, _ = Convert.get_bytes(buf_view[nonull_value_offset:], length=length)
     ret_obj = ret_obj.decode(charset)
+    ret_obj = ret_obj.rstrip('\x00').rstrip(' ')
+
     return ret_obj
 
 
@@ -629,6 +631,7 @@ def put_sqltype_char(buf_view, no_null_value, param_values, desc, param_count, s
     max_len = desc.max_len
     sql_charset = desc.sql_charset
     target_charset = "utf-8"
+    character_len = 0
     if param_values is None:
         # Note for future optimization. We can probably remove the next line,
         # because the array is already initialized to 0.
@@ -643,6 +646,7 @@ def put_sqltype_char(buf_view, no_null_value, param_values, desc, param_count, s
                 target_charset = "UTF-16LE"
             else:
                 target_charset = Transport.value_to_charset[sql_charset]
+                character_len = len(param_values)
             if isinstance(param_values, bytes):
                 param_values = param_values.decode("utf-8").encode(target_charset)
             else:
@@ -658,11 +662,13 @@ def put_sqltype_char(buf_view, no_null_value, param_values, desc, param_count, s
     data_len = len(param_values)
     # if column is utf-8, length is the number of character while other charset is the number of bytes
     # max len will be length * 4 if charset is utf-8
+
+    max_char_len = max_len
     if sql_charset != Transport.charset_to_value["UTF-8"]:
         character_len = data_len
     else:
-        max_len = max_len // 4
-    if max_len >= data_len:
+        max_char_len = max_len // 4
+    if max_char_len >= character_len:
         _ = Convert.put_bytes(param_values, buf_view[no_null_value:], True, nolen=True)
         # Blank pad for rest of the buffer
         if max_len > data_len:
@@ -680,10 +686,10 @@ def put_sqltype_char(buf_view, no_null_value, param_values, desc, param_count, s
                 b = bytearray()
                 if sql_charset != Transport.charset_to_value["UTF-8"]:
                     for x in range(max_len - data_len):
-                        b.append(ord(' '))
+                        b.append(0x20)
                 else:
-                    for x in range(max_len * 4 - data_len):
-                        b.append(ord(' '))
+                    for x in range(max_len - data_len):
+                        b.append(0x20)
                 _ = Convert.put_bytes(b, buf_view[no_null_value + data_len:], little=True, nolen=True)
     else:
         raise errors.ProgrammingError(
