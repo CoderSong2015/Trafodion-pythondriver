@@ -678,8 +678,12 @@ def put_sqltype_char(buf_view, no_null_value, param_values, desc, param_count, s
 
             else:
                 b = bytearray()
-                for x in range(max_len - data_len):
-                    b.append(ord(' '))
+                if sql_charset != Transport.charset_to_value["UTF-8"]:
+                    for x in range(max_len - data_len):
+                        b.append(ord(' '))
+                else:
+                    for x in range(max_len * 4 - data_len):
+                        b.append(ord(' '))
                 _ = Convert.put_bytes(b, buf_view[no_null_value + data_len:], little=True, nolen=True)
     else:
         raise errors.ProgrammingError(
