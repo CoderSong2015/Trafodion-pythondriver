@@ -891,7 +891,7 @@ def put_sqltype_largeint(buf_view, no_null_value, param_values, desc, param_coun
             "invalid_parameter_value, data should be either int or float for column: {0}".format(
                 param_count))
     if scale > 0:
-        param_values = round(param_values * (10 ** scale))
+        param_values = int(param_values * (10 ** scale))
 
     if param_values > Transport.max_long or param_values < Transport.min_long:
         raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
@@ -913,7 +913,7 @@ def put_sqltype_largeint_unsigned(buf_view, no_null_value, param_values, desc, p
             "invalid_parameter_value, data should be either int or float for column: {0}".format(
                 param_count))
     if scale > 0:
-        param_values = round(param_values * (10 ** scale))
+        param_values = int(param_values * (10 ** scale))
 
     if param_values > Transport.max_ulong or param_values < Transport.min_ulong:
         raise errors.DataError("numeric_out_of_range: {0}".format(param_values))
