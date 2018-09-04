@@ -247,6 +247,11 @@ class TrafCursor(CursorBase):
             self._description = None
 
         self._rowcount = descriptor.rows_affected
+        if hasattr(descriptor, 'query_type') and descriptor.query_type in (Transport.SQL_UNKNOWN,
+                                                                           Transport.SQL_SELECT_UNIQUE,
+                                                                           Transport.SQL_SELECT_NON_UNIQUE):
+            self._rowcount = -1
+
 
     def _generate_stmtlabel(self):
 
