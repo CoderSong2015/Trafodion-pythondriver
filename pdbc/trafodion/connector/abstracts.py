@@ -43,7 +43,7 @@ class TrafConnectionAbstract(object):
 
         # Check network locations
         if 'schema' in config and config['schema']:
-            self.property.schema = config['schema']
+            self.property.schema = config['schema'].upper()
 
         if 'charset' in config and config['charset']:
             self.property.charset = config['charset']
