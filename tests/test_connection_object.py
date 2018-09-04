@@ -68,7 +68,9 @@ class TestConnectionObject(unittest.TestCase):
         """
         read committed level check.
         """
-        row = (self.getId(), 2345.678)
+        id=self.getId()
+        money=2345.678
+        row = (id, money)
 
         cnx = connector.connect(**config)
         cnx.set_auto_commit(False)
@@ -76,8 +78,8 @@ class TestConnectionObject(unittest.TestCase):
         cursor.execute('insert into bank_account values(?,?)', (id, money))
         cnx.commit()
         cnx.close()
-        self.cnx.execute('select * from bank_account where id=?', (id,))
-        res = self.cnx.fetchone()
+        self.cursor.execute('select * from bank_account where id=?', (id,))
+        res = self.cursor.fetchone()
         self.assertEqual(res, row)
 
     def test_auto_commit_true(self):
