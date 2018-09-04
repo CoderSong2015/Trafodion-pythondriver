@@ -77,7 +77,8 @@ class Statement:
 
         if execute_api == Transport.SRVR_API_SQLEXECDIRECT:
             self._descriptor = temp_descriptor
-
+        else:
+            self._descriptor.rows_affected = temp_descriptor.rows_affected
         return self._descriptor
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
