@@ -284,7 +284,7 @@ class TrafCursor(CursorBase):
         self._next_row = 1
         return self._result_set[self._next_row - 1]
 
-    def fetchmany(self, size=1):
+    def fetchmany(self, size=None):
 
         if not self._connection.is_connected():
             raise errors.DatabaseError("Connection not available.")
@@ -299,7 +299,7 @@ class TrafCursor(CursorBase):
             row = self.fetchone()
             if row:
                 res.append(row)
-        return res if res else None
+        return res
 
     def close(self):
         if self._connection is None:
