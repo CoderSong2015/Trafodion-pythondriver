@@ -328,7 +328,7 @@ class TrafCursor(CursorBase):
             fetch_reply = self._st.fetch()
             self._end_data = fetch_reply.end_of_data
             if self._end_data:
-                return tuple(res) if res else None
+                return tuple(res)
             res = res + fetch_reply.result_set
 
     @property
