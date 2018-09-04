@@ -1011,6 +1011,12 @@ def put_sqltype_numeric(buf_view, no_null_value, param_values, desc, param_count
             "invalid_parameter_value, data should be either int or str or decimal for value: {0}".format(
                 param_values))
 
+    temp_num = Decimal(param_values)
+    if temp_num >= 10 ** (precision - scale):
+        raise errors.DataError(
+            "invalid_parameter_value: number larger than the max valid value, number: {0}, precision:{1}, scale:{2}".format(
+                param_values, precision, scale))
+
     sign = Convert.put_numeric(param_values, buf_view[no_null_value:], scale, max_len, precision)
     if sign:
         # byte -80 : 0xFFFFFFB0
