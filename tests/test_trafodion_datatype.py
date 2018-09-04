@@ -79,9 +79,7 @@ class DataTypes(unittest.TestCase):
         'timestamp_precision': 'type_test_timestamp_precision',
     }
 
-    dFile = None
-    log_file="DataType.log"
-
+    '''
     def drop_tables(self, conn):
         cur = conn.cursor()
         table_names = self.tables.values()
@@ -89,31 +87,54 @@ class DataTypes(unittest.TestCase):
             cur.execute("DROP TABLE IF EXISTS {table}".format(
                 table=table_name)
             )
-
+    '''
+    
+    @classmethod
+    def drop_tables(cls):
+        cur = cls.conn.cursor()
+        table_names = cls.tables.values()
+        for table_name in table_names:
+            cur.execute("DROP TABLE IF EXISTS {table}".format(
+                table=table_name)
+            )
+        cur.close()
 
 class TestTrafDataType(DataTypes):
     def tearDown(self):
         #self.conn = Connect(**self.config)
         #self.drop_tables(self.conn)
         #self.conn.close()
+        pass
         
-        if self.dFile:
-            self.dFile.close()
-            self.dFile=None
             
     def setUp(self):
-        self.config = config
-        self.conn = Connect(**config)
+        #self.config = config
+        #self.conn = Connect(**config)
+        
         #self.drop_tables(self.conn)
         
-
-        if not self.dFile:
-            self.dFile=open(self.log_file, 'a', encoding='utf-8')
+        pass
+            
+    @classmethod
+    def tearDownClass(cls):
+        #super(TestTrafDataType, cls).tearDownClass()
+        cls.conn.close()
+        
+    @classmethod
+    def setUpClass(cls):
+        #super(TestTrafDataType, cls).setUpClass()
+        cls.config = config
+        cls.conn = Connect(**config)
+        cursor = cls.conn.cursor()
+        cursor.execute('create schema if not exists py_driver_test')
+        cursor.execute('set schema py_driver_test')
+        cursor.close()
+        cls.drop_tables()
 
     def compare(self, name, val1, val2):
         WriteLog( "name:%s, expect:%s, result:%s" %(name, val1, val2))
         self.assertEqual(val1, val2, "%s  %s != %s" % (name, val1, val2))
-    
+
     #@unittest.skip("no")
     def test_numeric_int(self):
         tb_name = self.tables['int']
@@ -138,7 +159,8 @@ class TestTrafDataType(DataTypes):
               ).format(table=tb_name)
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
         
         
         columns = [
@@ -197,7 +219,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(err_flag==False):
                     WriteLog( "[+++]Test Success")
@@ -229,7 +251,7 @@ class TestTrafDataType(DataTypes):
                     self.compare(col, data[i][j], row[j])
                     WriteLog( str(type(row[j])))
                 except Exception as err:
-                    WriteLog( 'Unexpected Exception:' + err.__str__())
+                    WriteLog( 'Unexpected Exception:' + str(err))
                     err_flag=True
                 finally:
                     if(err_flag==False):
@@ -269,12 +291,12 @@ class TestTrafDataType(DataTypes):
                 
             expect_err_flag=False
             for insert_data in invalid_data[index]:
-                WriteLog( "<Begin Case>:" + insert_pre + insert_data.__str__(), True)
+                WriteLog( "<Begin Case>:" + insert_pre + str(insert_data), True)
                 try:
                     cur.execute(insert_pre, insert_data)
                 except Exception as err:
                     expect_err_flag=True
-                    WriteLog( err.__str__())
+                    WriteLog( str(err))
                 finally:
                     if(expect_err_flag==True):
                         WriteLog( "[+++]Test Success")
@@ -282,64 +304,13 @@ class TestTrafDataType(DataTypes):
                         WriteLog( "[---]Test Fail")
                         success_flag = False
                         
-                    WriteLog( "<End Case>:" + insert_pre + insert_data.__str__())
+                    WriteLog( "<End Case>:" + insert_pre + str(insert_data))
                     expect_err_flag=False    
         
         cur.close()
         
-        if(success_flag==False):
-            raise     
-        '''    
-        data = [
-            (
-                -128,  # tinyint signed
-                0,  # tinyint unsigned
-                -32768,  # smallint signed
-                0,  # smallint unsigned
-                -2147483648,  # int signed
-                0,  # int unsigned
-                -9223372036854775808,  # big signed
-                0,  # big unsigned
-            ),
-            (
-                127,    # tinyint signed
-                255,    # tinyint signed
-                32767,  # smallint signed
-                65535,  # smallint unsigned
-                2147483647,  # int signed
-                4294967295,  # int unsigned
-                9223372036854775807,  # big signed
-                18446744073709551615,  # big unsigned
-            ),
-        ]
-        insert = _insert_query(tb_name, columns)
-        for x in data:
-            cur.execute(insert, x)
-
-        select = _get_select_stmt(tb_name, columns)
-        cur.execute(select)
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
         
-        rows = cur.fetchall()
-        for i, col in enumerate(columns):
-            self.compare(col, data[0][i], rows[0][i])
-            self.compare(col, data[1][i], rows[1][i])
-         
-        cur.close()   
-        
-        cur = self.conn.cursor()
-        cur.execute(select)
-        
-        WriteLog( "tuple data's len is ",  len(data))
-        for i in range(len(data)):
-            rows = cur.fetchone()
-            self.assertTrue(len(rows)>1)
-            WriteLog( "row's column number is ",  len(rows))
-            for j, col in enumerate(columns):        
-                self.compare(col, data[i][j], rows[j])
-                self.assertTrue(type(rows[j]) is int)
-
-        cur.close()
-    '''    
        
     #@unittest.skip("no")
     def test_numeric_decimal(self):
@@ -375,7 +346,7 @@ class TestTrafDataType(DataTypes):
             try:
                 cur.execute(create_tb_str)
             except Exception as out_info:
-                WriteLog( 'Expected Exception:' + out_info.__str__())
+                WriteLog( 'Expected Exception:' + str(out_info))
                 expect_err_flag = True
             finally:
                 if(expect_err_flag == True):
@@ -401,7 +372,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_decimal_0',
@@ -430,7 +402,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(err_flag==False):
                     WriteLog( "[+++]Test Success")
@@ -472,7 +444,7 @@ class TestTrafDataType(DataTypes):
                     WriteLog( str(type(row[j])))
                     self.assertTrue(type(row[j]) is Decimal)
                 except Exception as err:
-                    WriteLog( 'Unexpected Exception:' + err.__str__())
+                    WriteLog( 'Unexpected Exception:' + str(err))
                     err_flag=True
                 finally:
                     if(err_flag==False):
@@ -497,7 +469,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 expect_err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(expect_err_flag==True):
                     WriteLog( "[+++]Test Success")
@@ -511,8 +483,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise     
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')    
           
        
     
@@ -537,7 +508,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_real',
@@ -567,8 +539,6 @@ class TestTrafDataType(DataTypes):
             (100.0,),
             (-100,),
             (100,),
-            (-340282366920938463463374607431768211456.0,),
-            (340282366920938463463374607431768211456.0,),
             (3.40282347e+38,),
             (1.2E37,),
             (3.4E38,),
@@ -597,8 +567,6 @@ class TestTrafDataType(DataTypes):
             (100.0,),
             (-100,),
             (100,),
-            (-340282366920938463463374607431768211456.0,),
-            (340282366920938463463374607431768211456.0,),
             (3.402823e+38,),
             (1.2E37,),
             (3.399999e+38,),
@@ -617,7 +585,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(err_flag==False):
                     WriteLog( "[+++]Test Success")
@@ -738,7 +706,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 expect_err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(expect_err_flag==True):
                     WriteLog( "[+++]Test Success")
@@ -752,8 +720,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
         
     #@unittest.skip("no")
     def test_numeric_float(self):
@@ -778,7 +745,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_float',
@@ -837,7 +805,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(err_flag==False):
                     WriteLog( "[+++]Test Success")
@@ -919,7 +887,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 expect_err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(expect_err_flag==True):
                     WriteLog( "[+++]Test Success")
@@ -933,8 +901,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
     
     #@unittest.skip("no")
     def test_numeric_double(self):
@@ -959,7 +926,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_double',
@@ -1018,7 +986,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(err_flag==False):
                     WriteLog( "[+++]Test Success")
@@ -1101,7 +1069,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 expect_err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(expect_err_flag==True):
                     WriteLog( "[+++]Test Success")
@@ -1115,8 +1083,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file') 
     
     
     #@unittest.skip("no")
@@ -1153,7 +1120,7 @@ class TestTrafDataType(DataTypes):
             try:
                 cur.execute(create_tb_str)
             except Exception as out_info:
-                WriteLog( 'Expected Exception:' + out_info.__str__())
+                WriteLog( 'Expected Exception:' + str(out_info))
                 expect_err_flag = True
             finally:
                 if(expect_err_flag == True):
@@ -1193,7 +1160,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_numeric_0',
@@ -1412,7 +1380,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(err_flag==False):
                     WriteLog( "[+++]Test Success")
@@ -1490,7 +1458,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 expect_err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(expect_err_flag==True):
                     WriteLog( "[+++]Test Success")
@@ -1504,8 +1472,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise     
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')   
 
     
     
@@ -1548,7 +1515,7 @@ class TestTrafDataType(DataTypes):
             try:
                 cur.execute(create_tb_str)
             except Exception as out_info:
-                WriteLog( 'Expected Exception:' + out_info.__str__())
+                WriteLog( 'Expected Exception:' + str(out_info))
                 flag = True
             finally:
                 if(flag == True):
@@ -1578,7 +1545,7 @@ class TestTrafDataType(DataTypes):
             try:
                 cur.execute(create_tb_str)
             except Exception as err:
-                WriteLog( 'Unxpected Exception:' + out_info.__str__())
+                WriteLog( 'Unxpected Exception:' + str(out_info))
                 err_flag = True
             finally:
                 if(err_flag == False):
@@ -1589,47 +1556,7 @@ class TestTrafDataType(DataTypes):
                     success_flag = False
                 WriteLog( "<End Case>:" + create_tb_str)
                 err_flag = False
-                
-        
-        '''
-        columns_definition = [
-            "col_char_0 char(1)",
-            "col_char_1 char(10)",
-            "col_char_2 char(16777216)",
-            "col_char_ucs2_0 char(1) character set ucs2",
-            "col_char_ucs2_1 char(10)  character set ucs2",
-            "col_char_ucs2_2 char(8388608)  character set ucs2",
-            "col_char_utf8_0 char(1) character set utf8",
-            "col_char_utf8_1 char(10) character set utf8",
-            "col_char_utf8_2 char(4194304) character set utf8",
-        ]
-        
-        columns_name = [
-            "col_char_0",
-            "col_char_1",
-            "col_char_2",
-            "col_char_ucs2_0",
-            "col_char_ucs2_1",
-            "col_char_ucs2_2",
-            "col_char_utf8_0",
-            "col_char_utf8_1",
-            "col_char_utf8_2",
-        ]
-        
-        data = [
-            ('0','01234567','01234567890123456789', '0','01234567','01234567890123456789', '0','01234567','01234567890123456789',),
-            ('','01234567890','',  '','','',  '','',''),
-            ('','','',  '','01234567890','',  '','',''),
-            ('','','',  '','','',  '','01234567890',''),
-        ]
-        
-        
-        exp = [
-            (1,10,16777216,1,10,8388608,1,10,4194304),
-            None
-        ]
-        '''
-        
+
         
         columns_definition = [
             "col_char_0 char(1)",
@@ -1652,41 +1579,7 @@ class TestTrafDataType(DataTypes):
             "col_char_utf8_0",
             "col_char_utf8_1",
         ]
-        
-        '''
-        data = [
-            ('0','0123456789','01234567890123456789', '0','0123456789','01234567890123456789', '0','0123456789','01234567890123456789',),
-            ('0','01234567','01234567890123456789', '0','01234567','01234567890123456789', '0','01234567','01234567890123456789',),
-            ('01','','',  '','','',  '','',''), 
-            ('','01234567890','',  '','','',  '','',''),
-            ('','','',  '01','','',  '','',''),
-            ('','','',  '','01234567890','',  '','',''),
-            ('','','',  '','','',  '01','',''),
-            ('','','',  '','','',  '','01234567890','')
-        ]
-        '''
-        
-        '''
-        data = [
-            ('0','0123456789', '0','0123456789', '0123','0123456789012345678901234567890123456789',),
-            ('0','01234567', '0','01234567', '0','01234567',),
-            
-            ('01','0',  '0','0',  '0','0'), 
-            ('0','01234567890',  '0','0',  '0','0'),
-            
-            ('0','0',  '01','0',  '0','0'),
-            ('0','0',  '0','01234567890',  '0','0'),
-
-            ('0','0',  '0','0',  '01234','0'),
-            ('0','0',  '0','0',  '0','01234567890123456789012345678901234567890'),
-        ]
-        
-        exp = [
-            (1,10, 2,20, 4,40),
-            (1,10, 2,20, 4,40),
-            None
-        ]
-        '''        
+           
                 
         data = [
             ('0','0123456789', '0','0123456789', '0','0123456789', '0','0123456789',),
@@ -1706,8 +1599,8 @@ class TestTrafDataType(DataTypes):
         ]
         
         expect_len = [
-            (1,10, 2,20, 2,20, 4,40),
-            (1,10, 2,20, 2,20, 4,40),
+            (1,10, 1,10, 1,10, 1,10),
+            (1,10, 1,10, 1,10, 1,10),
             None
         ]
         
@@ -1719,7 +1612,7 @@ class TestTrafDataType(DataTypes):
             cur.execute(create_tb_str)
         except Exception as err:
             WriteLog( "[---]Test Fail")
-            WriteLog( 'Unexpected Exception:' + err.__str__())
+            WriteLog( 'Unexpected Exception:' + str(err))
             success_flag = False
         finally:
             WriteLog( "[+++]Test Success")
@@ -1740,7 +1633,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(i<=1):
                     if(err_flag==False):
@@ -1779,8 +1672,8 @@ class TestTrafDataType(DataTypes):
             for j, col in enumerate(columns_name):
                 WriteLog( "<Begin Case>:test column {0}".format(j), True)
                 
-                WriteLog( "fetch["+ row[j]+"]")
-                WriteLog( "raw["+data[index_map[i]][j]+"]")
+                WriteLog( "fetch["+ str(row[j])+"]")
+                WriteLog( "raw["+str(data[index_map[i]][j])+"]")
                 
                 exp = data[index_map[i]][j]
                 res = row[j].rstrip()
@@ -1822,8 +1715,7 @@ class TestTrafDataType(DataTypes):
         cur.close() 
                     
                 
-        if(success_flag == False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file') 
         
          
         
@@ -1840,6 +1732,7 @@ class TestTrafDataType(DataTypes):
         
         
         columns_definition = [
+            "col_1 varchar",
             "col_1 varchar(-1)",
             "col_1 varchar(0)",
             "col_1 varchar(16777217)",
@@ -1862,7 +1755,7 @@ class TestTrafDataType(DataTypes):
             try:
                 cur.execute(create_tb_str)
             except Exception as out_info:
-                WriteLog( 'Expected Exception:' + out_info.__str__())
+                WriteLog( 'Expected Exception:' + str(out_info))
                 flag = True
             finally:
                 if(flag == True):
@@ -1892,7 +1785,7 @@ class TestTrafDataType(DataTypes):
             try:
                 cur.execute(create_tb_str)
             except Exception as err:
-                WriteLog( 'Unxpected Exception:' + out_info.__str__())
+                WriteLog( 'Unxpected Exception:' + str(err))
                 err_flag = True
             finally:
                 if(err_flag == False):
@@ -1946,8 +1839,8 @@ class TestTrafDataType(DataTypes):
         ]
         
         expect_len = [
-            (1,10, 2,20, 4,40,),
-            (1,8, 2,16, 4,32),
+            (1,10, 1,10, 1,10,),
+            (1,8, 1,8, 1,8),
             None
         ]
                 
@@ -1960,7 +1853,7 @@ class TestTrafDataType(DataTypes):
             cur.execute(create_tb_str)
         except Exception as err:
             WriteLog( "[---]Test Fail")
-            WriteLog( 'Unexpected Exception:' + err.__str__())
+            WriteLog( 'Unexpected Exception:' + str(err))
             success_flag = False
         finally:
             WriteLog( "[+++]Test Success")
@@ -1981,7 +1874,7 @@ class TestTrafDataType(DataTypes):
                 cur.execute(insert, x)
             except Exception as err:
                 err_flag=True
-                WriteLog( err.__str__())
+                WriteLog( str(err))
             finally:
                 if(i<=1):
                     if(err_flag==False):
@@ -2021,8 +1914,8 @@ class TestTrafDataType(DataTypes):
                 WriteLog( "<Begin Case>:test column {0}".format(j), True)
                 
                 
-                WriteLog( "fetch["+ row[j]+"]")
-                WriteLog( "raw["+data[index_map[i]][j]+"]")
+                WriteLog( "fetch["+ str(row[j])+"]")
+                WriteLog( "raw["+str(data[index_map[i]][j])+"]")
                 
                 exp = data[index_map[i]][j]
                 res = row[j].rstrip()
@@ -2054,8 +1947,7 @@ class TestTrafDataType(DataTypes):
         cur.close() 
                     
                 
-        if(success_flag == False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
        
     
     #@unittest.skip("no")
@@ -2079,7 +1971,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_time',
@@ -2190,8 +2083,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
     
     #@unittest.skip("no")
     def test_time_precision(self):
@@ -2221,7 +2113,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_time',
@@ -2349,8 +2242,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file') 
 
 
     #@unittest.skip("no")
@@ -2374,7 +2266,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_date',
@@ -2486,8 +2379,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
     
     #@unittest.skip("no")
     def test_timestamp(self):
@@ -2510,7 +2402,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_timestamp',
@@ -2640,8 +2533,7 @@ class TestTrafDataType(DataTypes):
         
         cur.close()
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
     
     
     #@unittest.skip("no")
@@ -2673,7 +2565,8 @@ class TestTrafDataType(DataTypes):
                 sql
             )
         except Exception as err:
-            WriteLog( 'Exception:', err)
+            WriteLog( 'Exception:'+str(err))
+            raise
             
         columns = [
             'col_timestamp_0',
@@ -2800,13 +2693,11 @@ class TestTrafDataType(DataTypes):
                     success_flag=False
 
         
-        if(success_flag==False):
-            raise  
+        self.assertTrue(success_flag==True, 'Data type case fail, please check the log in file')
     
     
-    @unittest.skip("no")
+    #@unittest.skip("no")
     def test_DateFromTicks(self):
-        """Interface exports DateFromTicks"""
         ticks = time.mktime(time.localtime())
         #ticks=1
         #time.localtime(ticks)[:3]
@@ -2815,25 +2706,23 @@ class TestTrafDataType(DataTypes):
             connector.DateFromTicks(ticks), exp,
             "Interface DateFromTicks should return a datetime.date")
     
-    @unittest.skip("no")
+    #@unittest.skip("no")
     def test_TimeFromTicks(self):
-        """Interface exports TimeFromTicks"""
         ticks = time.mktime(time.localtime())
         exp = datetime.time(*time.localtime(ticks)[3:6])
         self.assertEqual(
             connector.TimeFromTicks(ticks), exp,
             "Interface TimeFromTicks should return a datetime.time")
 
-    @unittest.skip("no")
+    #@unittest.skip("no")
     def test_TimestampFromTicks(self):
-        """Interface exports TimestampFromTicks"""
         ticks = time.mktime(time.localtime())
         exp = datetime.datetime(*time.localtime(ticks)[:6])
         self.assertEqual(
             connector.TimestampFromTicks(ticks), exp,
             "Interface TimestampFromTicks should return a datetime.datetime")
     
-    @unittest.skip("no")
+    #@unittest.skip("no")
     def test_none(self):
         cur = self.conn.cursor()
         

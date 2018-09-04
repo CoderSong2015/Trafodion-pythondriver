@@ -4,26 +4,28 @@ from pdbc.trafodion import connector
 from .config import config
 
 class TestCursorObject(unittest.TestCase):
-    def setUp(self):
-        self.testdata = [
+    @classmethod
+    def setUpClass(cls):
+        cls.testdata = [
             (1, 'Manager A', 2.0, datetime.date(2008, 7, 16)),
             (2, 'Manager B', 2.1, datetime.date(2008, 7, 16)),
             (3, 'Dev A', 1.9, datetime.date(2018, 7, 16)),
             (4, 'Dev B', 1.8, datetime.date(2018, 7, 16)),
             (5, 'Dev C', 1.7, datetime.date(2018, 7, 16))
         ]
-        self.cnx = connector.connect(**config)
-        cursor = self.cnx.cursor()
+        cls.cnx = connector.connect(**config)
+        cursor = cls.cnx.cursor()
         cursor.execute("DROP TABLE IF EXISTS employee CASCADE")
         cursor.execute("CREATE TABLE employee (id INT, name CHAR(20), salary DOUBLE PRECISION , hire_date DATE)")
         query = "INSERT INTO employee VALUES (?, ?, ?, ?)"
-        cursor.executemany(query, self.testdata)
+        cursor.executemany(query, cls.testdata)
         cursor.close()
-
-    def tearDown(self):
-        cursor = self.cnx.cursor()
-        cursor.execute("DROP TABLE employee CASCADE")
-        self.cnx.close()
+    
+    @classmethod
+    def tearDownClass(cls):
+        #cursor = cls.cnx.cursor()
+        #cursor.execute("DROP TABLE employee CASCADE")
+        cls.cnx.close()
 
     def test_description_before_operation(self):
         cursor = self.cnx.cursor()
@@ -77,18 +79,27 @@ class TestCursorObject(unittest.TestCase):
         # print('Name                    | TypeCode | DisplaySize | InternalSize | Precision | Scale | Null_ok\n')
         # for d in desc:
         #     print('%-30s, %10d, %10d, %12d, %10d, %8d, %s'% (d[0], d[1], d[2], d[3], d[4], d[5], d[6]))
-
+        
+        cursor.close()
+        cnx.close()
 
     def test_description_no_rows(self):
         cursor = self.cnx.cursor()
-        cursor.execute('select * from employee')
+        cursor.execute("DROP TABLE IF EXISTS test_description CASCADE")
+        cursor.execute("CREATE TABLE test_description (id INT, name CHAR(10))")
+        cursor.execute("INSERT INTO test_description VALUES (1, 'jim')")
+        cursor.execute('select * from test_description')
         self.assertIsNotNone(cursor.description)
-        cursor.execute('update employee set salary=1.8 where id = 5')
+        cursor.execute("update test_description set name='jack' where id = 1")
         self.assertIsNone(cursor.description)
+        cursor.execute("DELETE FROM test_description WHERE id = 1")
+        cursor.execute("DROP TABLE test_description")
+        cursor.close()
 
     def test_rowcount_before_execute(self):
         cursor = self.cnx.cursor()
         self.assertEqual(cursor.rowcount, -1)
+        cursor.close()
 
     def test_rowcount_after_execute(self):
         # table 'employee' has 5 records
@@ -96,11 +107,14 @@ class TestCursorObject(unittest.TestCase):
         cursor = cnx.cursor()
         cursor.execute('select * from employee')
         self.assertEqual(cursor.rowcount, 5)
+        cursor.close()
+        cnx.close()
 
     def test_rowcount_after_DML(self):
         cursor = self.cnx.cursor()
         cursor.execute('update employee set salary = 2.2 where id < 3')
         self.assertEqual(cursor.rowcount, 2)
+        cursor.close()
 
     # TODO: need to add some SPJ function on server side.
     @unittest.skip('not support yet')
@@ -119,8 +133,19 @@ class TestCursorObject(unittest.TestCase):
 
     def test_execute_with_parameters(self):
         cursor = self.cnx.cursor()
-
-        query = "SELECT * FROM employee WHERE hire_date BETWEEN ? AND ?"
+        cursor.execute("DROP TABLE IF EXISTS test_execute_with_parameters CASCADE")
+        cursor.execute("CREATE TABLE test_execute_with_parameters (id INT, name CHAR(20), salary DOUBLE PRECISION , hire_date DATE)")
+        query = "INSERT INTO test_execute_with_parameters VALUES (?, ?, ?, ?)"
+        testdata = [
+            (1, 'Manager A', 2.0, datetime.date(2008, 7, 16)),
+            (2, 'Manager B', 2.1, datetime.date(2008, 7, 16)),
+            (3, 'Dev A', 1.9, datetime.date(2018, 7, 16)),
+            (4, 'Dev B', 1.8, datetime.date(2018, 7, 16)),
+            (5, 'Dev C', 1.7, datetime.date(2018, 7, 16))
+        ]
+        cursor.executemany(query, testdata)
+        
+        query = "SELECT * FROM test_execute_with_parameters WHERE hire_date BETWEEN ? AND ?"
         hire_start = datetime.date(1991, 1, 1)
         hire_end = datetime.date(2018, 7, 16)
         cursor.execute(query, (hire_start, hire_end))
@@ -128,15 +153,15 @@ class TestCursorObject(unittest.TestCase):
                         [(id, name.strip(), salary, hire_date) for id, name, salary, hire_date in cursor])
 
         cursor.reset()
-        query = "INSERT INTO employee VALUES (?, ?, ?, ?)"
+        query = "INSERT INTO test_execute_with_parameters VALUES (?, ?, ?, ?)"
         cursor.execute(query, (6, 'Tester', 1.7, datetime.date(2018, 7, 16)))
         self.assertEqual(cursor.rowcount, 1)
 
-        query = "UPDATE employee SET salary = 1.8 WHERE name = ?"
+        query = "UPDATE test_execute_with_parameters SET salary = 1.8 WHERE name = ?"
         cursor.execute(query, ('Tester'))
         self.assertEqual(cursor.rowcount, 1)
 
-        query = "DELETE FROM employee WHERE id = ?"
+        query = "DELETE FROM test_execute_with_parameters WHERE id = ?"
         cursor.execute(query, (6))
         self.assertEqual(cursor.rowcount, 1)
 
@@ -161,6 +186,8 @@ class TestCursorObject(unittest.TestCase):
 
         for (id, name, salary, hire_date) in data:
             self.assertTrue((id, name, salary, hire_date) in res)
+
+        cursor.execute("DELETE FROM employee WHERE id>=11 and id<=13")
 
         cursor.close()
 
@@ -215,9 +242,11 @@ class TestCursorObject(unittest.TestCase):
         cursor = self.cnx.cursor()
         cursor.setinputsizes(connector.NUMBER, connector.STRING)
         self.assertTrue(hasattr(cursor, 'setinputsizes'))
+        cursor.close()
 
     @unittest.skip("unsupported")
     def test_setoutputsize(self):
         cursor = self.cnx.cursor()
         cursor.setoutputsize(connector.NUMBER, 1)
         self.assertTrue(hasattr(cursor, 'setoutputsize'))
+        cursor.close()

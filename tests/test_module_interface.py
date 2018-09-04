@@ -115,3 +115,47 @@ class TestModuleInterface(unittest.TestCase):
         self.assertTrue(issubclass(connector.NotSupportedError, connector.DatabaseError))
 
         s = str()
+        
+    #improve code coverage
+    def test_wrong_charset(self):
+        cnx = connector.connect(**config)
+        print(cnx.property.charset)
+        cnx.close()
+        with self.assertRaises(connector.ProgrammingError):
+            conx1 = connector.connect(host=config['host'], user=config['user'],
+                                      password=config['password'], port=config['port'], database='python_testsch1', charset='not_exist',)
+            cursor = conx1.cursor()
+            
+    #improve code coverage
+    def test_no_user(self):
+        try:
+            conx1 = connector.connect(host=config['host'], port=config['port'], password=config['password'])
+        except Exception as expect_info:
+            pass
+    
+    #improve code coverage
+    def test_no_password(self):
+        try:
+            conx1 = connector.connect(host=config['host'], port=config['port'], user=config['user'],)
+        except Exception as expect_info:
+            pass
+        
+    #improve code coverage
+    def test_tenant_name(self):
+        conx1 = connector.connect(host=config['host'], port=config['port'], 
+                                  user=config['user'],password=config['password'],
+                                  tenant_name="ESGYNDB")
+        conx1.close()   
+        
+    #improve code coverage
+    def test_schema(self):
+        conx1 = connector.connect(host=config['host'], port=config['port'], 
+                                  user=config['user'],password=config['password'],
+                                  schema="py_driver_test")
+        #cursor = conx1.cursor()
+        #cursor.execute('create schema if not exists py_driver_test')
+        #cursor.execute('set schema py_driver_test')
+        #cursor.execute("DROP TABLE IF EXISTS employee CASCADE")
+        #cursor.execute("CREATE TABLE employee (id INT, name CHAR(20), salary DOUBLE PRECISION , hire_date DATE)")
+        #cursor.close()
+        conx1.close()   
