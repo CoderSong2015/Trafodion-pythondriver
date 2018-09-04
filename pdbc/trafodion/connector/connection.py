@@ -389,7 +389,7 @@ class TrafConnection(TrafConnectionAbstract):
         """
 
         if not self.is_connected():
-            raise errors.OperationalError("Connection not available.")
+            raise errors.DatabaseError("Connection not available.")
 
         if cursor_class is not None:
             if not issubclass(cursor_class, CursorBase):
