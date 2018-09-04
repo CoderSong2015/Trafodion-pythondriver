@@ -133,7 +133,7 @@ class TrafTCPSocket(BaseTrafSocket):
             if addrinfo[0] is None:
                 addrinfo = addrinfos[0]
         except IOError as err:
-            raise
+            raise errors.Error("invalid socket host or port: " + err.strerror)
         else:
             (self._family, self.socktype, self.proto, _, self.sockaddr) = addrinfo
 
@@ -143,7 +143,7 @@ class TrafTCPSocket(BaseTrafSocket):
             self.sock.settimeout(self._connection_timeout)
             self.sock.connect(self.sockaddr)
         except IOError as err:
-            raise
+            raise errors.Error("invalid socket host or port: " + err.strerror)
         except Exception as err:
             raise
 
