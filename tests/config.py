@@ -1,7 +1,7 @@
 config = {
         'host': '10.10.10.7',
         'port': 23400,
-        'database': 'seabase',
+        'schema': 'seabase',
         'user': 'trafodion',
         'password': 'traf123',
         'charset': 'utf-8',

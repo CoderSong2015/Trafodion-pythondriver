@@ -1445,7 +1445,7 @@ class TestTrafDataType(DataTypes):
                     WriteLog( "[+++]Test Success")
                 else:
                     WriteLog( "[---]Test Fail")
-                success_flag=False
+                    success_flag=False
                 WriteLog( "<End Case>")
                     
 
@@ -1584,6 +1584,7 @@ class TestTrafDataType(DataTypes):
         data = [
             ('0','0123456789', '0','0123456789', '0','0123456789', '0','0123456789',),
             ('0','01234567', '0','01234567', '0','01234567', '0','01234567',),
+            ('0',' 0123456', '0',' 0123456', '0',' 0123456', '0',' 0123456',),
             
             ('01','0',          '0','0', '0','0',  '0','0'), 
             ('0','01234567890', '0','0', '0','0',  '0','0'),
@@ -1599,6 +1600,7 @@ class TestTrafDataType(DataTypes):
         ]
         
         expect_len = [
+            (1,10, 1,10, 1,10, 1,10),
             (1,10, 1,10, 1,10, 1,10),
             (1,10, 1,10, 1,10, 1,10),
             None
@@ -1635,7 +1637,7 @@ class TestTrafDataType(DataTypes):
                 err_flag=True
                 WriteLog( str(err))
             finally:
-                if(i<=1):
+                if(i<=2):
                     if(err_flag==False):
                         WriteLog( "[+++]Test Success")
                         index_insert=index_insert+1
@@ -1676,7 +1678,8 @@ class TestTrafDataType(DataTypes):
                 WriteLog( "raw["+str(data[index_map[i]][j])+"]")
                 
                 exp = data[index_map[i]][j]
-                res = row[j].rstrip()
+                #res = row[j].rstrip()
+                res = row[j]
                 
                 '''
                 num_part1 ,num_part2 = str(data[i][j]).split('.')
@@ -1822,6 +1825,10 @@ class TestTrafDataType(DataTypes):
             
             ('0','01234567', '0','01234567', '0','01234567',),
             
+            ('0',' 0123456', '0',' 0123456', '0',' 0123456',),
+            
+            ('0','0123456 ', '0','0123456 ', '0','0123456 ',),
+            
             ('01','0',  '0','0',  '0','0'), 
             
             
@@ -1840,6 +1847,8 @@ class TestTrafDataType(DataTypes):
         
         expect_len = [
             (1,10, 1,10, 1,10,),
+            (1,8, 1,8, 1,8),
+            (1,8, 1,8, 1,8),
             (1,8, 1,8, 1,8),
             None
         ]
@@ -1876,7 +1885,7 @@ class TestTrafDataType(DataTypes):
                 err_flag=True
                 WriteLog( str(err))
             finally:
-                if(i<=1):
+                if(i<=3):
                     if(err_flag==False):
                         WriteLog( "[+++]Test Success")
                         index_insert=index_insert+1
@@ -1918,7 +1927,8 @@ class TestTrafDataType(DataTypes):
                 WriteLog( "raw["+str(data[index_map[i]][j])+"]")
                 
                 exp = data[index_map[i]][j]
-                res = row[j].rstrip()
+                #res = row[j].rstrip()
+                res = row[j]
                 
                 #self.compare(col, exp, res)
                 
@@ -2732,11 +2742,7 @@ class TestTrafDataType(DataTypes):
         
         cur.execute("select * from type_test_none")
         
-        res = cur.fetchall()
-        
-        print (res)
-        
-        print (None)
+        res = cur.fetchone()
         
         self.assertEqual(res, None)
         

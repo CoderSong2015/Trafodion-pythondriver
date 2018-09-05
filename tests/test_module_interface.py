@@ -21,10 +21,10 @@ class TestModuleInterface(unittest.TestCase):
         cursor.execute('create table if not EXISTS python_testtb(i int)')
         cursor.close()
         conx1 = connector.connect(host=config['host'], user=config['user'],
-                                  password=config['password'], port=config['port'], database='python_testsch1')
+                                  password=config['password'], port=config['port'], schema='python_testsch1')
         cursor = conx1.cursor()
         cursor.execute('get tables')
-        self.assertTrue(('python_testtb') in cursor)
+        self.assertTrue(('PYTHON_TESTTB',) in cursor)
 
     def test_connect_with_invalid_user_or_password(self):
         with self.assertRaises(connector.DatabaseError):
@@ -33,10 +33,14 @@ class TestModuleInterface(unittest.TestCase):
             cnx1 = connector.connect(user='trafodion', password='wrongpass',
                                      host=config['host'], port=config['port'])
 
-    def test_connect_with_not_reachable_host(self):
-        """all exception should be correctly handled by the driver. exception throw from should be connector.Waring or
-        connecter.Error"""
+    def test_connect_with_invalid_parameter(self):
         with self.assertRaises(connector.Error):
+            conx = connector.connect(host=config['host'], user=config['user'], password=config['password'],
+                                      port=config['port'], invalid_param="invalid_param")
+
+    def test_connect_with_not_reachable_host(self):
+        """all exception should be correctly handled by the driver. exception throw from should be connector.Waring or connecter.Error"""
+        with self.assertRaises(connector.DatabaseError):
             cnx = connector.connect(user='someuser', password='somepass', host='notreachable')
 
     @unittest.skip('unsupported feature')
@@ -145,17 +149,4 @@ class TestModuleInterface(unittest.TestCase):
         conx1 = connector.connect(host=config['host'], port=config['port'], 
                                   user=config['user'],password=config['password'],
                                   tenant_name="ESGYNDB")
-        conx1.close()   
-        
-    #improve code coverage
-    def test_schema(self):
-        conx1 = connector.connect(host=config['host'], port=config['port'], 
-                                  user=config['user'],password=config['password'],
-                                  schema="py_driver_test")
-        #cursor = conx1.cursor()
-        #cursor.execute('create schema if not exists py_driver_test')
-        #cursor.execute('set schema py_driver_test')
-        #cursor.execute("DROP TABLE IF EXISTS employee CASCADE")
-        #cursor.execute("CREATE TABLE employee (id INT, name CHAR(20), salary DOUBLE PRECISION , hire_date DATE)")
-        #cursor.close()
         conx1.close()   

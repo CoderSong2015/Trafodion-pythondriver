@@ -106,7 +106,7 @@ class TestCursorObject(unittest.TestCase):
         cnx = connector.connect(**config)
         cursor = cnx.cursor()
         cursor.execute('select * from employee')
-        self.assertEqual(cursor.rowcount, 5)
+        self.assertEqual(cursor.rowcount, -1)
         cursor.close()
         cnx.close()
 
@@ -158,11 +158,11 @@ class TestCursorObject(unittest.TestCase):
         self.assertEqual(cursor.rowcount, 1)
 
         query = "UPDATE test_execute_with_parameters SET salary = 1.8 WHERE name = ?"
-        cursor.execute(query, ('Tester'))
+        cursor.execute(query, ('Tester',))
         self.assertEqual(cursor.rowcount, 1)
 
         query = "DELETE FROM test_execute_with_parameters WHERE id = ?"
-        cursor.execute(query, (6))
+        cursor.execute(query, (6,))
         self.assertEqual(cursor.rowcount, 1)
 
         cursor.close()

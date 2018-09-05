@@ -31,7 +31,7 @@ class TestConnectionObject(unittest.TestCase):
         cnx = connector.connect(**config)
         cnx.close()
         with self.assertRaises(connector.Error):
-            cursor = self.cnx.cursor()
+            cursor = cnx.cursor()
 
     def test_close_after_execute(self):
         try:
