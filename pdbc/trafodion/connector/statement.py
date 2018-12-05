@@ -28,6 +28,7 @@ class Statement:
         self._module_name = ""
         self._module_name_charset = 1
         self._module_timestamp = 0
+        self._is_prepared = False
         self.stmt_type = 0  # EXTERNAL_STMT
         pass
 
@@ -378,10 +379,14 @@ class PreparedStatement(Statement):
         self._descriptor = None
         pass
 
+    def set_is_prepare(self, val=False):
+        self._is_prepared = val
     def execute_all(self, operation, execute_type, params, is_executemany=False):
 
         # first: prepare
-        self._prepare(operation)
+        if not self._is_prepared:
+            self._prepare(operation)
+            self.set_is_prepare(True)
 
         # second: execute
         self.execute(operation, execute_type, params, is_executemany=is_executemany)

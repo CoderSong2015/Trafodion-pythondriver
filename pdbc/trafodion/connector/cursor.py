@@ -137,6 +137,7 @@ class TrafCursor(CursorBase):
         self._row_cached = 0
         self._executed = None
         self._max_rows_count = 100
+        self._operation = ''
         if connection is not None:
             self._set_connection(connection)
         self._stmt_name = self._generate_stmtlabel()
@@ -187,7 +188,6 @@ class TrafCursor(CursorBase):
 
         #self._reset_result()
         _operation = ''
-
         try:
             if not isinstance(operation, (bytes, bytearray)):
                 _operation = operation.encode("utf-8")
@@ -195,6 +195,16 @@ class TrafCursor(CursorBase):
                 _operation = operation
         except (UnicodeDecodeError, UnicodeEncodeError) as err:
             raise errors.ProgrammingError(str(err))
+
+        # if preparedstatement have been prepared
+        if self._st and isinstance(self._st, PreparedStatement) and params:
+            if self._executed != _operation:
+                # reprepare
+                self._st.set_is_prepare(False)
+            descriptor = self._st.execute_all(self._executed, self._execute_type, params, is_executemany=multi)
+            self._map_descriptor_and_rowcount(descriptor)
+            self._end_data = False
+            return None
 
         self._executed = _operation
         if params is not None:

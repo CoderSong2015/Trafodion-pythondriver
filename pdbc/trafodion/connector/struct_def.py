@@ -157,7 +157,7 @@ class ConnectionContextDef:
         except:
             self.computerName = "Unknown Client Host"
 
-        self.windowText = "FASTPDBC" if not conn.property.application_name else conn.property.application_name
+        self.windowText = "Python-Driver" if not conn.property.application_name else conn.property.application_name
 
         self.ctxDataLang = 15
         self.ctxErrorLang = 15
