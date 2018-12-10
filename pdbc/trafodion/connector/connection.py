@@ -11,7 +11,7 @@ from .struct_def import (
     ConnectReply, UserDescDef, ConnectionContextDef,
     VersionDef, Header, InitializeDialogueReply, TerminateReply, EndTransactionReply
 )
-
+from .logmodule import PyLog
 from .constants.TRANSPORT import Transport
 from .converters import Convert
 
@@ -37,10 +37,17 @@ class TrafConnection(TrafConnectionAbstract):
         self._buffered = None
         self._raw = None
         self._connecte_status = 0
+        self._log_obj = None
         super(TrafConnection, self).__init__(**kwargs)
 
         if kwargs:
+            self.config(**kwargs)
+            self._log_obj = PyLog(self.property.logging_path, self.property.loggger_name)
+            PyLog.set_global_logger(self._log_obj)
             self.connect(**kwargs)
+
+    def get_logger_obj(self):
+        return self._log_obj
 
     def _connect_to_mxosrvr(self):
         """
@@ -54,6 +61,7 @@ class TrafConnection(TrafConnectionAbstract):
         if self.mxosrvr_info.security_enabled:
             return_code = self._secure_login()
             if return_code == Transport.SQL_SUCCESS:
+                PyLog.global_logger.set_debug("Connect to mxosrvr success")
                 self._connecte_status = 1
         else:
             self._old_encrypt_password()
@@ -205,6 +213,9 @@ class TrafConnection(TrafConnectionAbstract):
         retry_count = self.property.retry_count
         srvr_type = self.property.srvr_type
 
+        PyLog.global_logger.set_debug(" connect to dcs master:" +
+                                " master ip:" + str(master_host) +
+                                " master port:" + str(master_port))
         wbuffer = self._marshal_getobjref(self._in_context,
                                           self._user_desc,
                                           srvr_type,
@@ -252,7 +263,19 @@ class TrafConnection(TrafConnectionAbstract):
             buf_view = memoryview(data)
             c = ConnectReply()
             c.init_reply(buf_view, self)
-        except:
+            PyLog.global_logger.set_debug(" master reply:"
+                                    + "\n" + " dialogue_id:" + str(c.dialogue_id)
+                                    + "\n" + " data_source:" + c.data_source
+                                    + "\n" + " user_sid:" + str(c.user_sid)
+                                    + "\n" + " server_host_name:" + c.server_host_name
+                                    + "\n" + " server_node_id:" + str(c.server_node_id)
+                                    + "\n" + " server_process_id:" + str(c.server_process_id)
+                                    + "\n" + " server_process_name:" + c.server_process_name
+                                    + "\n" + " server_ip_address:" + c.server_ip_address
+                                    + "\n" + " server_port:" + str(c.server_port))
+
+        except :
+            PyLog.global_logger.set_error("extract_master_data")
             raise errors.DataError("extract_master_data")
         return c
 

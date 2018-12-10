@@ -3,11 +3,13 @@ from .struct_def import (SQLDataValueDef, SQLValueListDef, Header, ExecuteReply,
 from .constants.TRANSPORT import Transport
 
 from .converters import Convert
+from .logmodule import PyLog
 
 class Statement:
 
     def __init__(self, conn, cursor):
         self._connection = conn
+        #self._log_obj = conn.get_logger_obj()
         self._cursor = cursor
         self._outputDesc_ = None
         self._stmt_handle_ = 0
@@ -60,6 +62,11 @@ class Statement:
 
             # self.set_transaction_status(stmt.connection_, sql)
             self._outputDesc_ = None  # clear the output descriptors
+            PyLog.global_logger.set_debug("Execute Type: SQLEXECDIRECT" + "\n"
+                                          + "Query: " + str(sqlstring))
+        else:
+            PyLog.global_logger.set_debug("Execute Type: SQLEXECUTE2" + "\n"
+                                          + "Query: " + str(sqlstring))
 
     #if (.usingRawRowset_):
     #else:
@@ -80,6 +87,16 @@ class Statement:
             self._descriptor = temp_descriptor
         else:
             self._descriptor.rows_affected = temp_descriptor.rows_affected
+
+        if execute_api == Transport.SRVR_API_SQLEXECDIRECT:
+
+            # self.set_transaction_status(stmt.connection_, sql)
+            self._outputDesc_ = None  # clear the output descriptors
+            PyLog.global_logger.set_debug("EXECUTE SUCCESS" + "\n" + "Execute Type: SQLEXECDIRECT" + "\n"
+                                          + "Query: " + str(sqlstring))
+        else:
+            PyLog.global_logger.set_debug("EXECUTE SUCCESS" + "\n" + "Execute Type: SQLEXECUTE2" + "\n"
+                                          + "Query: " + str(sqlstring))
         return self._descriptor
         # TODO now there is no need to make a resultset
         #self._handle_recv_data(recv_reply, execute_api, client_errors_list, input_row_count)
@@ -384,6 +401,8 @@ class PreparedStatement(Statement):
     def execute_all(self, operation, execute_type, params, is_executemany=False):
 
         # first: prepare
+        PyLog.global_logger.set_debug("prepare info:"
+                                      + "\n" + "is prepared:" + str(self._is_prepared))
         if not self._is_prepared:
             self._prepare(operation)
             self.set_is_prepare(True)
@@ -407,6 +426,9 @@ class PreparedStatement(Statement):
         sql_string_charset = 1
         tx_id = 0
         stmt_label_charset = self._stmt_label_charset
+
+        PyLog.global_logger.set_debug("prepare info:"
+                                      + "\n" + "sql string:" + str(sql_string))
 
         self._descriptor = self._to_send_prepare(sql_async_enable, stmt_type, self.sql_stmt_type_,
                                                  self.stmt_label, stmt_label_charset,
@@ -434,6 +456,8 @@ class PreparedStatement(Statement):
         buf_view = memoryview(data)
         t = PrepareReply()
         t.init_reply(buf_view)
+
+        PyLog.global_logger.set_debug("prepare success")
         return t
 
     def _marshal_prepare_statement(self, dialogue_id, sql_async_enable, query_timeout, stmt_type, sql_stmt_type,

@@ -47,6 +47,12 @@ class TrafConnectionAbstract(object):
 
         if 'charset' in config and config['charset']:
             self.property.charset = config['charset']
+
+        if 'logging_path' in config and config['logging_path']:
+            self.property.logging_path = config['logging_path']
+
+        if 'loggger_name' in config and config['loggger_name']:
+            self.property.loggger_name = config['loggger_name']
         try:
             self._port = int(config['port'])
             self.property.master_port = self._port
@@ -98,9 +104,6 @@ class TrafConnectionAbstract(object):
         Firstly, it will connect to dcsmaster to get info of a  free mxosrvr.
         Then connecting to mxosrvr
         """
-
-        if kwargs:
-            self.config(**kwargs)
 
         self._connect_to_mxosrvr()
 

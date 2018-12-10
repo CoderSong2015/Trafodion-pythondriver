@@ -6,7 +6,7 @@ from . import errors
 from .constants.TRANSPORT import Transport
 from .converters import sql_to_py_convert_dict, py_to_sql_convert_dict, Convert
 from .constants import CONNECTION, STRUCTDEF, FIELD_TYPE
-
+from .logmodule import PyLog
 
 class ConnectionContextDef:
     def __init__(self, conn):
@@ -406,6 +406,24 @@ class TrafProperty:
         self._fetch_ahead = ''
         self._tenant_name = None
         self._charset = "UTF-8"
+        self._logging_file_path = None
+        self._loggger_name = "Trafodion"
+
+    @property
+    def loggger_name(self):
+        return self._loggger_name
+
+    @loggger_name.setter
+    def loggger_name(self, logger_name):
+        self._loggger_name = logger_name
+
+    @property
+    def logging_path(self):
+        return self._logging_file_path
+
+    @logging_path.setter
+    def logging_path(self, logging_path):
+        self._logging_file_path = logging_path
 
     @property
     def charset(self):
@@ -592,24 +610,34 @@ class ConnectReply:
                 self.security_enabled = False
         else:
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASParamError_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_ASParamError_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASParamError_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASTimeout_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_ASTimeout_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASTimeout_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASNoSrvrHdl_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_ASNoSrvrHdl_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASNoSrvrHdl_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASTryAgain_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_ASTryAgain_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASTryAgain_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_ASNotAvailable_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_ASNotAvailable_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASNotAvailable_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_DSNotAvailable_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_DSNotAvailable_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_DSNotAvailable_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_PortNotAvailable_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_PortNotAvailable_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_PortNotAvailable_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_InvalidUser_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_ASParamError_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_ASParamError_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_LogonUserFailure_exn_:
+                PyLog.global_logger.set_error("odbc_Dcs_GetObjRefHdl_LogonUserFailure_exn_")
                 raise errors.DatabaseError("odbc_Dcs_GetObjRefHdl_LogonUserFailure_exn_")
             if self.buf_exception.exception_nr == STRUCTDEF.odbc_Dcs_GetObjRefHdl_TenantName_exn_:
+                PyLog.global_logger.set_error("wrong tenant name")
                 raise errors.DatabaseError("wrong tenant name")
 
 
@@ -689,6 +717,8 @@ class InitializeDialogueReply:
             if self.exception_detail == STRUCTDEF.SQL_PASSWORD_EXPIRING \
                 or self.exception_detail == STRUCTDEF.SQL_PASSWORD_GRACEPERIOD:
                 self.out_context.extract_from_bytearray(buf_view)
+
+            PyLog.global_logger.set_error(self.SQLError.get_error_info())
             raise errors.DatabaseError(self.SQLError.get_error_info())
 
         elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_InvalidUser_exn_:
@@ -697,12 +727,15 @@ class InitializeDialogueReply:
 
         elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_ParamError_exn_:
             self.param_error, buf_view = Convert.get_string(buf_view, little=True)
+            PyLog.global_logger.set_error(self.param_error)
             raise errors.ProgrammingError(self.param_error)
 
         elif self.exception_nr == STRUCTDEF.odbc_SQLSvc_InitializeDialogue_InvalidConnection_exn_:
+            PyLog.global_logger.set_error("invalid connection")
             raise errors.InternalError("invalid connection")
 
         else:
+            PyLog.global_logger.set_error("unknow error")
             self.client_error_text = "unknow error"
 
 
@@ -784,6 +817,7 @@ class SQLDataValueDef:
             else:
                 buf_view = Convert.put_int(0, buf_view, little)
         except:
+            PyLog.global_logger.set_error("Convert buffer error")
             raise errors.InternalError("Convert buffer error")
 
         return buf_view
@@ -874,6 +908,7 @@ class SQLDataValueDef:
         no_nullvalue = (no_nullvalue * param_rowcount) + (row_num * data_length)
         if param_values is None :
             if null_value == -1:
+                PyLog.global_logger.set_error("null_parameter_for_not_null_column")
                 raise errors.DataError("null_parameter_for_not_null_column")
             # values[null_value] = -1
             _ = Convert.put_short(-1, buf_view[null_value:], True)
@@ -973,8 +1008,10 @@ class ExecuteReply:
                 error_info += item.text + '\n'
 
             if self.return_code != 0:
+                PyLog.global_logger.set_error(error_info)
                 raise errors.ProgrammingError(error_info)
             else:
+                PyLog.global_logger.set_warn(error_info)
                 raise errors.Warning(error_info)
 
         self.output_desc_length, buf_view = Convert.get_int(buf_view, little=True)
@@ -1126,6 +1163,7 @@ class FetchReply:
                     self.errorlist.append(t)
 
                 error_info = '\n'.join([item.text for item in self.errorlist])
+                PyLog.global_logger.set_warn(error_info)
                 raise errors.ProgrammingError(error_info)
 
         self.rows_affected, buf_view = Convert.get_int(buf_view, little=True)
@@ -1175,6 +1213,7 @@ class FetchReply:
                 else:
                     column_value = self._get_execute_to_fetch_string(nonull_value_offset, out_desc_list[column_x])
                     if column_value is None:
+                        PyLog.global_logger.set_warn("column value is null")
                         raise errors.InternalError("column value is null")
 
                 column_result_list.append(column_value)
@@ -1223,6 +1262,7 @@ class PrepareReply:
                         buf_view = t.extract_from_bytearray(buf_view)
                         self.errorlist.append(t)
                     error_info = '\n'.join([item.text for item in self.errorlist])
+                    PyLog.global_logger.set_warn(error_info)
                     raise errors.Warning(error_info)
             self.sql_query_type, buf_view = Convert.get_int(buf_view, little=True)
             self.stmt_handle, buf_view = Convert.get_int(buf_view, little=True)
@@ -1257,6 +1297,7 @@ class PrepareReply:
                     buf_view = t.extract_from_bytearray(buf_view)
                     self.errorlist.append(t)
                 error_info = '\n'.join([item.text for item in self.errorlist])
+                PyLog.global_logger.set_error(error_info)
                 raise errors.ProgrammingError(error_info)
 
 
@@ -1275,14 +1316,19 @@ class TerminateReply:
             return True
         if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_SQLError_exn_:
             if self.exception_detail == 25000:
+                PyLog.global_logger.set_error("ids_25_000")
                 raise errors.DatabaseError("ids_25_000")
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            PyLog.global_logger.set_error(self.SQLError.get_error_info())
             raise errors.DatabaseError(self.SQLError.get_error_info())
         if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
+            PyLog.global_logger.set_error(self.error_text)
             raise errors.DatabaseError(self.error_text)
         if self.return_code == STRUCTDEF.odbc_SQLSvc_TerminateDialogue_InvalidConnection_exn_:
+            PyLog.global_logger.set_error("ids_08_s01")
             raise errors.DatabaseError("ids_08_s01")
+        PyLog.global_logger.set_error("ids_unknown_reply_error")
         raise errors.DatabaseError("ids_unknown_reply_error")
 
 
@@ -1302,13 +1348,17 @@ class SetConnectionOptionReply:
             return None
         if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_SQLError_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            PyLog.global_logger.set_error(self.SQLError.get_error_info())
             raise errors.DatabaseError(self.SQLError.get_error_info())
         if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
+            PyLog.global_logger.set_error(self.error_text)
             raise errors.DatabaseError(self.error_text)
         if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_InvalidConnection_exn_:
+            PyLog.global_logger.set_error("Invalid connection:" + "ids_program_error")
             raise errors.DatabaseError("Invalid connection:" + "ids_program_error")
         if self.return_code == STRUCTDEF.odbc_SQLSvc_SetConnectionOption_SQLInvalidHandle_exn_:
+            PyLog.global_logger.set_error("autocommit_txn_in_progress")
             raise errors.DatabaseError("autocommit_txn_in_progress")
 
 
@@ -1328,12 +1378,18 @@ class EndTransactionReply:
             return None
         if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_SQLError_exn_:
             buf_view = self.SQLError.extract_from_bytearray(buf_view)
+            PyLog.global_logger.set_error(self.SQLError.get_error_info())
             raise errors.DatabaseError(self.SQLError.get_error_info())
         if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_ParamError_exn_:
             self.error_text, buf_view = Convert.get_string(buf_view)
+            PyLog.global_logger.set_error(self.error_text)
             raise errors.DatabaseError(self.error_text)
         if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_InvalidConnection_exn_:
+            PyLog.global_logger.set_error("Invalid connection:" + "ids_transaction_error")
             raise errors.DatabaseError("Invalid connection:" + "ids_transaction_error")
         if self.return_code == STRUCTDEF.odbc_SQLSvc_EndTransaction_SQLInvalidHandle_exn_:
+            PyLog.global_logger.set_error("autocommit_txn_in_progress")
             raise errors.DatabaseError("autocommit_txn_in_progress")
+
+        PyLog.global_logger.set_error("ids_unknown_reply_error")
         raise errors.DatabaseError("ids_unknown_reply_error")

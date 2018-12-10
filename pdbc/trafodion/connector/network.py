@@ -2,7 +2,7 @@ import socket
 
 from .struct_def import Header
 from . import errors
-
+from .logmodule import PyLog
 class BaseTrafSocket(object):
     """Base class for Trafodion socket communication
 
@@ -143,6 +143,7 @@ class TrafTCPSocket(BaseTrafSocket):
             self.sock.settimeout(self._connection_timeout)
             self.sock.connect(self.sockaddr)
         except IOError as err:
+            PyLog.global_logger.set_error("invalid socket host or port: " + err.strerror)
             raise errors.Error("invalid socket host or port: " + err.strerror)
         except Exception as err:
             raise

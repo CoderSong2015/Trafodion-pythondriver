@@ -17,3 +17,5 @@ mytest.py
 connecttest.py
 venv
 PyTrafodion.egg-info
+*.conf
+*.log
