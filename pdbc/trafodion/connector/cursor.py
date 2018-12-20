@@ -201,6 +201,7 @@ class TrafCursor(CursorBase):
             if self._executed != _operation:
                 # reprepare
                 self._st.set_is_prepare(False)
+                self._executed = _operation
             descriptor = self._st.execute_all(self._executed, self._execute_type, params, is_executemany=multi)
             self._map_descriptor_and_rowcount(descriptor)
             self._end_data = False

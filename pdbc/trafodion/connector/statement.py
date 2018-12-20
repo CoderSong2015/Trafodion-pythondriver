@@ -403,10 +403,13 @@ class PreparedStatement(Statement):
         # first: prepare
         PyLog.global_logger.set_debug("prepare info:"
                                       + "\n" + "is prepared:" + str(self._is_prepared))
+        import time
+        start = time.time()
         if not self._is_prepared:
             self._prepare(operation)
             self.set_is_prepare(True)
-
+        end = time.time()
+        print(end - start)
         # second: execute
         self.execute(operation, execute_type, params, is_executemany=is_executemany)
         return self._descriptor
