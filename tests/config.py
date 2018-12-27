@@ -1,21 +1,13 @@
 config = {
         'host': '10.10.10.7',
         'port': 23400,
+        'tenant_name':'ESGYNDB',
         'schema': 'seabase',
         'user': 'trafodion',
         'password': 'traf123',
         'charset': 'utf-8',
         'use_unicode': True,
-        'get_warnings': True
+        'get_warnings': True,
+        'logging_path': 'logger.conf',
+        'loggger_name': 'simpleExample'
     }
-
-# config = {
-#     'host': '192.168.0.59',
-#     'port': 23400,
-#     'database': 'seabase',
-#     'user': 'db__root',
-#     'password': '123456',
-#     'charset': 'utf-8',
-#     'use_unicode': True,
-#     'get_warnings': True,
-# }
