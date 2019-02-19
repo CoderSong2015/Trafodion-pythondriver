@@ -157,7 +157,7 @@ class TrafCursor(CursorBase):
         except (AttributeError, TypeError):
             pass
 
-    def execute(self, operation, params=None, multi=False):
+    def execute(self, operation, params=None, multi=False, force_prepare=False):
         """Executes the given operation
 
         Executes the given operation substituting any markers with
@@ -208,7 +208,7 @@ class TrafCursor(CursorBase):
             return None
 
         self._executed = _operation
-        if params is not None:
+        if params is not None or force_prepare:
         # execute prepare statement
             self._execute_type = Transport.SRVR_API_SQLEXECUTE2
             self._st = PreparedStatement(self._connection, self)

@@ -35,9 +35,13 @@ class Statement:
         pass
 
     def execute(self, query: bytes, execute_api, params=None, is_executemany=False):
-        # sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
+        ## default:
+        # resultSetType  ResultSet.TYPE_FORWARD_ONLY, \
+        # resultSetConcurrency ResultSet.CONCUR_READ_ONLY,
+        # resultSetHoldability TrafT4ResultSet.CLOSE_CURSORS_AT_COMMIT
+
         self._cursor_name = self._cursor._cursor_name
-        sql_async_enable = self._sql_async_enable
+        sql_async_enable = 0 #self._sql_async_enable  # sqlAsyncEnable = 1 if stmt.getResultSetHoldability() == TrafT4ResultSet.HOLD_CURSORS_OVER_COMMIT else 0
         input_row_count = self._handle_params(params, is_executemany)  #used for batch insert
         max_rowset_size = self._max_rowset_size
         sqlstring = query
