@@ -53,6 +53,10 @@ class TrafConnectionAbstract(object):
 
         if 'loggger_name' in config and config['loggger_name']:
             self.property.loggger_name = config['loggger_name']
+
+        if 'query_timeout' in config and config['query_timeout']:
+            self.property.query_timeout = config['query_timeout']
+
         try:
             self._port = int(config['port'])
             self.property.master_port = self._port
