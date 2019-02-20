@@ -11,7 +11,7 @@ class BaseTrafSocket(object):
     """
     def __init__(self):
         self.sock = None
-        self._connection_timeout = None
+        self._connection_timeout = None #Set a timeout on blocking socket operations.
 
     def open_connection(self):
         """ Open connection"""

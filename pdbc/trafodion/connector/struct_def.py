@@ -396,6 +396,7 @@ class TrafProperty:
         self._userRole = ""
         self._cpuToUse = 0
         self._query_timeout = 3600
+        self._connection_timeout = 300
         self._idleTimeout = 3600
         self._login_timeout = 60
         self._fetchbuffersize = 100
@@ -518,9 +519,18 @@ class TrafProperty:
     @property
     def query_timeout(self):
         return self._query_timeout
+
     @query_timeout.setter
     def query_timeout(self, num):
         self._query_timeout = num
+
+    @property
+    def connection_timeout(self):
+        return self._connection_timeout
+
+    @connection_timeout.setter
+    def connection_timeout(self, num):
+        self._connection_timeout = num
 
     @property
     def idleTimeout(self):

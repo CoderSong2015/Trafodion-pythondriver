@@ -57,6 +57,9 @@ class TrafConnectionAbstract(object):
         if 'query_timeout' in config and config['query_timeout']:
             self.property.query_timeout = config['query_timeout']
 
+        if 'connection_timeout' in config and config['connection_timeout']:
+            self.property.connection_timeout = config['connection_timeout']
+
         try:
             self._port = int(config['port'])
             self.property.master_port = self._port
@@ -79,7 +82,7 @@ class TrafConnectionAbstract(object):
                                  port=port,
                                  force_ipv6=self._force_ipv6)
 
-        conn.set_connection_timeout(self._connection_timeout)
+        conn.set_connection_timeout(self.property.connection_timeout)
         conn.open_connection()
         return conn
 
