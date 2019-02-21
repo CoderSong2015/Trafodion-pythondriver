@@ -16,7 +16,8 @@ class PyLog:
         self.logger = None
 
         if not file_path:
-            self.init_default()
+            pass
+            #self.init_default()
         else:
             self.init_conf(file_path)
 
@@ -38,30 +39,40 @@ class PyLog:
         return logging.getLogger(self.logger_name)
 
     def set_debug(self, message, exc_info=None):
+        if not self.logger:
+            return
         if exc_info is not None:
             self.logger.debug(message, exc_info)
         else:
             self.logger.debug(message)
 
     def set_info(self, message, exc_info=None):
+        if not self.logger:
+            return
         if exc_info is not None:
             self.logger.info(message, exc_info)
         else:
             self.logger.info(message)
 
     def set_warn(self, message, exc_info=None):
+        if not self.logger:
+            return
         if exc_info is not None:
             self.logger.warning(message, exc_info)
         else:
             self.logger.warning(message)
 
     def set_error(self, message, exc_info=None):
+        if not self.logger:
+            return
         if exc_info is not None:
             self.logger.error(message, exc_info)
         else:
             self.logger.error(message)
 
     def set_critical(self, message, exc_info=None):
+        if not self.logger:
+            return
         if exc_info is not None:
             self.logger.critical(message, exc_info)
         else:
