@@ -350,3 +350,9 @@ class TrafCursor(CursorBase):
         self._max_rows_count = size
         if self._st:
             self._st.set_max_row_count(self._max_rows_count)
+
+    def get_error_list(self):
+        """
+            :return list:   ###
+        """
+        return self._st.get_error_list()

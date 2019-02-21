@@ -993,7 +993,6 @@ class ExecuteReply:
     def __init__(self):
         self.return_code = 0
         self.total_error_length = 0
-        self.errorlist = []
         self.output_desc_length = 0   #column length
         self.rows_affected = 0
         self.query_type = 0
@@ -1004,17 +1003,18 @@ class ExecuteReply:
         self.stmt_labels_list = []
         self.proxy_syntax_list = []
 
-    def init_reply(self, buf_view):
+    def init_reply(self, buf_view, errorlist):
         self.return_code, buf_view = Convert.get_int(buf_view, little=True)
         self.total_error_length, buf_view = Convert.get_int(buf_view, little=True)
         if self.total_error_length > 0:
             error_count, buf_view = Convert.get_int(buf_view, little=True)
+
             for x in range(error_count):
                 t = SQLWarningOrError()
                 buf_view = t.extract_from_bytearray(buf_view)
-                self.errorlist.append(t)
+                errorlist.append(t)
             error_info = ''
-            for item in self.errorlist:
+            for item in errorlist:
                 error_info += item.text + '\n'
 
             if self.return_code != 0:
@@ -1022,7 +1022,6 @@ class ExecuteReply:
                 raise errors.ProgrammingError(error_info)
             else:
                 PyLog.global_logger.set_warn(error_info)
-                raise errors.Warning(error_info)
 
         self.output_desc_length, buf_view = Convert.get_int(buf_view, little=True)
         if self.output_desc_length > 0:

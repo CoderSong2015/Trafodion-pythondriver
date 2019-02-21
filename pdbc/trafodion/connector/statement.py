@@ -32,6 +32,7 @@ class Statement:
         self._module_timestamp = 0
         self._is_prepared = False
         self.stmt_type = 0  # EXTERNAL_STMT
+        self._error_list = []
         pass
 
     def execute(self, query: bytes, execute_api, params=None, is_executemany=False):
@@ -189,7 +190,9 @@ class Statement:
         data = self._connection.get_from_server(execute_api, wbuffer, self._connection._mxosrvr_conn)
         buf_view = memoryview(data)
         c = ExecuteReply()
-        c.init_reply(buf_view)
+
+        self._error_list = []
+        c.init_reply(buf_view, self._error_list)
         return c
 
     def _handle_recv_data(self, recv_reply, execute_api, client_errors_list, input_row_count):
@@ -392,6 +395,11 @@ class Statement:
     def set_max_row_count(self, size=100):
         self._max_row_count = size
 
+    def get_error_list(self):
+        return self._error_list
+
+    #def get_warning_list(self):
+    #    return self._warning_list
 
 class PreparedStatement(Statement):
 
