@@ -1002,6 +1002,7 @@ class ExecuteReply:
         self.output_desc_list = []
         self.stmt_labels_list = []
         self.proxy_syntax_list = []
+        self._out_values_used = False
 
     def init_reply(self, buf_view, errorlist):
         self.return_code, buf_view = Convert.get_int(buf_view, little=True)
@@ -1075,6 +1076,26 @@ class ExecuteReply:
         if not self.proxy_syntax_list:
             self.proxy_syntax_list.append(single_syntax)
 
+    # When sql has condition and the key is primary key, it will return values directly by execute
+    def has_outvalues(self):
+        if self.out_values:
+            return True
+        else:
+            return False
+
+    def get_outvalues(self):
+        return self.out_values
+
+    # called after outvalues used
+    def clear_outvalues(self):
+        self.out_values = None
+        self._set_out_values_used()
+
+    def _set_out_values_used(self):
+        self._out_values_used = True
+
+    def is_out_values_used(self):
+        return self._out_values_used
 
 class SQLWarningOrError:
 
@@ -1188,6 +1209,22 @@ class FetchReply:
 
         if self.return_code == Transport.NO_DATA_FOUND:
             self.end_of_data = True
+
+    def init_from_values(self, execute_desc, values, max_row):
+        self.out_values = values
+        self.rows_affected = execute_desc.rows_affected
+        self._set_out_puts(execute_desc)
+
+        self.end_of_data = False
+
+        # TODO if rows_affected < max_row
+        # then we should set a flag to prevent another fetch to get
+        # NO_DATA_FOUND
+        #
+        #if self.rows_affected < max_row:
+        #    self.end_of_data = True
+        #else:
+        #    self.end_of_data = False
 
     def _set_out_puts(self, execute_desc):
 

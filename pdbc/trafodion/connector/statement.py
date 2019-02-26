@@ -121,9 +121,19 @@ class Statement:
             return 1
 
     def fetch(self, row_count=None):
-
         max_row_count = row_count if row_count else self._max_row_count
 
+        # When sql has condition and the key is primary key, it will return values directly by execute
+        # Here check if the result has returned by execute
+        if self._descriptor.has_outvalues() and not self._descriptor.is_out_values_used():
+            t = FetchReply()
+            t.init_from_values(self._descriptor, self._descriptor.get_outvalues(), max_row_count)
+
+            # clear the outvalues and set used flag
+            self._descriptor.clear_outvalues()
+            return t
+
+        # fetch from server
         wbuffer = self._marshal_fetch(self._connection.dialogue_id, self._sql_async_enable,
                                       self._connection.property.query_timeout,
                                       self._stmt_handle_, self.stmt_label, self._stmt_label_charset, max_row_count, 0,
