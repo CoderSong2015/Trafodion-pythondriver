@@ -200,9 +200,7 @@ class Statement:
         data = self._connection.get_from_server(execute_api, wbuffer, self._connection._mxosrvr_conn)
         buf_view = memoryview(data)
         c = ExecuteReply()
-
-        self._error_list = []
-        c.init_reply(buf_view, self._error_list)
+        c.init_reply(buf_view)
         return c
 
     def _handle_recv_data(self, recv_reply, execute_api, client_errors_list, input_row_count):

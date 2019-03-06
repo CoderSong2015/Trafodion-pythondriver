@@ -1003,8 +1003,9 @@ class ExecuteReply:
         self.stmt_labels_list = []
         self.proxy_syntax_list = []
         self._out_values_used = False
+        self.errorlist = []
 
-    def init_reply(self, buf_view, errorlist):
+    def init_reply(self, buf_view):
         self.return_code, buf_view = Convert.get_int(buf_view, little=True)
         self.total_error_length, buf_view = Convert.get_int(buf_view, little=True)
         if self.total_error_length > 0:
@@ -1013,14 +1014,14 @@ class ExecuteReply:
             for x in range(error_count):
                 t = SQLWarningOrError()
                 buf_view = t.extract_from_bytearray(buf_view)
-                errorlist.append(t)
+                self.errorlist.append(t)
             error_info = ''
-            for item in errorlist:
+            for item in self.errorlist:
                 error_info += item.text + '\n'
 
             if self.return_code != 0:
                 PyLog.global_logger.set_error(error_info)
-                raise errors.ProgrammingError(error_info)
+                raise errors.ProgrammingError(error_info, msg_list=self.errorlist)
             else:
                 PyLog.global_logger.set_warn(error_info)
 
@@ -1096,6 +1097,7 @@ class ExecuteReply:
 
     def is_out_values_used(self):
         return self._out_values_used
+
 
 class SQLWarningOrError:
 
@@ -1194,7 +1196,7 @@ class FetchReply:
 
                 error_info = '\n'.join([item.text for item in self.errorlist])
                 PyLog.global_logger.set_warn(error_info)
-                raise errors.ProgrammingError(error_info)
+                raise errors.ProgrammingError(error_info, msg_list=self.errorlist)
 
         self.rows_affected, buf_view = Convert.get_int(buf_view, little=True)
         self.out_values_format, buf_view = Convert.get_int(buf_view, little=True)
@@ -1344,7 +1346,7 @@ class PrepareReply:
                     self.errorlist.append(t)
                 error_info = '\n'.join([item.text for item in self.errorlist])
                 PyLog.global_logger.set_error(error_info)
-                raise errors.ProgrammingError(error_info)
+                raise errors.ProgrammingError(error_info, msg_list=self.errorlist)
 
 
 class TerminateReply:
